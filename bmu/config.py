@@ -14,7 +14,7 @@ __config_spec = {
 }
 
 
-with open('config.yaml', 'r') as __config_yaml_fh:
+with open('conf.yaml', 'r') as __config_yaml_fh:
     __config_yaml = __yaml.load(__config_yaml_fh.read())
 
 
@@ -24,7 +24,7 @@ def __set_config(name, value=None):
     variable with a matching name
     '''
     try:
-        required, read_env, default = __config_spec['name']
+        required, read_env, default = __config_spec[name]
     except KeyError:
         raise NameError(
             "`{0}` is not a recongised configuration key".format(name)
@@ -42,7 +42,7 @@ def __set_config(name, value=None):
     if not value and required and default:
         value = default
     if value:
-        locals()[name] = value
+        globals()[name] = value
     elif required:
         raise NameError(
             "Configuration key `{0}` is required".format(name)
