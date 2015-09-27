@@ -14,10 +14,6 @@ __config_spec = {
 }
 
 
-with open('conf.yaml', 'r') as __config_yaml_fh:
-    __config_yaml = __yaml.load(__config_yaml_fh.read())
-
-
 def __set_config(name, value=None):
     '''
     Get a config value from a file in the repo root, or from an evironment
@@ -48,5 +44,18 @@ def __set_config(name, value=None):
             "Configuration key `{0}` is required".format(name)
         )
 
-for name in __config_spec.keys():
-    __set_config(name)
+
+def init(path=None):
+    if not path:
+        try:
+            path = __os.environ['BMU_CONF_PATH']
+        except KeyError:
+            pass
+    if path:
+        with open(path, 'r') as __config_yaml_fh:
+            globals()['__config_yaml'] = __yaml.load(__config_yaml_fh.read())
+    else:
+        globals()['__config_yaml'] = {}
+
+    for name in __config_spec.keys():
+        __set_config(name)
