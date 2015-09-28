@@ -9,6 +9,7 @@ __config_spec = {
     'github_user':           (True, True, None),
     'github_token':          (True, True, None),
     'github_webhook_secret': (True, True, None),
+    'buildbot_url':          (True, True, 'http://localhost:8010/change_hook/bmu'),
     'repos':                 (True, False, None),
     'namespace':             (True, False, 'bmu'),
 }
