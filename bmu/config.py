@@ -45,7 +45,7 @@ def __set_config(name, value=None):
         )
 
 
-def init(path=None):
+def populate(path=None):
     if not path:
         try:
             path = __os.environ['BMU_CONF_PATH']
@@ -59,3 +59,8 @@ def init(path=None):
 
     for name in __config_spec.keys():
         __set_config(name)
+
+try:
+    populate()
+except NameError:
+    pass
