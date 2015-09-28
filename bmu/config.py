@@ -35,7 +35,10 @@ def __set_config(name, value=None):
                 value = __constant_fh.read().rstrip('\n')
         except IOError as exc:
             if exc.errno == 2:
-                value = __os.environ[name.upper()]
+                try:
+                    value = __os.environ[name.upper()]
+                except KeyError:
+                    pass
     if not value and required and default:
         value = default
     if value:
