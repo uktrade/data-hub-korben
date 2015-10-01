@@ -12,6 +12,8 @@ __config_spec = {
     'buildbot_url':          (True, True, 'http://localhost:8010/change_hook/bmu'),
     'repos':                 (True, False, None),
     'namespace':             (True, False, 'bmu'),
+    'developers':            (False, False, None),
+    'mergers':               (True, False, None),
 }
 
 
