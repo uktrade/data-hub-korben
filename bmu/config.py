@@ -1,5 +1,9 @@
 import os as __os
 import yaml as __yaml
+import constants as __constants
+
+class ConfigError(Exception):
+    pass
 
 __config_spec = {
     #                                       default
@@ -25,20 +29,21 @@ def __set_config(name, value=None):
     try:
         required, read_env, default = __config_spec[name]
     except KeyError:
-        raise NameError(
-            "`{0}` is not a recongised configuration key".format(name)
+        raise ConfigError(
+            "`{0}` is not a recognised configuration key".format(name)
         )
     value = __config_yaml.get(name)
     if read_env:
+        env_name = "BMU_{0}".format(name.upper())
         here = __os.path.dirname(__file__)
         try:
-            with open(__os.path.join(here, '..', name.upper()), 'r') \
+            with open(__os.path.join(here, '..', env_name), 'r') \
             as __constant_fh:
                 value = __constant_fh.read().rstrip('\n')
         except IOError as exc:
             if exc.errno == 2:
                 try:
-                    value = __os.environ[name.upper()]
+                    value = __os.environ[env_name]
                 except KeyError:
                     pass
     if not value and required and default:
@@ -46,7 +51,7 @@ def __set_config(name, value=None):
     if value:
         globals()[name] = value
     elif required:
-        raise NameError(
+        raise ConfigError(
             "Configuration key `{0}` is required".format(name)
         )
 
@@ -54,12 +59,20 @@ def __set_config(name, value=None):
 def populate(path=None):
     if not path:
         try:
-            path = __os.environ['BMU_CONF_PATH']
+            path = __os.environ[__constants.CONF_PATH]
         except KeyError:
             pass
     if path:
         with open(path, 'r') as __config_yaml_fh:
-            globals()['__config_yaml'] = __yaml.load(__config_yaml_fh.read())
+            try:
+                globals()['__config_yaml'] = __yaml.load(__config_yaml_fh.read())
+            except Exception as exc:
+                msg = 'Could not parse config YAML ({0})'
+                raise ConfigError(msg.format(exc))
+            if not __config_yaml:
+                raise ConfigError('Named config YAML was empty')
+            pass
+
     else:
         globals()['__config_yaml'] = {}
 
@@ -68,5 +81,5 @@ def populate(path=None):
 
 try:
     populate()
-except NameError:
+except ConfigError:
     pass
