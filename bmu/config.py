@@ -35,17 +35,20 @@ def __set_config(name, value=None):
     value = __config_yaml.get(name)
     if read_env:
         env_name = "BMU_{0}".format(name.upper())
-        here = __os.path.dirname(__file__)
         try:
-            with open(__os.path.join(here, '..', env_name), 'r') \
-            as __constant_fh:
-                value = __constant_fh.read().rstrip('\n')
-        except IOError as exc:
-            if exc.errno == 2:
-                try:
-                    value = __os.environ[env_name]
-                except KeyError:
+            value = __os.environ[env_name]
+            print('Actually got env var value for {0}'.format(env_name))
+        except KeyError:
+            here = __os.path.dirname(__file__)
+            try:
+                constant_filename = __os.path.join(here, '..', env_name)
+                with open(constant_filename, 'r') as constant_fh:
+                    value = constant_fh.read().rstrip('\n')
+            except IOError as exc:
+                if exc.errno == 2:
                     pass
+                else:
+                    raise
     if not value and required and default:
         value = default
     if value:
