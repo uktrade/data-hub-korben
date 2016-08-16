@@ -1,3 +1,9 @@
-from django.shortcuts import render
+from rest_framework import viewsets
+from api.models import CHCompany
+from api.serializers import CHCompanySerializer
 
-# Create your views here.
+
+class CHCompanyViewSet(viewsets.ModelViewSet):
+    queryset = CHCompany.objects.all()
+    serializer_class = CHCompanySerializer
+
