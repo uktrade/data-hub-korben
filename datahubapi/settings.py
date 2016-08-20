@@ -1,5 +1,6 @@
 import os
 import dj_database_url
+from elasticsearch import Elasticsearch, RequestsHttpConnection
 
 
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
@@ -30,6 +31,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'django.contrib.postgres',
     'rest_framework',
     'api',
 ]
@@ -131,3 +133,9 @@ REST_FRAMEWORK = {
 # https://warehouse.python.org/project/whitenoise/
 
 STATICFILES_STORAGE = 'whitenoise.django.GzipManifestStaticFilesStorage'
+
+
+ES_CLIENT = Elasticsearch(
+    ['http://127.0.0.1:9200/'],
+    connection_class=RequestsHttpConnection
+)
