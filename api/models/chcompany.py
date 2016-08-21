@@ -79,7 +79,6 @@ class CHCompany(models.Model):
         blank=True,
         verbose_name="Company status")
 
-
     sic_code_1 = models.CharField(
         max_length=170,
         null=True,
@@ -104,6 +103,10 @@ class CHCompany(models.Model):
         max_length=100,
         null=True,
         blank=True)
+
+    incorporation_date = models.DateField(
+        null=True
+    )
 
     def __str__(self):
         return self.company_name
