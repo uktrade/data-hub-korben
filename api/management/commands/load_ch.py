@@ -40,8 +40,8 @@ class Command(BaseCommand):
 
     def handle(self, filename, *args, **options):
 
-        print("Creating Index in elasticsearch")
-        self.create_index()
+        # print("Creating Index in elasticsearch")
+        # self.create_index()
 
         # Open the csv file and parse as a collection of dictionaries
         with open(filename, 'r') as csv_fh:
@@ -50,33 +50,26 @@ class Command(BaseCommand):
         count = 0
         max_buffer = 10000
         pos = 0
-        buffer = []
+        ch_buffer = []
 
         # Iterate through reach row and build a new company record in a buffer
         for row in rows:
             if CHCompany.objects.filter(company_number=row['company_number']).exists():
                 print("{0!s} already exists".format(row['company_number']))
             else:
-                buffer.append(self.create_company(row))
+                ch_buffer.append(self.create_company(row))
                 pos += 1
                 count += 1
 
                 print("{0},{1} {2!s} - {3!s}".format(count, pos, row['company_number'], row['company_name']))
 
                 if pos == max_buffer:
-                    self.dump(buffer)
+                    CHCompany.objects.bulk_create(ch_buffer)
                     pos = 0
-                    buffer = []
+                    ch_buffer = []
 
         print("Finished, saving remaining records.")
-        self.dump(buffer)
-
-    def dump(self, buffer):
-        print("Dumping to DB")
-        CHCompany.objects.bulk_create(buffer)
-        print("Saving to index")
-        self.push_buffer_to_index(buffer)
-        print("Indexed")
+        CHCompany.objects.bulk_create(ch_buffer)
 
     def create_company(self, row):
         data = {}
