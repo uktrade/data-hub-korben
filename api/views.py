@@ -7,3 +7,4 @@ class CHCompanyViewSet(viewsets.ModelViewSet):
     queryset = CHCompany.objects.all()
     serializer_class = CHCompanySerializer
 
+
