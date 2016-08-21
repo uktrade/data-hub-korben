@@ -1,7 +1,7 @@
 from django.contrib import admin
 from django.contrib.admin import ModelAdmin
 
-from api.models import CHCompany
+from api.models import *
 
 
 class CHCompanyAdmin(ModelAdmin):
@@ -19,5 +19,9 @@ class CHCompanyAdmin(ModelAdmin):
 
 
 admin.site.register(CHCompany, CHCompanyAdmin)
+admin.site.register(Company)
+admin.site.register(Contact)
+admin.site.register(Interaction)
+admin.site.register(Sector)
 
 
