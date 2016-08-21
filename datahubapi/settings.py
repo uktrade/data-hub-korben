@@ -134,8 +134,8 @@ REST_FRAMEWORK = {
 
 STATICFILES_STORAGE = 'whitenoise.django.GzipManifestStaticFilesStorage'
 
-
+ES_HOST = os.getenv("ES_HOST")
 ES_CLIENT = Elasticsearch(
-    ['http://127.0.0.1:9200/'],
+    [ES_HOST],
     connection_class=RequestsHttpConnection
 )
