@@ -7,7 +7,7 @@ from api.models import *
 class CHCompanyAdmin(ModelAdmin):
     model = CHCompany
 
-    list_display = ("id", "company_name")
+    list_display = ("company_number", "company_name")
 
     def add_view(self, *args, **kwargs):
         self.exclude = getattr(self, 'exclude', ())

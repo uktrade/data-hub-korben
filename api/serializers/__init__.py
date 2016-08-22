@@ -1,2 +1,2 @@
 from .chcompanyserializer import *
-from .searchindexserializer import *
+from .searchitemserializer import *

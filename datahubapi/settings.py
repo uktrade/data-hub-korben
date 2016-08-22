@@ -126,7 +126,9 @@ SECRET_KEY = os.getenv("SECRET_KEY")  # needed for shell not sure why
 
 # DRF
 REST_FRAMEWORK = {
-    'UNAUTHENTICATED_USER': None
+    'UNAUTHENTICATED_USER': None,
+    'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.LimitOffsetPagination',
+    'PAGE_SIZE': 100
 }
 
 # Simplified static file serving.
