@@ -7,6 +7,7 @@ router = routers.DefaultRouter()
 router.register(r'ch', views.CHCompanyViewSet)
 
 urlpatterns = [
+    url(r'^search$', views.search),
     url(r'^', include(router.urls)),
     url(r'^admin/', admin.site.urls),
 ]
