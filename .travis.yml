@@ -1,0 +1,22 @@
+language: python
+
+python:
+  - "3.5"
+
+services:
+  - postgresql
+
+env:
+  - DJANGO_VERSION=1.10
+
+before_install:
+  - export DATABASE_URL=postgres://postgres:@localhost:5432/conference
+
+install:
+  - pip install -r requirements.txt
+
+before_script:
+  - psql -c 'create database conference;' -U postgres
+
+script: python manage.py test
+
