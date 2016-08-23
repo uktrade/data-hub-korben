@@ -87,8 +87,10 @@ class Command(BaseCommand):
                 row[key] = None
 
             if row[key] is not None and key in DATE_FIELDS or row[key] is not None and 'date' in key:
-                day, month, year = row[key].split('/')
-                data[key] = "{0}-{1}-{2}".format(year, month, day)
+                row_value = row[key]
+                if row_value is not None:
+                    day, month, year = row_value.split('/')
+                    data[key] = "{0}-{1}-{2}".format(year, month, day)
             else:
                 data[key] = row[key]
 
@@ -98,8 +100,11 @@ class Command(BaseCommand):
 
     def create_index_item(self, row, action=None):
 
-        day, month, year = row['incorporation_date'].split('/')
-        incorporation_date = datetime.date(int(year), int(month), int(day))
+        if row['incorporation_date'] is not None:
+            day, month, year = row['incorporation_date'].split('/')
+            incorporation_date = datetime.date(int(year), int(month), int(day))
+        else:
+            incorporation_date = None
 
         search_item = SearchItem(
             source_id=row['company_number'],
