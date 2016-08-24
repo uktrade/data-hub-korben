@@ -1,10 +1,10 @@
-from rest_framework import viewsets
-from .serializers import CHCompanySerializer
-from api.models import CHCompany
-from django.http import HttpResponse
 import json
-import requests
+from django.http import HttpResponse
 from django.conf import settings
+from rest_framework import viewsets
+from api.models import CHCompany, SearchItem
+from .serializers import CHCompanySerializer
+
 
 class CHCompanyViewSet(viewsets.ModelViewSet):
     queryset = CHCompany.objects.all()
@@ -19,8 +19,6 @@ def search(request):
         }
     }
 
-    url = "{0}datahub/_search".format(settings.ES_HOST)
-
-    response = requests.post(url, data=json.dumps(data))
-    return HttpResponse(response, content_type='application/json')
-
+    index_name=SearchItem.Meta.es_index_name
+    res = settings.ES_CLIENT.search(index=index_name, body=data)
+    return HttpResponse(json.dumps(res['hits']), content_type='application/json')
