@@ -1,4 +1,8 @@
 # Korben
+![Korben](korben-dallas.jpg)
+
+_Korben talks to CDMS_
+
 This repo contains application code for a service providing CDMS sync, an ETL
 “pipeline” for getting data to a standard Django-controlled database, and
 search indexing. It offers a web API for search, to trigger sync. It also
