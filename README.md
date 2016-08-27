@@ -9,6 +9,7 @@ be written back to CDMS.
 
  - [Sync](#sync)
  - [ETL](#etl)
+ - [Search](#search)
  - [Client](#client)
 
 # Sync
@@ -18,6 +19,9 @@ loading object dependencies. Make appropriate calls to ETL with fresh data.
 # ETL
 Map data from CDMS schema to Django schema, populate/update Django database.
 
+# Search
+Load data into ElasticSearch.
+
 # Client
 Provide CRUD functions which talk about Django model objects, but handle
-individual CDMS sync operations “behind the scenes”.
+individual CDMS sync operations “behind the scenes”. Provide search API.
