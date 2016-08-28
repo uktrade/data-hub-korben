@@ -8,8 +8,8 @@ from django.conf import settings
 from django.test import override_settings
 from django.core.exceptions import ImproperlyConfigured
 
-from cdms_api.rest.api import CDMSRestApi
-from cdms_api.exceptions import LoginErrorException, UnexpectedResponseException, CDMSUnauthorizedException, \
+from korben.cdms_api.rest.api import CDMSRestApi
+from korben.cdms_api.exceptions import LoginErrorException, UnexpectedResponseException, CDMSUnauthorizedException, \
     CDMSNotFoundException, ErrorResponseException
 from .cookie_storage_test_case import CookieStorageTestCase
 

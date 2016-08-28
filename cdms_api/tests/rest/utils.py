@@ -4,8 +4,8 @@ from unittest import mock
 
 from django.utils import timezone
 
-from cdms_api.rest.api import CDMSRestApi
-from cdms_api.rest.utils import datetime_to_cdms_datetime
+from korben.cdms_api.rest.api import CDMSRestApi
+from korben.cdms_api.rest.utils import datetime_to_cdms_datetime
 
 
 def populate_data(service, data={}, guid=None):

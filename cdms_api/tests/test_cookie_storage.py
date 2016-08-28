@@ -7,7 +7,7 @@ from django.conf import settings
 from django.test.testcases import TestCase
 from django.core.exceptions import ImproperlyConfigured
 
-from cdms_api.cookie_storage import CookieStorage
+from korben.cdms_api.cookie_storage import CookieStorage
 
 
 class BaseCookieStorageTestCase(TestCase):
@@ -45,7 +45,7 @@ class ReadCookieStorageTestCase(BaseCookieStorageTestCase):
         self.write_cookie()
 
         with mock.patch(
-            'cdms_api.cookie_storage.open',
+            'korben.cdms_api.cookie_storage.open',
             mock.mock_open(read_data='something')
         ):
             storage = CookieStorage()
@@ -61,7 +61,7 @@ class ReadCookieStorageTestCase(BaseCookieStorageTestCase):
         encrypted_cookie = Fernet(Fernet.generate_key()).encrypt(pickle.dumps('something'))
 
         with mock.patch(
-            'cdms_api.cookie_storage.open',
+            'korben.cdms_api.cookie_storage.open',
             mock.mock_open(read_data=encrypted_cookie)
         ):
             storage = CookieStorage()
