@@ -10,6 +10,14 @@ setup_kwargs = {
     'author': 'B M Corser',
     'author_email': 'ben@steady.supply',
     'packages': ['korben'],
+    'tests_require': [
+        'py.test',
+    ],
+    'install_requires': [
+        'django',
+        'requests',
+        'cryptography',
+    ],
 }
 
 setuptools.setup(**setup_kwargs)
