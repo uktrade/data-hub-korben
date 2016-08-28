@@ -1,6 +1,8 @@
 #!/usr/bin/env python
-
 import setuptools
+
+
+
 
 DESCRIPTION = 'Codebase for sync/ETL/search service, Django "client" for CDMS'
 setup_kwargs = {
@@ -10,8 +12,11 @@ setup_kwargs = {
     'author': 'B M Corser',
     'author_email': 'ben@steady.supply',
     'packages': ['korben'],
+    'setup_requires': [
+        'pytest-runner',
+    ],
     'tests_require': [
-        'py.test',
+        'pytest',
     ],
     'install_requires': [
         'django',
