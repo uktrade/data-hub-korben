@@ -1,6 +1,6 @@
 from django.test import TestCase, override_settings
 
-from cdms_api.cookie_storage import CookieStorage
+from korben.cdms_api.cookie_storage import CookieStorage
 
 
 class CookieStorageTestCase(TestCase):

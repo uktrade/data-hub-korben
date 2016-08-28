@@ -22,6 +22,7 @@ setup_kwargs = {
         'django',
         'requests',
         'cryptography',
+        'pyquery',  # >:(
     ],
 }
 
