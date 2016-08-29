@@ -1,6 +1,6 @@
 import json
 
-from django.conf import settings
+from korben import config
 from django.core.exceptions import ImproperlyConfigured
 from requests import Session
 from requests_ntlm import HttpNtlmAuth
@@ -20,17 +20,8 @@ class NTLMAuth:
     """
 
     def __init__(self):
-        """
-        Raises:
-            ImproperlyConfigured: If `CDMS_BASE_URL`, `CDMS_USERNAME` or
-                `CDMS_PASSWORD` are not provided via Django settings.
-        """
-        for setting_name in ['CDMS_BASE_URL', 'CDMS_USERNAME', 'CDMS_PASSWORD']:
-            if not getattr(settings, setting_name):
-                raise ImproperlyConfigured('{} setting required'.format(setting_name))
-
         self.session = Session()
-        self.session.auth = HttpNtlmAuth(settings.CDMS_USERNAME, settings.CDMS_PASSWORD)
+        self.session.auth = HttpNtlmAuth(config.cdms_username, config.cdms_password)
 
     def make_request(self, verb, url, data=None):
         """

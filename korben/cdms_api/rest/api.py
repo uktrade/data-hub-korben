@@ -1,4 +1,4 @@
-from django.conf import settings
+from korben import config
 
 from .auth.active_directory import ActiveDirectoryAuth
 
@@ -9,7 +9,7 @@ class CDMSRestApi(object):
     """
 
     CRM_REST_BASE_URL = '/'.join([
-        settings.CDMS_BASE_URL.rstrip('/'),
+        config.cdms_base_url.rstrip('/'),
         'XRMServices/2011/OrganizationData.svc'
     ])
 

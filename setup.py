@@ -19,10 +19,13 @@ setup_kwargs = {
         'pytest',
     ],
     'install_requires': [
-        'django',
-        'requests',
         'cryptography',
+        'django',
         'pyquery',  # >:(
+        'pyyaml',
+        'requests',
+        'requests_ntlm',
+        'responses',  # >:(
     ],
 }
 
