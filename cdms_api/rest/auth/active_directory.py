@@ -2,12 +2,11 @@ import json
 import logging
 
 import requests
-from django.conf import settings
-from django.core.exceptions import ImproperlyConfigured
+from korben import config
 from pyquery import PyQuery
 
-from ...cookie_storage import CookieStorage
-from ...exceptions import (
+from korben.cdms_api.cookie_storage import CookieStorage
+from korben.cdms_api.exceptions import (
     CDMSNotFoundException,
     CDMSUnauthorizedException,
     ErrorResponseException,
@@ -32,15 +31,6 @@ class ActiveDirectoryAuth:
     """
 
     def __init__(self):
-        """
-        Raises:
-            ImproperlyConfigured: If any required settings are not provided via
-                Django settings.
-        """
-        for setting_name in ['CDMS_ADFS_URL', 'CDMS_BASE_URL', 'CDMS_USERNAME', 'CDMS_PASSWORD']:
-            if not getattr(settings, setting_name):
-                raise ImproperlyConfigured('{} setting required'.format(setting_name))
-
         self.cookie_storage = CookieStorage()
         self.setup_session()
 
@@ -78,7 +68,7 @@ class ActiveDirectoryAuth:
         session = requests.session()
 
         # 1. get login page
-        url = '{}/?whr={}'.format(settings.CDMS_BASE_URL, settings.CDMS_ADFS_URL)
+        url = '{}/?whr={}'.format(config.cdms_base_url, config.cdms_adfs_url)
         resp = session.get(url)
         if not resp.ok:
             raise UnexpectedResponseException(
@@ -96,8 +86,8 @@ class ActiveDirectoryAuth:
             session, resp.content,
             url=resp.url,
             params={
-                username_field_name: settings.CDMS_USERNAME,
-                password_field_name: settings.CDMS_PASSWORD,
+                username_field_name: config.cdms_username,
+                password_field_name: config.cdms_password,
             }
         )
 
