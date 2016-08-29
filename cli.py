@@ -1,17 +1,29 @@
 import sys
-from . import sync
+from . import sync, odata_psql
 
 COMMANDS = {
     'sync': sync,
+    'odata-psql': odata_psql,
 }
+
+
+def print_commands():
+    for command in sorted(COMMANDS):
+        print("  {0}".format(command))
+
 
 def main():
     try:
         module = COMMANDS[sys.argv[1]]
     except IndexError:
         print('Must pass a command, available commands are:')
-        for command in sorted(COMMANDS.keys()):
-            print("  {0}".format(command))
+        print_commands()
+        exit(1)
+    except KeyError:
+        print("`{0}` is not a command, available commands are:".format(
+            sys.argv[1]
+        ))
+        print_commands()
         exit(1)
     try:
         func = getattr(module, sys.argv[2])
