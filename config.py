@@ -8,10 +8,10 @@ class ConfigError(Exception):
 __noop = lambda x: x
 __config_spec = {
     #                                       default
-    #                             read from  value
-    #   name            required     env     /
-    #    |                     \      |     /
-    'cookie_file':            (True, True, None, __noop),
+    #                             read from  value    cast
+    #   name            required     env     /      function
+    #    |                     \      |     /       /
+    'cdms_cookie_path':       (True, True, None, __noop),
     'cdms_cookie_key':        (True, True, None, lambda x: bytes(x, 'utf8')),
     'cdms_base_url':          (True, True, None, __noop),
     'cdms_username':          (True, True, None, __noop),
@@ -96,5 +96,7 @@ def temporarily(**changes):
 
 try:
     populate()
-except ConfigError:
+except ConfigError as exc:
+    print('Ignoring config exception:')
+    print(exc)
     pass
