@@ -51,7 +51,6 @@ def __set_config(name, value=None):
     if not value and required and default:
         value = default
     if value:
-        print('plonk {0} to {1}'.format(name, cast(value)))
         globals()[name] = cast(value)
     elif required:
         raise ConfigError(
