@@ -1,5 +1,5 @@
-from odata_sql_schema import main as odata_sql_schema
-from separate_constraints import main as separate_constraints
+from .odata_sql_schema import main as odata_sql_schema
+from .separate_constraints import main as separate_constraints
 
 
 def main(name_in, name_out):

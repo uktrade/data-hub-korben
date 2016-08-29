@@ -21,17 +21,23 @@ setup_kwargs = {
     'install_requires': [
         'cryptography',
         'django',
+        'psycopg2',
         'pyquery',  # >:(
+        'pyslet',
         'pyyaml',
         'requests',
         'requests_ntlm',
         'responses',  # >:(
+        'sqlparse',
     ],
     'entry_points': {
         'console_scripts': [
             'korben=korben.cli:main',
         ],
     },
+    'dependency_links': [
+        'git+https://github.com/UKTradeInvestment/pyslet.git@master#egg=pyslet',
+    ]
 }
 
 setuptools.setup(**setup_kwargs)
