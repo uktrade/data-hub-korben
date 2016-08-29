@@ -27,6 +27,11 @@ setup_kwargs = {
         'requests_ntlm',
         'responses',  # >:(
     ],
+    'entry_points': {
+        'console_scripts': [
+            'korben=korben.cli:main',
+        ],
+    },
 }
 
 setuptools.setup(**setup_kwargs)

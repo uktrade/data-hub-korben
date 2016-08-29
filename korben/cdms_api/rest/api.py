@@ -8,17 +8,17 @@ class CDMSRestApi(object):
     Instance of a connection to the Microsoft Dynamics 2011 REST API.
     """
 
-    CRM_REST_BASE_URL = '/'.join([
-        config.cdms_base_url.rstrip('/'),
-        'XRMServices/2011/OrganizationData.svc'
-    ])
-
     def __init__(self, auth=None):
         """
         Args:
             auth (Optional): An authentication instance. Defaults to a default
                 instance of ActiveDirectoryAuth.
         """
+        self.CRM_REST_BASE_URL = '/'.join([
+            config.cdms_base_url.rstrip('/'),
+            'XRMServices/2011/OrganizationData.svc'
+        ])
+
         if auth is not None:
             self.auth = auth
         else:

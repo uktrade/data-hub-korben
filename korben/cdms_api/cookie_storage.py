@@ -26,7 +26,7 @@ class CookieStorage(object):
         Returns the cookie if valid and exists, None otherwise.
         """
         if self.exists():
-            with open(config.cookie_file, 'rb') as f:
+            with open(config.cdms_cookie_path, 'rb') as f:
                 try:
                     ciphertext = self.crypto.decrypt(f.read())
                     return pickle.loads(ciphertext)
@@ -39,18 +39,18 @@ class CookieStorage(object):
         Writes a cookie overriding any existing ones.
         """
         ciphertext = self.crypto.encrypt(pickle.dumps(cookie))
-        with open(config.cookie_file, 'wb') as f:
+        with open(config.cdms_cookie_path, 'wb') as f:
             f.write(ciphertext)
 
     def exists(self):
         """
         Returns True if the cookie exists, False otherwise.
         """
-        return os.path.exists(config.cookie_file)
+        return os.path.exists(config.cdms_cookie_path)
 
     def reset(self):
         """
         Deletes the cookie.
         """
         if self.exists():
-            os.remove(config.cookie_file)
+            os.remove(config.cdms_cookie_path)
