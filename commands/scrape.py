@@ -149,6 +149,10 @@ def cache_passthrough(cache, entity_name, offset):
     if resp.ok:
         try:
             etree.fromstring(resp.content)  # check XML is parseable
+            root = etree.fromstring(resp.content)
+            if not root.findall('{http://www.w3.org/2005/Atom}entry'):
+                print("No entries {0} {1} {2}".format(entity_name, offset, identifier))
+                return
         except etree.XMLSyntaxError as exc:
             # need to auth
             return
