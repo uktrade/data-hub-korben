@@ -1,6 +1,8 @@
 import uuid
 from django.db import models
 
+from api.models import CHCompany
+
 
 class Company(models.Model):
 
@@ -103,10 +105,10 @@ class Company(models.Model):
 
     # countries of interest
 
-    # company connections
+
 
     def __str__(self):
-        return self.company_name
+        return self.registered_name
 
     def save(self, *args, **kwargs):
         if not self.id:

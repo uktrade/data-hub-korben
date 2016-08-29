@@ -4,12 +4,11 @@ from django.db import models
 
 class CHCompany(models.Model):
 
-    id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
-
     company_number = models.CharField(
         max_length=8,
         null=False,
         blank=False,
+        primary_key=True,
         db_index=True,
         verbose_name="Company number")
 

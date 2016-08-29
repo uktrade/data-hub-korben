@@ -5,6 +5,7 @@ from api import views
 
 router = routers.DefaultRouter()
 router.register(r'ch', views.CHCompanyViewSet)
+router.register(r'company', views.CompanyViewSet)
 
 urlpatterns = [
     url(r'^search$', views.search),
