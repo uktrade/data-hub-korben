@@ -1,7 +1,5 @@
 from lxml import etree
-
-TYPE_KEY = '{http://schemas.microsoft.com/ado/2007/08/dataservices/metadata}type'
-CONTENT_TAG = '{http://www.w3.org/2005/Atom}content'
+from . import constants
 
 def handle_multiprop(prop):
     name = etree.QName(prop).localname
@@ -34,8 +32,8 @@ PROP_KV_MAP = {
 def entry_row(col_names, link_fkey_map, entry):
     'Extract a row dict from an OData entry'
     row = {}
-    for prop in entry.find(CONTENT_TAG)[0]:
-        prop_type = prop.attrib.get(TYPE_KEY)
+    for prop in entry.find(constants.CONTENT_TAG)[0]:
+        prop_type = prop.attrib.get(constants.TYPE_KEY)
         if prop_type in PROP_KV_MAP:
             row.update(PROP_KV_MAP[prop_type](prop))
         else:
@@ -44,9 +42,11 @@ def entry_row(col_names, link_fkey_map, entry):
                 prop.text.strip() if prop.text else prop.text
             })
         to_pop = []
+    '''
     for link in entry.find(LINK_TAG):
         import ipdb;ipdb.set_trace()
         pass
+    '''
     for key in row:
         if key not in col_names:
             to_pop.append(key)
@@ -55,8 +55,9 @@ def entry_row(col_names, link_fkey_map, entry):
     return row
 
 
-def get_link_fkey_map(table, entry):
+def link_fkey_map(table, entry):
     'Generate a mapping from table fkey to link name'
+    import ipdb;ipdb.set_trace()
     link_map = {}
     fkey_names = map(lambda fkey: fkey.name, table.foreign_keys)
     for link in entry.findall(LINK_TAG):

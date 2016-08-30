@@ -1,58 +1,7 @@
-'Unpickle response objects in passed directory, output CSV for loading'
-import subprocess
-import tempfile
-import os
-import pickle
-import csv
-import sys
-from lxml import etree
-
-from . import utils
-
-PSQL_STRAIGHT = '''
-COPY "{0}" FROM '{1}' DELIMITER ',' CSV;
-'''
-
-PSQL_DEDUPE = '''
-TRUNCATE TABLE "{0}";
-
-CREATE TEMP TABLE "{0}_dedupe" AS SELECT * FROM "{0}" WITH NO DATA;
-
-COPY "{0}_dedupe" FROM '{1}' DELIMITER ',' CSV;
-
-INSERT INTO "{0}" SELECT DISTINCT ON ({2}) * FROM "{0}_dedupe";
-
-DROP TABLE "{0}_dedupe";
-'''
-
-ENTRY_TAG = '{http://www.w3.org/2005/Atom}entry'
-ATTRIBUTEMASK_TAG = '{http://schemas.microsoft.com/ado/2007/08/dataservices}AttributeMask'
-ID_TAG = '{http://schemas.microsoft.com/ado/2007/08/dataservices}Id'
-
-def unpickle_resp(resp_dir, entity_name, name):
-    path = os.path.join(resp_dir, entity_name, name)
-    with open(path, 'rb') as resp_fh:
-        try:
-            resp = pickle.load(resp_fh)
-        except:
-            print('Bad pickle!')
-            # unpickle failed
-            return
-    try:
-        return etree.fromstring(resp.content)
-    except etree.XMLSyntaxError:
-        print('Bad resp!')
-        # scrape failed
-        return
-
-
 def main(metadata, resp_dir, entity_name):
     table = metadata.tables[entity_name + 'Set']
     col_names = [col.name for col in table.columns]
     # assume one column
-    primary_key = '"{0}"'.format(
-        '","'.join([col.name for col in table.primary_key.columns.values()])
-    )
     out_temp = tempfile.NamedTemporaryFile(delete=False)
 
     out_temp_fh = open(out_temp.name, 'w')
