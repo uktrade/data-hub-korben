@@ -138,13 +138,13 @@ class CDMSListRequestCache(object):
         return resp
 
 
-def cache_passthrough(cache, entity_name, offset):
+def cache_passthrough(cdms_api, entity_name, offset):
     entity_index = ENTITY_INT_MAP[entity_name]
     identifier = uuid.uuid4()
     LOGGER.debug(
         "Starting {0} {1} {2}".format(entity_name, offset, identifier)
     )
-    resp = cache.list(entity_name, offset)
+    resp = cdms_api.list(entity_name, offset)
     if resp is False:
         # means deauth'd
         SHOULD_REQUEST[entity_index] = 1  # mark entity as open

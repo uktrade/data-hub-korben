@@ -28,6 +28,7 @@ setup_kwargs = {
         'requests',
         'requests_ntlm',
         'responses',  # >:(
+        'sqlalchemy',
         'sqlparse',
     ],
     'entry_points': {
