@@ -1,45 +1,56 @@
 import sys
 from . import sync, odata_psql
 
-COMMANDS = {
+MODULES = {
     'sync': sync,
     'odata-psql': odata_psql,
 }
 
 
-def print_commands():
-    for command in sorted(COMMANDS):
-        print("  {0}".format(command))
+def print_modules():
+    for module_name in sorted(MODULES):
+        print("  {0}".format(module_name))
 
 
 def main():
     try:
-        module = COMMANDS[sys.argv[1]]
+        module = MODULES[sys.argv[1]]
     except IndexError:
         print('Must pass a command, available commands are:')
-        print_commands()
-        exit(1)
+        print_modules()
+        return exit(1)
     except KeyError:
-        print("`{0}` is not a command, available commands are:".format(
+        print("`{0}` is not a command try one of the following:".format(
             sys.argv[1]
         ))
-        print_commands()
-        exit(1)
-    try:
-        func = getattr(module, sys.argv[2]).main
-    except (AttributeError, IndexError) as exc:
-        import ipdb;ipdb.set_trace()
+        print_modules()
+        return exit(1)
+    commands = list(sorted(getattr(module, 'COMMANDS', {}).keys()))
+    if commands:
         try:
-            getattr(module, 'main')(*sys.argv[3:])
-        except AttributeError:
-            subcommands = sorted(getattr(module, 'COMMANDS', {}).keys())
-            if not subcommands:
-                print(
-                    "Module {0} doesn’t offer a CLI".format(module.__name__)
-                )
-                exit(1)
-            print('Must pass a subcommand, available commands are:')
-            for command in subcommands:
+            func = module.COMMANDS[sys.argv[2]]
+        except IndexError as exc:  # no command requested
+            try:
+                func = module.main  # module itself offers CLI
+            except AttributeError:
+                print(("Must pass a subcommand, available subcommands for {0} "
+                       "are:").format(sys.argv[1]))
+                for command in commands:
+                    print("  {0}".format(command))
+                return exit(1)
+        except KeyError:
+            print("`{0}` is not a subcommand, available subcommands are:".format(
+                sys.argv[2]
+            ))
+            for command in commands:
                 print("  {0}".format(command))
-            exit(1)
-    func(*sys.argv[3:])
+            return exit(1)
+    else:
+        try:
+            func = module.main  # module itself offers CLI
+        except AttributeError:
+            print(
+                "Module {0} doesn’t offer a CLI".format(module.__name__)
+            )
+
+    return func(*sys.argv[3:])
