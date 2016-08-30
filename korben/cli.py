@@ -26,8 +26,9 @@ def main():
         print_commands()
         exit(1)
     try:
-        func = getattr(module, sys.argv[2])
-    except (AttributeError, IndexError):
+        func = getattr(module, sys.argv[2]).main
+    except (AttributeError, IndexError) as exc:
+        import ipdb;ipdb.set_trace()
         try:
             getattr(module, 'main')(*sys.argv[3:])
         except AttributeError:
@@ -41,3 +42,4 @@ def main():
             for command in subcommands:
                 print("  {0}".format(command))
             exit(1)
+    func(*sys.argv[3:])

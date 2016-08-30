@@ -11,7 +11,7 @@ from lxml import etree
 
 MESSAGE_TAG = '{http://schemas.microsoft.com/ado/2007/08/dataservices/metadata}message'
 
-PROCESSES = 32
+PROCESSES = 64
 FORBIDDEN_ENTITIES = set((
     'Competitor',
     'ConstraintBasedGroup',
@@ -73,9 +73,9 @@ with open(ENTITY_LIST_PATH, 'r') as entities_fh:
 ENTITY_INT_MAP = {
     name: index for index, name in enumerate(ENTITY_NAMES)
 }
-ENTITY_OFFSETS = []
 
 SHOULD_REQUEST = multiprocessing.Array('i', len(ENTITY_NAMES))
+ENTITY_OFFSETS = multiprocessing.Array('i', len(ENTITY_NAMES))
 AUTH_IN_PROGRESS = multiprocessing.Value('i', 0)
 
 
@@ -101,7 +101,8 @@ class CDMSListRequestCache(object):
             return False
         try:
             with open(path, 'rb') as cache_fh:
-                etree.fromstring(pickle.load(cache_fh))
+                resp = pickle.load(cache_fh)
+                etree.fromstring(resp.content)
         except etree.XMLSyntaxError as exc:
             return False
         return True
@@ -121,7 +122,7 @@ class CDMSListRequestCache(object):
         try:
             etree.fromstring(resp.content)  # check XML is parseable
         except etree.XMLSyntaxError as exc:
-            # assume we got de-auth'd, trust poll_auth to fix it, don't cache
+            # assume we got deauth'd, trust poll_auth to fix it, don't cache
             # print("{0} ({1}) {2}s (FAIL)".format(service, skip, time_delta))
             return False
         # print("{0} ({1}) {2}s".format(service, skip, time_delta))
@@ -145,7 +146,6 @@ def cache_passthrough(cache, entity_name, offset):
 
     if resp is False:
         # means deauth'd
-        print("setting 1 because deauth for {0}".format(entity_name))
         SHOULD_REQUEST[entity_index] = 1  # mark entity as open
                                           # don't increment offset
         return
@@ -155,20 +155,18 @@ def cache_passthrough(cache, entity_name, offset):
             etree.fromstring(resp.content)  # check XML is parseable
             root = etree.fromstring(resp.content)
             if not root.findall('{http://www.w3.org/2005/Atom}entry'):
-                print("No entries {0} {1} {2}".format(entity_name, offset, identifier))
+                # print("No entries {0} {1} {2}".format(entity_name, offset, identifier))
                 return
         except etree.XMLSyntaxError as exc:
             # need to auth
             return
         # everything went according to plan
-        print("setting 1 because success for {0}".format(entity_name))
         SHOULD_REQUEST[entity_index] = 1  # mark entity as open
         ENTITY_OFFSETS[entity_index] += 50  # bump offset
         # print("Completing {0} {1} {2}".format(entity_name, offset, identifier))
         return
 
     if not resp.ok:
-        print("setting 0 because not resp.ok for {0}".format(entity_name))
         SHOULD_REQUEST[entity_index] = 0
         if resp.status_code == 500:
             try:
@@ -181,12 +179,10 @@ def cache_passthrough(cache, entity_name, offset):
                 # print("Error {0} {1} {2}".format(entity_name, offset, identifier))
             except Exception as exc:
                 # print("Failing {0} {1} {2}".format(entity_name, offset, identifier))
-                print("setting 0 because error for {0}".format(entity_name))
                 SHOULD_REQUEST[entity_index] = 0
                 # something bad, unknown and unknowable happened
                 return
         else:
-            print("setting 0 because big error for {0}".format(entity_name))
             SHOULD_REQUEST[entity_index] = 0
             # print("Failing {0} {1} {2}".format(entity_name, offset, identifier))
             return
@@ -200,30 +196,57 @@ def poll_auth(n):
     try:
         etree.fromstring(resp.content)  # check XML is parseable
     except etree.XMLSyntaxError as exc:
+        print('auth required')
         # assume we got the login page, just try again
         AUTH_IN_PROGRESS.value = 1
-        api.setup_session(True)
+        api.auth.setup_session(True)
         AUTH_IN_PROGRESS.value = 0
 
 
-def main(self, *args, **options):
+def main():
     cache = CDMSListRequestCache()
     pool = multiprocessing.Pool(processes=PROCESSES)
-    for entity_name in ENTITY_NAMES:
+    for index, entity_name in enumerate(ENTITY_NAMES):
+        SHOULD_REQUEST[index] = 1
         try:
             caches = os.listdir(os.path.join('cache', 'list', entity_name))
-            ENTITY_OFFSETS.append(max(map(int, caches)) + 50)
+            ENTITY_OFFSETS[index] = max(map(int, caches)) + 50
         except (FileNotFoundError, ValueError) as exc:
-            ENTITY_OFFSETS.append(0)
-    api.setup_session(True)
-    for index in range(len(ENTITY_NAMES)):
-        SHOULD_REQUEST[index] = 1
+            ENTITY_OFFSETS[index] = 0
+    api.auth.setup_session(True)
     last_polled = 0
     last_report = 0
     pending = []
     while True:
-        if pool._taskqueue.qsize() > PROCESSES - 1:
+        now = datetime.datetime.now()
+
+        # reporting, pending tracking
+        if now.second and now.second % 3 == 0 and last_report != now.second:
+            last_report = now.second
+            pending_swap = []
+            for result in pending:
+                if not result.ready():
+                    pending_swap.append(result)
+            pending = pending_swap
+            # print("{0}".format(SHOULD_REQUEST[:]))
+            print(
+                "{0} - {1} requests pending, {2} entity types waiting".format(
+                    now.strftime('%Y-%m-%d %H:%M:%S'),
+                    len(pending),
+                    len(list(filter(None, SHOULD_REQUEST[:])))
+                )
+            )
+
+        # throttling
+        if len(pending) >= PROCESSES:
             continue
+
+        # auth management
+        if now.second and now.second % 5 == 0 and last_polled != now.second:
+            last_polled = now.second
+            poll_auth(now.second)
+
+        # add to request queues
         for entity_name in ENTITY_NAMES:
             entity_index = ENTITY_INT_MAP[entity_name]
             if SHOULD_REQUEST[entity_index] == 0:
@@ -233,21 +256,4 @@ def main(self, *args, **options):
                 (cache, entity_name, ENTITY_OFFSETS[entity_index]),
             )
             pending.append(result)
-            print("setting 0 to start for {0}".format(entity_name))
             SHOULD_REQUEST[entity_index] = 0  # mark entity as closed
-
-        now = datetime.datetime.now()
-        if now.second and now.second % 5 == 0 and last_polled != now.second:
-            last_polled = now.second
-            poll_auth(now.second)
-
-        if now.second and now.second % 3 == 0 and last_report != now.second:
-            last_report = now.second
-            pending_swap = []
-            for result in pending:
-                if not result.ready():
-                    pending_swap.append(result)
-            pending = pending_swap
-            print("{0}".format(SHOULD_REQUEST[:]))
-            print("{0} outstanding".format(len(pending)))
-            print("{0} pending".format(len(list(filter(None, SHOULD_REQUEST[:])))))
