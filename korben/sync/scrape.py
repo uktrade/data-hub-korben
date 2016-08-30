@@ -64,7 +64,10 @@ class CDMSListRequestCache(object):
         if not resp.ok:
             return resp  # don't cache fails
         try:
-            etree.fromstring(resp.content)  # check XML is parseable
+            root = etree.fromstring(resp.content)  # check XML is parseable
+            if not root.findall('{http://www.w3.org/2005/Atom}entry'):
+                # some weird crap from M$ here
+                return None
         except etree.XMLSyntaxError as exc:
             # assume we got deauth'd, trust poll_auth to fix it, don't cache
             LOGGER.error(
@@ -84,6 +87,10 @@ def cache_passthrough(cdms_api, entity_name, offset):
         "Starting {0} {1} {2}".format(entity_name, offset, identifier)
     )
     resp = cdms_api.list(entity_name, offset)
+    if resp is None:
+        # means trash response
+        SHOULD_REQUEST[entity_index] = 0  # kill it
+        return
     if resp is False:
         # means deauth'd
         SHOULD_REQUEST[entity_index] = 1  # mark entity as open
