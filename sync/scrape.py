@@ -5,8 +5,7 @@ import os
 import pickle
 import time
 
-from django.core.management.base import BaseCommand, CommandError
-from cdms_api.connection import rest_connection as api
+from korben.cdms_api.connection import rest_connection as api
 
 from lxml import etree
 
@@ -59,7 +58,12 @@ FORBIDDEN_ENTITIES = set((
     'optevia_uktiorder',
 ))
 
-with open('cdms-psql/entity-table-map/entities-optimisable', 'r') as entities_fh:
+ENTITY_LIST_PATH = os.path.join(
+    os.path.dirname(os.path.abspath(__file__)),
+    '..', 'odata_psql', 'entity-table-map', 'entities'
+)
+
+with open(ENTITY_LIST_PATH, 'r') as entities_fh:
     ENTITY_NAMES = []
     for line in entities_fh.readlines():
         entity_name = line.strip()
@@ -202,51 +206,48 @@ def poll_auth(n):
         AUTH_IN_PROGRESS.value = 0
 
 
-class Command(BaseCommand):
-    help = 'Download and cache XML responses from CDMS'
-
-    def handle(self, *args, **options):
-        cache = CDMSListRequestCache()
-        pool = multiprocessing.Pool(processes=PROCESSES)
+def main(self, *args, **options):
+    cache = CDMSListRequestCache()
+    pool = multiprocessing.Pool(processes=PROCESSES)
+    for entity_name in ENTITY_NAMES:
+        try:
+            caches = os.listdir(os.path.join('cache', 'list', entity_name))
+            ENTITY_OFFSETS.append(max(map(int, caches)) + 50)
+        except (FileNotFoundError, ValueError) as exc:
+            ENTITY_OFFSETS.append(0)
+    api.setup_session(True)
+    for index in range(len(ENTITY_NAMES)):
+        SHOULD_REQUEST[index] = 1
+    last_polled = 0
+    last_report = 0
+    pending = []
+    while True:
+        if pool._taskqueue.qsize() > PROCESSES - 1:
+            continue
         for entity_name in ENTITY_NAMES:
-            try:
-                caches = os.listdir(os.path.join('cache', 'list', entity_name))
-                ENTITY_OFFSETS.append(max(map(int, caches)) + 50)
-            except (FileNotFoundError, ValueError) as exc:
-                ENTITY_OFFSETS.append(0)
-        api.setup_session(True)
-        for index in range(len(ENTITY_NAMES)):
-            SHOULD_REQUEST[index] = 1
-        last_polled = 0
-        last_report = 0
-        pending = []
-        while True:
-            if pool._taskqueue.qsize() > PROCESSES - 1:
+            entity_index = ENTITY_INT_MAP[entity_name]
+            if SHOULD_REQUEST[entity_index] == 0:
                 continue
-            for entity_name in ENTITY_NAMES:
-                entity_index = ENTITY_INT_MAP[entity_name]
-                if SHOULD_REQUEST[entity_index] == 0:
-                    continue
-                result = pool.apply_async(
-                    cache_passthrough,
-                    (cache, entity_name, ENTITY_OFFSETS[entity_index]),
-                )
-                pending.append(result)
-                print("setting 0 to start for {0}".format(entity_name))
-                SHOULD_REQUEST[entity_index] = 0  # mark entity as closed
+            result = pool.apply_async(
+                cache_passthrough,
+                (cache, entity_name, ENTITY_OFFSETS[entity_index]),
+            )
+            pending.append(result)
+            print("setting 0 to start for {0}".format(entity_name))
+            SHOULD_REQUEST[entity_index] = 0  # mark entity as closed
 
-            now = datetime.datetime.now()
-            if now.second and now.second % 5 == 0 and last_polled != now.second:
-                last_polled = now.second
-                poll_auth(now.second)
+        now = datetime.datetime.now()
+        if now.second and now.second % 5 == 0 and last_polled != now.second:
+            last_polled = now.second
+            poll_auth(now.second)
 
-            if now.second and now.second % 3 == 0 and last_report != now.second:
-                last_report = now.second
-                pending_swap = []
-                for result in pending:
-                    if not result.ready():
-                        pending_swap.append(result)
-                pending = pending_swap
-                print("{0}".format(SHOULD_REQUEST[:]))
-                print("{0} outstanding".format(len(pending)))
-                print("{0} pending".format(len(list(filter(None, SHOULD_REQUEST[:])))))
+        if now.second and now.second % 3 == 0 and last_report != now.second:
+            last_report = now.second
+            pending_swap = []
+            for result in pending:
+                if not result.ready():
+                    pending_swap.append(result)
+            pending = pending_swap
+            print("{0}".format(SHOULD_REQUEST[:]))
+            print("{0} outstanding".format(len(pending)))
+            print("{0} pending".format(len(list(filter(None, SHOULD_REQUEST[:])))))
