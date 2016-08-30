@@ -153,11 +153,10 @@ class ActiveDirectoryAuth:
         if data is None:
             data = {}
         logger.debug('Calling CDMS url (%s) on %s' % (verb, url))
-        headers = {'Content-type': 'application/json', 'Accept': 'application/json'}
 
         if data:
             data = json.dumps(data)
-        resp = getattr(self.session, verb)(url, data=data, headers=headers)
+        resp = getattr(self.session, verb)(url, data=data)
 
         if resp.status_code >= 400:
             logger.debug('Got CDMS error (%s): %s' % (resp.status_code, resp.content))
@@ -171,8 +170,5 @@ class ActiveDirectoryAuth:
                 resp.content,
                 status_code=resp.status_code
             )
-
-        if resp.status_code in (200, 201):
-            return resp.json()['d']
 
         return resp
