@@ -200,7 +200,7 @@ def main():
                 else:
                     complete += 1
             pending = pending_swap
-            LOGGER.debug("{0}".format(SHOULD_REQUEST[:]))
+            # LOGGER.debug("{0}".format(SHOULD_REQUEST[:]))
             waiting = len(list(filter(None, SHOULD_REQUEST[:])))
             report_fmt = (
                 "{0} - "
@@ -222,7 +222,7 @@ def main():
             )
             if all(done_conditions):
                 LOGGER.info("Scrape complete!?")
-                exit(0)
+                exit(1)  # i doubt it
 
         # throttling
         if len(pending) >= PROCESSES:
