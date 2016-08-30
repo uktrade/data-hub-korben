@@ -2,6 +2,9 @@ import os
 import pickle
 import sys
 
+from . import constants
+
+
 
 def main(entity_name, start, number=10):
     for page in map(str, range(start, start + (number * 50), 50)):

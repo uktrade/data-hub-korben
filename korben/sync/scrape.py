@@ -7,6 +7,7 @@ import time
 import uuid
 
 from korben.cdms_api.connection import rest_connection as api
+from . import constants
 
 from lxml import etree
 
@@ -14,73 +15,11 @@ logging.basicConfig(level=logging.INFO)
 
 LOGGER = logging.getLogger('korben.sync.scrape')
 
-MESSAGE_TAG = '{http://schemas.microsoft.com/ado/2007/08/dataservices/metadata}message'
 
 PROCESSES = 128
-FORBIDDEN_ENTITIES = set((
-    'Competitor',
-    'ConstraintBasedGroup',
-    'Contract',
-    'ContractDetail',
-    'ContractTemplate',
-    'CustomerOpportunityRole',
-    'CustomerRelationship',
-    'Discount',
-    'DiscountType',
-    'Invoice',
-    'InvoiceDetail',
-    'Lead',
-    'LookUpMapping',
-    'Opportunity',
-    'OpportunityProduct',
-    'OrganizationUI',
-    'Post',
-    'PostComment',
-    'PostFollow',
-    'PostLike',
-    'PriceLevel',
-    'Product',
-    'ProductPriceLevel',
-    'Quote',
-    'QuoteDetail',
-    'RelationshipRole',
-    'RelationshipRoleMap',
-    'Resource',
-    'ResourceGroup',
-    'ResourceSpec',
-    'SalesLiterature',
-    'SalesLiteratureItem',
-    'SalesOrder',
-    'SalesOrderDetail',
-    'Service',
-    'Territory',
-    'UoM',
-    'UoMSchedule',
-    'detica_optionsetfield',
-    'detica_portalpage',
-    'mtc_licensing',
-    'optevia_omisorder',
-    'optevia_uktiorder',
-))
 
-ENTITY_LIST_PATH = os.path.join(
-    os.path.dirname(os.path.abspath(__file__)),
-    '..', 'odata_psql', 'entity-table-map', 'entities'
-)
-
-with open(ENTITY_LIST_PATH, 'r') as entities_fh:
-    ENTITY_NAMES = []
-    for line in entities_fh.readlines():
-        entity_name = line.strip()
-        if entity_name not in FORBIDDEN_ENTITIES:
-            ENTITY_NAMES.append(entity_name)
-
-ENTITY_INT_MAP = {
-    name: index for index, name in enumerate(ENTITY_NAMES)
-}
-
-SHOULD_REQUEST = multiprocessing.Array('i', len(ENTITY_NAMES))
-ENTITY_OFFSETS = multiprocessing.Array('i', len(ENTITY_NAMES))
+SHOULD_REQUEST = multiprocessing.Array('i', len(constants.ENTITY_NAMES))
+ENTITY_OFFSETS = multiprocessing.Array('i', len(constants.ENTITY_NAMES))
 AUTH_IN_PROGRESS = multiprocessing.Value('i', 0)
 
 
@@ -139,7 +78,7 @@ class CDMSListRequestCache(object):
 
 
 def cache_passthrough(cdms_api, entity_name, offset):
-    entity_index = ENTITY_INT_MAP[entity_name]
+    entity_index = constants.ENTITY_INT_MAP[entity_name]
     identifier = uuid.uuid4()
     LOGGER.debug(
         "Starting {0} {1} {2}".format(entity_name, offset, identifier)
@@ -178,7 +117,7 @@ def cache_passthrough(cdms_api, entity_name, offset):
         if resp.status_code == 500:
             try:
                 root = etree.fromstring(resp.content)
-                if 'paging' in root.find(MESSAGE_TAG).text:
+                if 'paging' in root.find(constants.MESSAGE_TAG).text:
                     # let's pretend this means we reached the end and set this
                     # entity type to spent
                     LOGGER.info(
@@ -228,7 +167,7 @@ def poll_auth(n):
 def main():
     cache = CDMSListRequestCache()
     pool = multiprocessing.Pool(processes=PROCESSES)
-    for index, entity_name in enumerate(ENTITY_NAMES):
+    for index, entity_name in enumerate(constants.ENTITY_NAMES):
         SHOULD_REQUEST[index] = 1
         try:
             caches = os.listdir(os.path.join('cache', 'list', entity_name))
@@ -288,8 +227,8 @@ def main():
             poll_auth(now.second)
 
         # add to request queues
-        for entity_name in ENTITY_NAMES:
-            entity_index = ENTITY_INT_MAP[entity_name]
+        for entity_name in constants.ENTITY_NAMES:
+            entity_index = constants.ENTITY_INT_MAP[entity_name]
             if SHOULD_REQUEST[entity_index] == 0:
                 continue
             result = pool.apply_async(
