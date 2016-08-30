@@ -1,13 +1,17 @@
-import uuid
 import datetime
+import logging
 import multiprocessing
 import os
 import pickle
 import time
+import uuid
 
 from korben.cdms_api.connection import rest_connection as api
 
 from lxml import etree
+
+logging.basicConfig()
+LOGGER = logging.getLogger('korben.sync.scrape')
 
 MESSAGE_TAG = '{http://schemas.microsoft.com/ado/2007/08/dataservices/metadata}message'
 
@@ -123,9 +127,11 @@ class CDMSListRequestCache(object):
             etree.fromstring(resp.content)  # check XML is parseable
         except etree.XMLSyntaxError as exc:
             # assume we got deauth'd, trust poll_auth to fix it, don't cache
-            # print("{0} ({1}) {2}s (FAIL)".format(service, skip, time_delta))
+            LOGGER.error(
+                "{0} ({1}) {2}s (DEAUTH)".format(service, skip, time_delta)
+            )
             return False
-        # print("{0} ({1}) {2}s".format(service, skip, time_delta))
+        LOGGER.debug("{0} ({1}) {2}s".format(service, skip, time_delta))
         with open(cache_path, 'wb') as cache_fh:
             pickle.dump(resp, cache_fh)
         return resp
@@ -134,16 +140,10 @@ class CDMSListRequestCache(object):
 def cache_passthrough(cache, entity_name, offset):
     entity_index = ENTITY_INT_MAP[entity_name]
     identifier = uuid.uuid4()
-    # print("Starting {0} {1} {2}".format(entity_name, offset, identifier))
-    resp = cache.list(entity_name, offset)
-    '''
-    print(
-        "RESPONSE {0} {1} {2} {3}".format(
-            getattr(resp, 'status_code', 403), entity_name, offset, identifier
-        )
+    LOGGER.debug(
+        "Starting {0} {1} {2}".format(entity_name, offset, identifier)
     )
-    '''
-
+    resp = cache.list(entity_name, offset)
     if resp is False:
         # means deauth'd
         SHOULD_REQUEST[entity_index] = 1  # mark entity as open
@@ -155,7 +155,11 @@ def cache_passthrough(cache, entity_name, offset):
             etree.fromstring(resp.content)  # check XML is parseable
             root = etree.fromstring(resp.content)
             if not root.findall('{http://www.w3.org/2005/Atom}entry'):
-                # print("No entries {0} {1} {2}".format(entity_name, offset, identifier))
+                LOGGER.info(
+                    "No entries {0} {1} {2}".format(
+                        entity_name, offset, identifier
+                    )
+                )
                 return
         except etree.XMLSyntaxError as exc:
             # need to auth
@@ -163,7 +167,9 @@ def cache_passthrough(cache, entity_name, offset):
         # everything went according to plan
         SHOULD_REQUEST[entity_index] = 1  # mark entity as open
         ENTITY_OFFSETS[entity_index] += 50  # bump offset
-        # print("Completing {0} {1} {2}".format(entity_name, offset, identifier))
+        LOGGER.debug(
+            "Completing {0} {1} {2}".format(entity_name, offset, identifier)
+        )
         return
 
     if not resp.ok:
@@ -174,17 +180,31 @@ def cache_passthrough(cache, entity_name, offset):
                 if 'paging' in root.find(MESSAGE_TAG).text:
                     # let's pretend this means we reached the end and set this
                     # entity type to spent
-                    # print("Spent {0} {1} {2}".format(entity_name, offset, identifier))
+                    LOGGER.info(
+                        "Spent {0} {1} {2}".format(
+                            entity_name, offset, identifier
+                        )
+                    )
                     return
-                # print("Error {0} {1} {2}".format(entity_name, offset, identifier))
+                LOGGER.error(
+                    "Error {0} {1} {2}".format(
+                        entity_name, offset, identifier
+                    )
+                )
             except Exception as exc:
-                # print("Failing {0} {1} {2}".format(entity_name, offset, identifier))
-                SHOULD_REQUEST[entity_index] = 0
+                LOGGER.error(
+                    "Failing {0} {1} {2}".format(
+                        entity_name, offset, identifier
+                    )
+                )
+                SHOULD_REQUEST[entity_index] = 1
                 # something bad, unknown and unknowable happened
                 return
         else:
             SHOULD_REQUEST[entity_index] = 0
-            # print("Failing {0} {1} {2}".format(entity_name, offset, identifier))
+            LOGGER.error(
+                "Failing {0} {1} {2}".format(entity_name, offset, identifier)
+            )
             return
 
 
@@ -196,11 +216,12 @@ def poll_auth(n):
     try:
         etree.fromstring(resp.content)  # check XML is parseable
     except etree.XMLSyntaxError as exc:
-        print('auth required')
+        LOGGER.debug('Authenticating')
         # assume we got the login page, just try again
         AUTH_IN_PROGRESS.value = 1
         api.auth.setup_session(True)
         AUTH_IN_PROGRESS.value = 0
+        LOGGER.debug('Authentication complete')
 
 
 def main():
@@ -216,6 +237,7 @@ def main():
     api.auth.setup_session(True)
     last_polled = 0
     last_report = 0
+    first_loop = True
     pending = []
     while True:
         now = datetime.datetime.now()
@@ -228,14 +250,16 @@ def main():
                 if not result.ready():
                     pending_swap.append(result)
             pending = pending_swap
-            # print("{0}".format(SHOULD_REQUEST[:]))
-            print(
+            LOGGER.debug("{0}".format(SHOULD_REQUEST[:]))
+            waiting = len(list(filter(None, SHOULD_REQUEST[:])))
+            LOGGER.info(
                 "{0} - {1} requests pending, {2} entity types waiting".format(
-                    now.strftime('%Y-%m-%d %H:%M:%S'),
-                    len(pending),
-                    len(list(filter(None, SHOULD_REQUEST[:])))
+                    now.strftime('%Y-%m-%d %H:%M:%S'), len(pending), waiting
                 )
             )
+            if not first_loop and not len(pending) and not waiting:
+                LOGGER.info("Scrape complete!?")
+                exit(0)
 
         # throttling
         if len(pending) >= PROCESSES:
