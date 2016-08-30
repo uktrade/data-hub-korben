@@ -10,12 +10,13 @@ from korben.cdms_api.connection import rest_connection as api
 
 from lxml import etree
 
-logging.basicConfig()
+logging.basicConfig(level=logging.INFO)
+
 LOGGER = logging.getLogger('korben.sync.scrape')
 
 MESSAGE_TAG = '{http://schemas.microsoft.com/ado/2007/08/dataservices/metadata}message'
 
-PROCESSES = 64
+PROCESSES = 128
 FORBIDDEN_ENTITIES = set((
     'Competitor',
     'ConstraintBasedGroup',
@@ -246,18 +247,34 @@ def main():
         if now.second and now.second % 3 == 0 and last_report != now.second:
             last_report = now.second
             pending_swap = []
+            complete = 0
             for result in pending:
                 if not result.ready():
                     pending_swap.append(result)
+                else:
+                    complete += 1
             pending = pending_swap
             LOGGER.debug("{0}".format(SHOULD_REQUEST[:]))
             waiting = len(list(filter(None, SHOULD_REQUEST[:])))
-            LOGGER.info(
-                "{0} - {1} requests pending, {2} entity types waiting".format(
-                    now.strftime('%Y-%m-%d %H:%M:%S'), len(pending), waiting
-                )
+            report_fmt = (
+                "{0} - "
+                "{1} requests pending, "
+                "{2} entity types waiting, "
+                "{3} complete since last report"
             )
-            if not first_loop and not len(pending) and not waiting:
+            LOGGER.info(report_fmt.format(
+                now.strftime('%Y-%m-%d %H:%M:%S'),
+                len(pending),
+                waiting,
+                complete
+            ))
+            done_conditions = (
+                not first_loop,
+                not len(pending),
+                not waiting,
+                not complete,
+            )
+            if all(done_conditions):
                 LOGGER.info("Scrape complete!?")
                 exit(0)
 
@@ -281,3 +298,4 @@ def main():
             )
             pending.append(result)
             SHOULD_REQUEST[entity_index] = 0  # mark entity as closed
+        first_loop = False
