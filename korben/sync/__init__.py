@@ -1,3 +1,8 @@
 'Namespace for sync module'
-__all__ = ('poll', 'traverse')
-from . import poll, traverse  # NOQA
+from . import poll, traverse, scrape  # NOQA
+
+COMMANDS = {
+    'scrape': scrape.main,
+}
+
+__all__ = ('COMMANDS', 'poll', 'traverse', 'scrape')
