@@ -1,6 +1,6 @@
 import uuid
 from django.db import models
-from . import Contact
+from api.models.contact import Contact
 
 
 class Interaction(models.Model):

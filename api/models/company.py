@@ -1,8 +1,6 @@
 import uuid
 from django.db import models
 
-from api.models import CHCompany
-
 
 class Company(models.Model):
 
@@ -16,7 +14,7 @@ class Company(models.Model):
         verbose_name="Company number")
 
     uk_based = models.BooleanField(
-        null=False
+        default=True
     )
 
     business_type = models.CharField(
@@ -33,13 +31,16 @@ class Company(models.Model):
 
     trading_name = models.CharField(
         max_length=160,
-        null=False,
-        blank=False,
+        null=True,
+        blank=True,
         verbose_name="Trading name")
 
-    # sectors
+    sectors = models.TextField(
+        null=True,
+        blank=True
+    )
 
-    website = models.URLField(null=True, verbose_name="Website")
+    website = models.URLField(null=True, blank=True, verbose_name="Website")
 
     number_of_employees = models.CharField(
         max_length=20,
@@ -101,11 +102,21 @@ class Company(models.Model):
         blank=True,
         verbose_name="Account manger")
 
-    currently_exporting = models.BooleanField()
+    countries_of_interest = models.TextField(
+        null=True,
+        blank=True
+    )
 
-    # countries of interest
+    currently_exporting_to = models.TextField(
+        null=True,
+        blank=True
+    )
 
-
+    connections = models.CharField(
+        max_length=200,
+        null=True,
+        blank=True,
+    )
 
     def __str__(self):
         return self.registered_name

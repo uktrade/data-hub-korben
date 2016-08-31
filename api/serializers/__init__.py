@@ -1,3 +1,3 @@
-from .chcompanyserializer import *
-from .searchitemserializer import *
-from .companyserialzer import *
+from .chcompanyserializer import CHCompanySerializer
+from .searchitemserializer import SearchItemSerializer
+from .companyserialzer import CompanySerializer
