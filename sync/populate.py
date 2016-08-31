@@ -1,24 +1,27 @@
 'Parse database rows from XML, throw into database'
+import multiprocessing
 import os
 import sys
 import sqlalchemy as sqla
 from .resp_csv import main as load_table
 
 def main(cache_dir):
+    pool = multiprocessing.Pool()
     engine = sqla.create_engine('postgresql://localhost/cdms_psql')
     metadata = sqla.MetaData(bind=engine)
     metadata.reflect()
     results = []
+    complete = 0
     for entity_name in os.listdir(cache_dir):
-        '''
-        tempfiles, returncode = load_table(metadata, cache_dir, entity_name)
-        if returncode > 0:
-            print("COPY command for {0} failed".format(entity_name))
-        for tempfile in tempfiles:
-            os.unlink(tempfile.name)
-        '''
-        results.append(load_table(metadata, cache_dir, entity_name))
-    for tempfiles, proc in results:
-        proc.wait()
-        for tempfile in tempfiles:
-            os.unlink(tempfile.name)
+        results.append(pool.apply_async(load_table, (metadata, cache_dir, entity_name)))
+    while complete != len(result):  # wait for completion
+        for index, result in results:
+            if not result.ready():
+                continue
+            complete += 1
+            tempfiles, returncode = result.get()
+            if returncode > 0:
+                print("COPY command for {0} failed".format(entity_name))
+            for tempfile in tempfiles:
+                os.unlink(tempfile.name)
+        time.sleep(1)  # don’t spam
