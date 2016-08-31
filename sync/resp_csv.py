@@ -4,7 +4,9 @@ import tempfile
 import os
 import pickle
 import csv
+
 from lxml import etree
+import sqlalchemy as sqla
 
 from . import constants, utils
 
@@ -95,4 +97,4 @@ def main(metadata, resp_dir, entity_name):
                 '-d', 'cdms_psql', '-f', psql_temp.name
             ])
             returncode = psql_proc.wait()
-    return (out_temp, psql_temp), returncode
+    return (out_temp.name, psql_temp.name), returncode
