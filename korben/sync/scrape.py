@@ -4,6 +4,7 @@ import multiprocessing
 import os
 import pickle
 import time
+import random
 import uuid
 
 from korben.cdms_api.connection import rest_connection as api
@@ -18,7 +19,7 @@ LOGGER = logging.getLogger('korben.sync.scrape')
 
 PROCESSES = 128
 
-SHOULD_REQUEST = multiprocessing.Array('i', len(constants.ENTITY_NAMES))
+ENTITY_REQUEST = multiprocessing.Array('i', len(constants.ENTITY_NAMES))
 ENTITY_OFFSETS = multiprocessing.Array('i', len(constants.ENTITY_NAMES))
 AUTH_IN_PROGRESS = multiprocessing.Value('i', 0)
 
@@ -74,7 +75,7 @@ class CDMSListRequestCache(object):
                 "{0} ({1}) {2}s (DEAUTH)".format(service, skip, time_delta)
             )
             return False
-        LOGGER.debug("{0} ({1}) {2}s".format(service, skip, time_delta))
+        LOGGER.info("{0} ({1}) {2}s".format(service, skip, time_delta))
         with open(cache_path, 'wb') as cache_fh:
             pickle.dump(resp, cache_fh)
         return resp
@@ -82,6 +83,7 @@ class CDMSListRequestCache(object):
 
 def cache_passthrough(cdms_api, entity_name, offset):
     entity_index = constants.ENTITY_INT_MAP[entity_name]
+    ENTITY_OFFSETS[entity_index] += 50  # bump offset
     identifier = uuid.uuid4()
     LOGGER.debug(
         "Starting {0} {1} {2}".format(entity_name, offset, identifier)
@@ -89,12 +91,12 @@ def cache_passthrough(cdms_api, entity_name, offset):
     resp = cdms_api.list(entity_name, offset)
     if resp is None:
         # means trash response
-        SHOULD_REQUEST[entity_index] = 0  # kill it
+        ENTITY_REQUEST[entity_index] = -1  # kill it
         return
     if resp is False:
         # means deauth'd
-        SHOULD_REQUEST[entity_index] = 1  # mark entity as open
-                                          # don't increment offset
+        ENTITY_REQUEST[entity_index] -= 1  # this request is over
+                                           # don't increment offset
         return
 
     if resp.ok:
@@ -112,15 +114,15 @@ def cache_passthrough(cdms_api, entity_name, offset):
             # need to auth
             return
         # everything went according to plan
-        SHOULD_REQUEST[entity_index] = 1  # mark entity as open
-        ENTITY_OFFSETS[entity_index] += 50  # bump offset
+        ENTITY_REQUEST[entity_index] -= 1  # this request is complete
         LOGGER.debug(
             "Completing {0} {1} {2}".format(entity_name, offset, identifier)
         )
         return
 
     if not resp.ok:
-        SHOULD_REQUEST[entity_index] = 0
+        ENTITY_REQUEST[entity_index] = -1  # don’t carry on with this entity
+                                           # will get picked up on next run
         if resp.status_code == 500:
             try:
                 root = etree.fromstring(resp.content)
@@ -144,11 +146,11 @@ def cache_passthrough(cdms_api, entity_name, offset):
                         entity_name, offset, identifier
                     )
                 )
-                SHOULD_REQUEST[entity_index] = 1
+                ENTITY_REQUEST[entity_index] -= 1
                 # something bad, unknown and unknowable happened
                 return
         else:
-            SHOULD_REQUEST[entity_index] = 0
+            ENTITY_REQUEST[entity_index] = -1
             LOGGER.error(
                 "Failing {0} {1} {2}".format(entity_name, offset, identifier)
             )
@@ -175,7 +177,7 @@ def main():
     cache = CDMSListRequestCache()
     pool = multiprocessing.Pool(processes=PROCESSES)
     for index, entity_name in enumerate(constants.ENTITY_NAMES):
-        SHOULD_REQUEST[index] = 1
+        ENTITY_REQUEST[index] = 0
         try:
             caches = os.listdir(os.path.join('cache', 'list', entity_name))
             ENTITY_OFFSETS[index] = max(map(int, caches)) + 50
@@ -200,8 +202,20 @@ def main():
                 else:
                     complete += 1
             pending = pending_swap
-            # LOGGER.debug("{0}".format(SHOULD_REQUEST[:]))
-            waiting = len(list(filter(None, SHOULD_REQUEST[:])))
+            LOGGER.debug('Entity request status:')
+            dead = 0
+            for entity_index, request_count in enumerate(ENTITY_REQUEST[:]):
+                if request_count > 0:
+                    LOGGER.debug(
+                        "  {0} {1}".format(
+                            constants.ENTITY_NAMES[entity_index],
+                            request_count
+                        )
+                    )
+                else:
+                    dead += 1
+            print("Entities complete/dead/errored: {0}".format(dead))
+            waiting = len(list(filter(lambda x: x == 0, ENTITY_REQUEST[:])))
             report_fmt = (
                 "{0} - "
                 "{1} requests pending, "
@@ -224,24 +238,30 @@ def main():
                 LOGGER.info("Scrape complete!?")
                 exit(1)  # i doubt it
 
-        # throttling
-        if len(pending) >= PROCESSES:
-            continue
-
         # auth management
         if now.second and now.second % 5 == 0 and last_polled != now.second:
             last_polled = now.second
             poll_auth(now.second)
 
         # add to request queues
-        for entity_name in constants.ENTITY_NAMES:
+        sample = random.sample(
+            constants.ENTITY_NAMES,
+            len(constants.ENTITY_NAMES)
+        )
+        for entity_name in sample:
+
+            # throttling
+            if len(pending) >= PROCESSES:
+                continue
+
             entity_index = constants.ENTITY_INT_MAP[entity_name]
-            if SHOULD_REQUEST[entity_index] == 0:
+            if ENTITY_REQUEST[entity_index] == -1:  # marked as bad
                 continue
             result = pool.apply_async(
                 cache_passthrough,
                 (cache, entity_name, ENTITY_OFFSETS[entity_index]),
             )
             pending.append(result)
-            SHOULD_REQUEST[entity_index] = 0  # mark entity as closed
+            ENTITY_REQUEST[entity_index] += 1  # increment request count for
+                                               # this entity type
         first_loop = False

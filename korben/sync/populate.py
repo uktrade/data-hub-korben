@@ -1,7 +1,7 @@
 'Parse database rows from XML, throw into database'
 import multiprocessing
 import os
-import sys
+import time
 import sqlalchemy as sqla
 from .resp_csv import main as load_table
 
@@ -14,8 +14,8 @@ def main(cache_dir):
     complete = 0
     for entity_name in os.listdir(cache_dir):
         results.append(pool.apply_async(load_table, (metadata, cache_dir, entity_name)))
-    while complete != len(result):  # wait for completion
-        for index, result in results:
+    while complete != len(results):  # wait for completion
+        for result in results:
             if not result.ready():
                 continue
             complete += 1
@@ -23,5 +23,8 @@ def main(cache_dir):
             if returncode > 0:
                 print("COPY command for {0} failed".format(entity_name))
             for tempfile in tempfiles:
-                os.unlink(tempfile.name)
+                try:
+                    os.unlink(tempfile)
+                except FileNotFoundError:
+                    pass
         time.sleep(1)  # don’t spam
