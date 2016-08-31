@@ -71,6 +71,7 @@ class CDMSListRequestCache(object):
                 return None
         except etree.XMLSyntaxError as exc:
             # assume we got deauth'd, trust poll_auth to fix it, don't cache
+            LOGGER.info('Vote of no confidence')
             LOGGER.error(
                 "{0} ({1}) {2}s (DEAUTH)".format(service, skip, time_delta)
             )
@@ -98,7 +99,7 @@ def cache_passthrough(cdms_api, entity_name, offset):
         ENTITY_REQUEST[entity_index] -= 1  # this request is over
                                            # don't increment offset
         ENTITY_OFFSETS[entity_index] -= 50  # debump offset
-        return
+        return False
 
     if resp.ok:
         try:
@@ -201,12 +202,18 @@ def main():
                 if not result.ready():
                     pending_swap.append(result)
                 else:
+                    try:
+                        result_value = result.get()
+                    except:  # >:(
+                        result_value = None
+                    if result_value is False:
+                        exit(1)  # means deauth, just kernel panic and gtfo
                     complete += 1
             pending = pending_swap
             LOGGER.debug('Entity request status:')
             dead = 0
             for entity_index, request_count in enumerate(ENTITY_REQUEST[:]):
-                if request_count > 0:
+                if request_count >= 0:
                     LOGGER.debug(
                         "  {0} {1}".format(
                             constants.ENTITY_NAMES[entity_index],
