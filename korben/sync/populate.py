@@ -1,12 +1,10 @@
-'Unpickle response objects in passed directory, output CSV for loading'
+'Parse database rows from XML, throw into database'
 import os
 import sys
-
 import sqlalchemy as sqla
+from .resp_csv import main as load_table
 
-from resp_csv import main as load_table
-
-def main(cache_dir)
+def main(cache_dir):
     engine = sqla.create_engine('postgresql://localhost/cdms_psql')
     metadata = sqla.MetaData(bind=engine)
     metadata.reflect()
