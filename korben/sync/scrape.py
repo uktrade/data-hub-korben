@@ -97,6 +97,7 @@ def cache_passthrough(cdms_api, entity_name, offset):
         # means deauth'd
         ENTITY_REQUEST[entity_index] -= 1  # this request is over
                                            # don't increment offset
+        ENTITY_OFFSETS[entity_index] -= 50  # debump offset
         return
 
     if resp.ok:

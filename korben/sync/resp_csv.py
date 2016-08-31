@@ -6,7 +6,6 @@ import pickle
 import csv
 
 from lxml import etree
-import sqlalchemy as sqla
 
 from . import constants, utils
 
