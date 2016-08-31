@@ -1,14 +1,17 @@
+'''
+Do some rough “polling” for entities that have a "ModifiedOn" column, this code
+operates under the assumption that there is a fully populated local database.
+'''
 import datetime
 import multiprocessing
-import time
 from lxml import etree
 import sqlalchemy as sqla
 from ..cdms_api.rest.api import CDMSRestApi
-from . import resp_csv
 from . import constants
 from . import utils
 
-CDMS_API = CDMSRestApi()
+CDMS_API = None
+
 
 def reverse_scrape(entity_name, table, col_names, primary_key, offset):
     engine = sqla.create_engine('postgresql://localhost/cdms_psql')
@@ -62,7 +65,9 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
         entity_name, table, col_names, primary_key, offset + 50
     )
 
+
 def main():
+    CDMS_API = CDMSRestApi()
     engine = sqla.create_engine('postgresql://localhost/cdms_psql')
     metadata = sqla.MetaData(bind=engine)
     metadata.reflect()
