@@ -4,10 +4,9 @@ import tempfile
 import os
 import pickle
 import csv
-import sys
 from lxml import etree
 
-from . import utils
+from . import constants, utils
 
 PSQL_STRAIGHT = '''
 COPY "{0}" FROM '{1}' DELIMITER ',' CSV;
@@ -25,9 +24,6 @@ INSERT INTO "{0}" SELECT DISTINCT ON ({2}) * FROM "{0}_dedupe";
 DROP TABLE "{0}_dedupe";
 '''
 
-ENTRY_TAG = '{http://www.w3.org/2005/Atom}entry'
-ATTRIBUTEMASK_TAG = '{http://schemas.microsoft.com/ado/2007/08/dataservices}AttributeMask'
-ID_TAG = '{http://schemas.microsoft.com/ado/2007/08/dataservices}Id'
 
 def unpickle_resp(resp_dir, entity_name, name):
     path = os.path.join(resp_dir, entity_name, name)
@@ -71,10 +67,7 @@ def main(metadata, resp_dir, entity_name):
     for page in pages:
         root = unpickle_resp(resp_dir, entity_name, page)
         rows = []
-        if not root.findall(ENTRY_TAG):
-            print('Breaking')
-            break
-        entries = root.findall(ENTRY_TAG)
+        entries = root.findall(constants.ENTRY_TAG)
         for entry in entries:
             rows.append(utils.entry_row(col_names, None, entry))
         for row in rows:
