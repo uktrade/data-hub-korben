@@ -16,11 +16,23 @@ logging.basicConfig(level=logging.INFO)
 
 LOGGER = logging.getLogger('korben.sync.scrape')
 
+try:
+    with open('popular-entities', 'r') as entity_names_fh:
+        ENTITY_NAMES = [name.strip() for name in entity_names_fh.readlines()]
+    print('Using popular-entities file:')
+    for entity_name in ENTITY_NAMES:
+        print("  {0}".format(entity_name))
+except FileNotFoundError:
+    ENTITY_NAMES = constants.ENTITY_NAMES
 
-PROCESSES = 128
+ENTITY_INT_MAP = {
+    name: index for index, name in enumerate(ENTITY_NAMES)
+}
 
-ENTITY_REQUEST = multiprocessing.Array('i', len(constants.ENTITY_NAMES))
-ENTITY_OFFSETS = multiprocessing.Array('i', len(constants.ENTITY_NAMES))
+PROCESSES = 32
+
+ENTITY_REQUEST = multiprocessing.Array('i', len(ENTITY_NAMES))
+ENTITY_OFFSETS = multiprocessing.Array('i', len(ENTITY_NAMES))
 AUTH_IN_PROGRESS = multiprocessing.Value('i', 0)
 
 
@@ -83,7 +95,7 @@ class CDMSListRequestCache(object):
 
 
 def cache_passthrough(cdms_api, entity_name, offset):
-    entity_index = constants.ENTITY_INT_MAP[entity_name]
+    entity_index = ENTITY_INT_MAP[entity_name]
     ENTITY_OFFSETS[entity_index] += 50  # bump offset
     identifier = uuid.uuid4()
     LOGGER.debug(
@@ -178,7 +190,7 @@ def poll_auth(n):
 def main():
     cache = CDMSListRequestCache()
     pool = multiprocessing.Pool(processes=PROCESSES)
-    for index, entity_name in enumerate(constants.ENTITY_NAMES):
+    for index, entity_name in enumerate(ENTITY_NAMES):
         ENTITY_REQUEST[index] = 0
         try:
             caches = os.listdir(os.path.join('cache', 'list', entity_name))
@@ -216,7 +228,7 @@ def main():
                 if request_count >= 0:
                     LOGGER.debug(
                         "  {0} {1}".format(
-                            constants.ENTITY_NAMES[entity_index],
+                            ENTITY_NAMES[entity_index],
                             request_count
                         )
                     )
@@ -251,18 +263,14 @@ def main():
             last_polled = now.second
             poll_auth(now.second)
 
-        # add to request queues
-        sample = random.sample(
-            constants.ENTITY_NAMES,
-            len(constants.ENTITY_NAMES)
-        )
-        for entity_name in sample:
+        # add to request queues, randomise to not favour early alphabet
+        for entity_name in random.sample(ENTITY_NAMES, len(ENTITY_NAMES)):
 
             # throttling
             if len(pending) >= PROCESSES:
                 continue
 
-            entity_index = constants.ENTITY_INT_MAP[entity_name]
+            entity_index = ENTITY_INT_MAP[entity_name]
             if ENTITY_REQUEST[entity_index] == -1:  # marked as bad
                 continue
             result = pool.apply_async(
