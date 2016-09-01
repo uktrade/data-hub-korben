@@ -96,30 +96,31 @@ def csv_psql(cache_dir, csv_path, table):
     ])
 
 
+def populate_entity(cache_dir, metadata, entity_name):
+    os.makedirs(os.path.join(cache_dir, 'csv', entity_name), exist_ok=True)
+    table = metadata.tables[entity_name + 'Set']
+    rowcount = metadata.bind.connect().execute(table.count()).scalar()
+    '''
+    if rowcount and rowcount % 50:
+        print(
+            '"{0}" appears to be fully populated, skipping'.format(
+                table.name
+            )
+        )
+        continue
+    '''
+    col_names = [col.name for col in table.columns]
+    csv_paths = entity_csv(cache_dir, col_names, entity_name, rowcount)
+    for csv_path in csv_paths:
+        try:
+            csv_psql(cache_dir, csv_path, table)
+        except subprocess.CalledProcessError:
+            print("COPY command for {0} failed".format(csv_path))
+
+
 def main(cache_dir='cache'):
     engine = sqla.create_engine('postgresql://localhost/cdms_psql')
     metadata = sqla.MetaData(bind=engine)
     metadata.reflect()
-    connection = engine.connect()
     for entity_name in os.listdir(os.path.join(cache_dir, 'list')):
-        os.makedirs(
-            os.path.join(cache_dir, 'csv', entity_name), exist_ok=True
-        )
-        table = metadata.tables[entity_name + 'Set']
-        rowcount = connection.execute(table.count()).scalar()
-        '''
-        if rowcount and rowcount % 50:
-            print(
-                '"{0}" appears to be fully populated, skipping'.format(
-                    table.name
-                )
-            )
-            continue
-        '''
-        col_names = [col.name for col in table.columns]
-        csv_paths = entity_csv(cache_dir, col_names, entity_name, rowcount)
-        for csv_path in csv_paths:
-            try:
-                csv_psql(cache_dir, csv_path, table)
-            except subprocess.CalledProcessError:
-                print("COPY command for {0} failed".format(csv_path))
+        populate_entity(cache_dir, metadata, entity_name)
