@@ -1,6 +1,6 @@
 import uuid
 from django.db import models
-from . import Company
+from api.models.company import Company
 
 
 class Contact(models.Model):

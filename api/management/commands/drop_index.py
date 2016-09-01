@@ -1,7 +1,7 @@
 from elasticsearch.client import IndicesClient
 from django.conf import settings
 from django.core.management.base import BaseCommand
-from api.models import SearchItem
+from api.models.searchitem import SearchItem
 
 
 class Command(BaseCommand):

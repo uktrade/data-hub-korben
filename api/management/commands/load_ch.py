@@ -5,7 +5,8 @@ from django.conf import settings
 from django.core.management.base import BaseCommand
 from elasticsearch.client import IndicesClient
 from elasticsearch.helpers import bulk
-from api.models import CHCompany, SearchItem
+from api.models.searchitem import SearchItem
+from api.models.chcompany import CHCompany
 from api.serializers import SearchItemSerializer
 
 DATE_FIELDS = (

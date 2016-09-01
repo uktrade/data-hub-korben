@@ -1,5 +1,5 @@
 from rest_framework import serializers
-from api.models import Company
+from api.models.company import Company
 
 
 class CompanySerializer(serializers.ModelSerializer):
@@ -12,6 +12,7 @@ class CompanySerializer(serializers.ModelSerializer):
             'business_type',
             'registered_name',
             'trading_name',
+            'sectors',
             'website',
             'number_of_employees',
             'annual_turnover',
@@ -23,5 +24,7 @@ class CompanySerializer(serializers.ModelSerializer):
             'trading_address_postcode',
             'region',
             'account_manager',
-            'currently_exporting'
+            'countries_of_interest',
+            'currently_exporting_to',
+            'connections'
         )
