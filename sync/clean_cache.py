@@ -17,7 +17,11 @@ def main(cache_dir, dry_run=False):
             path = os.path.join(cache_dir, entity_name, page)
             with open(path, 'rb') as fh:
                 resp = pickle.load(fh)
-            root = etree.fromstring(resp.content)
+            try:
+                root = etree.fromstring(resp.content)
+            except etree.XMLSyntaxError:
+                print("Bad resp {0} {1}".format(entity_name, page))
+                continue
             if not root.findall(constants.ENTRY_TAG):
                 empty.append(path)
             else:

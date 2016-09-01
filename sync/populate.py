@@ -32,37 +32,54 @@ def unpickle_resp(cache_dir, entity_name, name):
         return
 
 
-def entity_csv(cache_dir, col_names, entity_name):
+def resp_csv(cache_dir, csv_dir, col_names, entity_name, page):
+    root = unpickle_resp(cache_dir, entity_name, page)
+    if root is None:
+        print("Unpickle of {0} failed on page {1}".format(
+            entity_name, page
+        ))
+        return None, None
+    csv_path = os.path.join(csv_dir, page)
+    if os.path.isfile(csv_path):
+        '''
+        print("CSV exists for {0}/{1}, using existing data".format(
+            entity_name, page
+        ))
+        '''
+        return None, csv_path
+    csv_fh = open(csv_path, 'w')
+    writer = csv.DictWriter(csv_fh, col_names, dialect='excel')
+    # print(index + 1, end=' ', flush=True)
+    entries = root.findall(constants.ENTRY_TAG)
+    rowcount = 0
+    for entry in entries:
+        writer.writerow(utils.entry_row(col_names, None, entry))
+        rowcount += 1
+    csv_fh.close()
+    return rowcount, csv_path
+
+
+def entity_csv(cache_dir, col_names, entity_name, start=0):
     csv_dir = os.path.join(cache_dir, 'csv', entity_name)
-    pages = sorted(
-        os.listdir(os.path.join(cache_dir, 'list', entity_name)),
-        key=int,
+    pages = list(
+        filter(
+            lambda P: int(P) > start,
+            sorted(
+                os.listdir(os.path.join(cache_dir, 'list', entity_name)),
+                key=int,
+            )
+        )
     )
     print("{0} pages for {1}".format(len(pages), entity_name))
     csv_paths = []
     rowcount = 0
-    for index, page in enumerate(pages):
-        root = unpickle_resp(cache_dir, entity_name, page)
-        if root is None:
-            print("Unpickle of {0} failed on page {1}".format(
-                entity_name, page
-            ))
-            continue
-        csv_path = os.path.join(csv_dir, page)
-        if os.path.isfile(csv_path):
-            print("CSV exists for {0}/{1}, using existing data".format(
-                entity_name, page
-            ))
-            continue
-        csv_fh = open(csv_path, 'w')
-        writer = csv.DictWriter(csv_fh, col_names, dialect='excel')
-        # print(index + 1, end=' ', flush=True)
-        entries = root.findall(constants.ENTRY_TAG)
-        for entry in entries:
-            writer.writerow(utils.entry_row(col_names, None, entry))
-            rowcount += 1
-        csv_fh.close()
-        csv_paths.append(csv_path)
+    for page in pages:
+        n_rows, csv_path = resp_csv(
+            cache_dir, csv_dir, col_names, entity_name, page
+        )
+        if n_rows and csv_path:
+            csv_paths.append(csv_path)
+            rowcount += n_rows
     print("{0} rows for {1}".format(rowcount, entity_name))
     print("")
     return csv_paths
@@ -89,15 +106,18 @@ def main(cache_dir='cache'):
             os.path.join(cache_dir, 'csv', entity_name), exist_ok=True
         )
         table = metadata.tables[entity_name + 'Set']
-        if connection.execute(table.count()).scalar():
+        rowcount = connection.execute(table.count()).scalar()
+        '''
+        if rowcount and rowcount % 50:
             print(
-                '"{0}" appears already to be populated, skipping'.format(
+                '"{0}" appears to be fully populated, skipping'.format(
                     table.name
                 )
             )
             continue
+        '''
         col_names = [col.name for col in table.columns]
-        csv_paths = entity_csv(cache_dir, col_names, entity_name)
+        csv_paths = entity_csv(cache_dir, col_names, entity_name, rowcount)
         for csv_path in csv_paths:
             try:
                 csv_psql(cache_dir, csv_path, table)
