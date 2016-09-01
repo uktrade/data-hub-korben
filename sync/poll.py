@@ -55,7 +55,9 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
             result = connection.execute(table.insert().values(**row))
             assert result.rowcount == 1
             new_rows += 1
-    print("{0} new and {1} updated for {2}".format(new_rows, updated_rows, entity_name))
+    print("{2}\n INSERT {0}\n UPDATE {1}".format(
+        new_rows, updated_rows, entity_name
+    ))
     if new_rows + updated_rows < 50:
         return offset + new_rows + updated_rows
     print("Continuing reverse scrape for {0} (from offset {1})".format(entity_name, offset))
