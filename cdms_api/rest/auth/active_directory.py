@@ -157,18 +157,4 @@ class ActiveDirectoryAuth:
         if data:
             data = json.dumps(data)
         resp = getattr(self.session, verb)(url, data=data)
-
-        if resp.status_code >= 400:
-            logger.debug('Got CDMS error (%s): %s' % (resp.status_code, resp.content))
-
-            EXCEPTIONS_MAP = {
-                401: CDMSUnauthorizedException,
-                404: CDMSNotFoundException
-            }
-            ExceptionClass = EXCEPTIONS_MAP.get(resp.status_code, ErrorResponseException)
-            raise ExceptionClass(
-                resp.content,
-                status_code=resp.status_code
-            )
-
         return resp
