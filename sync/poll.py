@@ -69,6 +69,7 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
 
 
 def main():
+    global CDMS_API
     CDMS_API = CDMSRestApi()
     engine = sqla.create_engine('postgresql://localhost/cdms_psql')
     metadata = sqla.MetaData(bind=engine)
@@ -78,7 +79,7 @@ def main():
             x.strip() for x in fh.readlines()
             if x.strip() not in constants.FORBIDDEN_ENTITIES
         ]
-    pool = multiprocessing.Pool()
+    # pool = multiprocessing.Pool()
     results = []
     CDMS_API.auth.setup_session()
     for entity_name in pollable_entities:
@@ -88,7 +89,6 @@ def main():
         primary_key = next(
             col.name for col in table.primary_key.columns.values()
         )
-        '''
         print("Starting reverse scrape for {0}".format(entity_name))
         reverse_scrape(entity_name, table, col_names, primary_key, 0)
         '''
@@ -96,6 +96,8 @@ def main():
             reverse_scrape, (entity_name, table, col_names, primary_key, 0)
         )
         results.append(result)
+
     pool.close()
     pool.join()
     print([x.get() for x in results])
+    '''
