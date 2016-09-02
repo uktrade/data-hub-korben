@@ -118,9 +118,13 @@ def populate_entity(cache_dir, metadata, entity_name):
             print("COPY command for {0} failed".format(csv_path))
 
 
-def main(cache_dir='cache'):
-    engine = sqla.create_engine('postgresql://localhost/cdms_psql')
-    metadata = sqla.MetaData(bind=engine)
-    metadata.reflect()
+def main(cache_dir='cache', entity_name=None, metadata=None):
+    if not metadata:
+        engine = sqla.create_engine('postgresql://localhost/cdms_psql')
+        metadata = sqla.MetaData(bind=engine)
+        metadata.reflect()
+    if entity_name:
+        populate_entity(cache_dir, metadata, entity_name)
+        return
     for entity_name in os.listdir(os.path.join(cache_dir, 'list')):
         populate_entity(cache_dir, metadata, entity_name)
