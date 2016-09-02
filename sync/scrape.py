@@ -290,6 +290,7 @@ def main():
                             spent.add(entity_chunk.entity_name)
                         with open(os.path.join('cache', 'spent'), 'wb') as spent_fh:
                             pickle.dump(spent, spent_fh)
+                        LOGGER.info("{0} ({1}) spent".format(entity_page.entity_name, entity_page.offset))
                     if isinstance(entity_page.exception, EntityPageDeAuth):
                         api.setup_sesstion(True)
             entity_chunk.done()  # do a bit of polling
