@@ -100,7 +100,7 @@ def cdms_list(entity_name, offset):
         timing_fh.write(str(time_delta))
     with open(cache_path, 'wb') as cache_fh:
         pickle.dump(resp, cache_fh)
-    LOGGER.info("{0} ({1})".format(entity_name, offset))
+    LOGGER.info("{0} ({1}) {2}s".format(entity_name, offset, time_delta))
     return resp
 
 
