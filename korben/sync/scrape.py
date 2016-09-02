@@ -1,4 +1,5 @@
 import datetime
+import enum
 import logging
 import multiprocessing
 import os
@@ -8,9 +9,10 @@ import random
 import uuid
 
 from korben.cdms_api.connection import rest_connection as api
-from . import constants
 
 from lxml import etree
+
+from . import constants
 
 logging.basicConfig(level=logging.INFO)
 
@@ -25,15 +27,8 @@ try:
 except FileNotFoundError:
     ENTITY_NAMES = constants.ENTITY_NAMES
 
-ENTITY_INT_MAP = {
-    name: index for index, name in enumerate(ENTITY_NAMES)
-}
-
-PROCESSES = 32
-
-ENTITY_REQUEST = multiprocessing.Array('i', len(ENTITY_NAMES))
-ENTITY_OFFSETS = multiprocessing.Array('i', len(ENTITY_NAMES))
-AUTH_IN_PROGRESS = multiprocessing.Value('i', 0)
+PROCESSES = 128
+CHUNKSIZE = 5000
 
 
 def file_leaf(*args):
@@ -42,242 +37,271 @@ def file_leaf(*args):
     return path
 
 
-def list_cache_key(service, offset):
-    return file_leaf('cache', 'list', service, offset)
+def list_cache_key(entity_name, offset):
+    return file_leaf('cache', 'list', entity_name, offset)
 
 
-def timing_record(service, offset):
-    return file_leaf('cache', 'timing', service, offset)
+def timing_record(entity_name, offset):
+    return file_leaf('cache', 'timing', entity_name, offset)
 
-
-class CDMSListRequestCache(object):
-
-    def holds(self, service, skip):
-        path = list_cache_key(service, skip)
-        if not os.path.isfile(path):
-            return False
-        try:
-            with open(path, 'rb') as cache_fh:
-                resp = pickle.load(cache_fh)
-                etree.fromstring(resp.content)
-        except etree.XMLSyntaxError as exc:
-            return False
-        return True
-
-    def list(self, service, skip):
-        cache_path = list_cache_key(service, skip)
-        if self.holds(service, skip):
-            with open(cache_path, 'rb') as cache_fh:
-                return pickle.load(cache_fh)
-        start_time = datetime.datetime.now()
-        resp = api.list(service, skip=skip)
-        with open(timing_record(service, skip), 'w') as timing_fh:
-            time_delta = (datetime.datetime.now() - start_time).seconds
-            timing_fh.write(str(time_delta))
-        if not resp.ok:
-            return resp  # don't cache fails
-        try:
-            root = etree.fromstring(resp.content)  # check XML is parseable
-            if not root.findall('{http://www.w3.org/2005/Atom}entry'):
-                # some weird crap from M$ here
-                return None
-        except etree.XMLSyntaxError as exc:
-            # assume we got deauth'd, trust poll_auth to fix it, don't cache
-            LOGGER.info('Vote of no confidence')
-            LOGGER.error(
-                "{0} ({1}) {2}s (DEAUTH)".format(service, skip, time_delta)
-            )
-            return False
-        LOGGER.info("{0} ({1}) {2}s".format(service, skip, time_delta))
-        with open(cache_path, 'wb') as cache_fh:
-            pickle.dump(resp, cache_fh)
-        return resp
-
-
-def cache_passthrough(cdms_api, entity_name, offset):
-    entity_index = ENTITY_INT_MAP[entity_name]
-    ENTITY_OFFSETS[entity_index] += 50  # bump offset
-    identifier = uuid.uuid4()
-    LOGGER.debug(
-        "Starting {0} {1} {2}".format(entity_name, offset, identifier)
-    )
-    resp = cdms_api.list(entity_name, offset)
-    if resp is None:
-        # means trash response
-        ENTITY_REQUEST[entity_index] = -1  # kill it
-        return
-    if resp is False:
-        # means deauth'd
-        ENTITY_REQUEST[entity_index] -= 1  # this request is over
-                                           # don't increment offset
-        ENTITY_OFFSETS[entity_index] -= 50  # debump offset
-        return False
-
-    if resp.ok:
-        try:
-            etree.fromstring(resp.content)  # check XML is parseable
-            root = etree.fromstring(resp.content)
-            if not root.findall('{http://www.w3.org/2005/Atom}entry'):
-                LOGGER.info(
-                    "No entries {0} {1} {2}".format(
-                        entity_name, offset, identifier
-                    )
-                )
-                return
-        except etree.XMLSyntaxError as exc:
-            # need to auth
-            return
-        # everything went according to plan
-        ENTITY_REQUEST[entity_index] -= 1  # this request is complete
-        LOGGER.debug(
-            "Completing {0} {1} {2}".format(entity_name, offset, identifier)
-        )
-        return
-
-    if not resp.ok:
-        ENTITY_REQUEST[entity_index] = -1  # don’t carry on with this entity
-                                           # will get picked up on next run
-        if resp.status_code == 500:
-            try:
-                root = etree.fromstring(resp.content)
-                if 'paging' in root.find(constants.MESSAGE_TAG).text:
-                    # let's pretend this means we reached the end and set this
-                    # entity type to spent
-                    LOGGER.info(
-                        "Spent {0} {1} {2}".format(
-                            entity_name, offset, identifier
-                        )
-                    )
-                    return
-                LOGGER.error(
-                    "Error {0} {1} {2}".format(
-                        entity_name, offset, identifier
-                    )
-                )
-            except Exception as exc:
-                LOGGER.error(
-                    "Failing {0} {1} {2}".format(
-                        entity_name, offset, identifier
-                    )
-                )
-                ENTITY_REQUEST[entity_index] -= 1
-                # something bad, unknown and unknowable happened
-                return
-        else:
-            ENTITY_REQUEST[entity_index] = -1
-            LOGGER.error(
-                "Failing {0} {1} {2}".format(entity_name, offset, identifier)
-            )
-            return
-
-
-def poll_auth(n):
-    resp = api.list('FixedMonthlyFiscalCalendar')  # requests here seem fast
-    if not resp.ok:
-        time.sleep(1)
-        return poll_auth(True)
+def is_cached(entity_name, offset):
+    path = list_cache_key(entity_name, offset)
+    if not os.path.isfile(path):
+        return False, path
     try:
-        etree.fromstring(resp.content)  # check XML is parseable
+        with open(path, 'rb') as cache_fh:
+            resp = pickle.load(cache_fh)
+            etree.fromstring(resp.content)
     except etree.XMLSyntaxError as exc:
-        LOGGER.debug('Authenticating')
-        # assume we got the login page, just try again
-        AUTH_IN_PROGRESS.value = 1
-        api.auth.setup_session(True)
-        AUTH_IN_PROGRESS.value = 0
-        LOGGER.debug('Authentication complete')
+        return False, path
+    return True, path
+
+
+def cdms_list(entity_name, offset):
+    cached, cache_path = is_cached(entity_name, offset)
+    if cached:
+        with open(cache_path, 'rb') as cache_fh:
+            return pickle.load(cache_fh)
+    start_time = datetime.datetime.now()
+    resp = api.list(entity_name, skip=offset)
+    time_delta = (datetime.datetime.now() - start_time).seconds
+    if not resp.ok:
+        try:
+            root = etree.fromstring(resp.content)
+            if 'paging' in root.find(constants.MESSAGE_TAG).text:
+                raise EntityPageNoData(
+                    "500 page out {0} {1}".format(
+                        entity_name, offset
+                    )
+                )
+        except AttributeError as exc:
+            # no message in xml
+            raise EntityPageDynamicsBombed(
+                "{0} {1}".format(entity_name, offset)
+            )
+        except etree.XMLSyntaxError as exc:
+            # no xml in xml
+            raise EntityPageDynamicsBombed(
+                "{0} {1}".format(entity_name, offset)
+            )
+    try:
+        root = etree.fromstring(resp.content)  # check XML is parseable
+        if not root.findall('{http://www.w3.org/2005/Atom}entry'):
+            # paged out in a useless way
+            raise EntityPageNoData(
+                "{0} {1}".format(entity_name, offset)
+            )
+    except etree.XMLSyntaxError as exc:
+        raise EntityPageDeAuth(
+            "{0} {1}".format(entity_name, offset)
+        )
+    # record our expensive network request
+    with open(timing_record(entity_name, offset), 'w') as timing_fh:
+        timing_fh.write(str(time_delta))
+    with open(cache_path, 'wb') as cache_fh:
+        pickle.dump(resp, cache_fh)
+    LOGGER.info("{0} ({1})".format(entity_name, offset))
+    return resp
+
+
+class EntityPageException(Exception):
+    pass
+
+
+class EntityPageDynamicsBombed(EntityPageException):
+    pass
+
+
+class EntityPageNoData(EntityPageException):
+    pass
+
+
+class EntityPageDeAuth(EntityPageException):
+    pass
+
+
+EntityPageState = enum.Enum(
+    'EntityPageState',
+    (
+            'initial',
+#               |
+#               |
+            'pending',
+#             /   \
+#            /     \
+       'failed', 'complete',
+    )
+)
+
+EntityChunkState = enum.Enum(
+    'EntityChunkState',
+    (
+           'incomplete',
+#             /   \
+#            /     \
+        'spent', 'complete',
+    )
+)
+
+is_pending = lambda entity_page: entity_page.state == EntityPageState.pending
+
+class EntityChunk(object):
+
+    state = EntityChunkState.incomplete
+
+    def __init__(self, entity_name, offset_start, offset_end):
+        self.entity_name = entity_name
+        self.offset_start = offset_start
+        self.offset_end = offset_end
+        self.entity_pages = []
+        for offset in range(offset_start, offset_end, 50):
+            self.entity_pages.append(EntityPage(entity_name, offset))
+
+    def __str__(self):
+        return "<EntityChunk {0} ({1}-{2})>".format(
+            self.entity_name, self.offset_start, self.offset_end
+        )
+
+
+    def pending(self):
+        'Return number of pending tasks'
+        return len(list(filter(is_pending, self.entity_pages)))
+
+    def start(self, pool):
+        'Start the first "unstarted" EntityPage'
+        for entity_page in self.entity_pages:
+            if entity_page.state == EntityPageState.initial:
+                entity_page.start(pool)
+                break
+
+    def done(self):
+        'Are all the tasks complete'
+        done = (
+            entity_page.state == EntityPageState.complete
+            for entity_page in self.entity_pages
+        )
+        if all(done):
+            self.state = EntityChunkState.complete
+
+
+
+class EntityPage(object):
+
+    state = EntityPageState.initial
+    task = None
+    entries = None
+    rows_inserted = None
+    exception = None
+
+    def __init__(self, entity_name, offset):
+        self.entity_name = entity_name
+        self.offset = offset
+
+    def __str__(self):
+        return "<EntityPage {0} ({1})>".format(self.entity_name, self.offset)
+
+    def reset(self):
+        self.state = EntityPageState.initial
+        self.task = None
+        self.entries = None
+        self.rows_inserted = None
+        self.exception = None
+
+
+    def start(self, pool):
+        self.task = pool.apply_async(cdms_list, (
+            self.entity_name, self.offset
+        ))
+        self.state = EntityPageState.pending
+
+    def poll(self):
+        if self.state == EntityPageState.initial:
+            return  # not started
+        if not self.task.ready():
+            return  # pending
+        try:
+            result = self.task.get()
+            self.state = EntityPageState.complete
+        except (EntityPageNoData, EntityPageDeAuth) as exc:
+            self.exception = exc
+            self.state = EntityPageState.failed
+        except EntityPageDynamicsBombed:
+            self.reset()
 
 
 def main():
-    cache = CDMSListRequestCache()
     pool = multiprocessing.Pool(processes=PROCESSES)
-    for index, entity_name in enumerate(ENTITY_NAMES):
-        ENTITY_REQUEST[index] = 0
+    entity_chunks = []
+    spent_path = os.path.join('cache', 'spent')
+    try:
+        with open(spent_path, 'rb') as spent_fh:
+            spent = pickle.load(spent_fh)
+    except FileNotFoundError:
+        spent = set()
+        with open(spent_path, 'wb') as spent_fh:
+            pickle.dump(spent, spent_fh)
+    print("The follow entities are spent, skipping:")
+    for entity_name in spent:
+        print("  {0}".format(entity_name))
+    for entity_name in set(constants.ENTITY_NAMES) - spent:
         try:
             caches = os.listdir(os.path.join('cache', 'list', entity_name))
-            ENTITY_OFFSETS[index] = max(map(int, caches)) + 50
+            start = max(map(int, caches)) + 50
         except (FileNotFoundError, ValueError) as exc:
-            ENTITY_OFFSETS[index] = 0
+            start = 0
+        end = start + CHUNKSIZE
+        entity_chunks.append(EntityChunk(entity_name, start, end))
+
     api.auth.setup_session(True)
-    last_polled = 0
     last_report = 0
-    first_loop = True
-    pending = []
-    while True:
+
+    while True:  # take a deep breath
+
         now = datetime.datetime.now()
+        report_conditions = (
+            now.second,
+            now.second % 5 == 0,
+            last_report != now.second,
+        )
+        if not all(report_conditions):
+            continue  # this isn’t a report loop
 
-        # reporting, pending tracking
-        if now.second and now.second % 3 == 0 and last_report != now.second:
-            last_report = now.second
-            pending_swap = []
-            complete = 0
-            for result in pending:
-                if not result.ready():
-                    pending_swap.append(result)
-                else:
-                    try:
-                        result_value = result.get()
-                    except:  # >:(
-                        result_value = None
-                    if result_value is False:
-                        exit(1)  # means deauth, just kernel panic and gtfo
-                    complete += 1
-            pending = pending_swap
-            LOGGER.debug('Entity request status:')
-            dead = 0
-            for entity_index, request_count in enumerate(ENTITY_REQUEST[:]):
-                if request_count >= 0:
-                    LOGGER.debug(
-                        "  {0} {1}".format(
-                            ENTITY_NAMES[entity_index],
-                            request_count
-                        )
-                    )
-                else:
-                    dead += 1
-            print("Entities complete/dead/errored: {0}".format(dead))
-            waiting = len(list(filter(lambda x: x == 0, ENTITY_REQUEST[:])))
-            report_fmt = (
-                "{0} - "
-                "{1} requests pending, "
-                "{2} entity types waiting, "
-                "{3} complete since last report"
+        last_report = now.second
+
+        for entity_chunk in random.sample(entity_chunks, len(entity_chunks)):
+            pending = sum(
+                entity_chunk.pending() for entity_chunk in entity_chunks
             )
-            LOGGER.info(report_fmt.format(
-                now.strftime('%Y-%m-%d %H:%M:%S'),
-                len(pending),
-                waiting,
-                complete
-            ))
-            done_conditions = (
-                not first_loop,
-                not len(pending),
-                not waiting,
-                not complete,
-            )
-            if all(done_conditions):
-                LOGGER.info("Scrape complete!?")
-                exit(1)  # i doubt it
-
-        # auth management
-        if now.second and now.second % 5 == 0 and last_polled != now.second:
-            last_polled = now.second
-            poll_auth(now.second)
-
-        # add to request queues, randomise to not favour early alphabet
-        for entity_name in random.sample(ENTITY_NAMES, len(ENTITY_NAMES)):
 
             # throttling
-            if len(pending) >= PROCESSES:
-                continue
+            if pending <= PROCESSES:
+                if entity_chunk.state == EntityChunkState.incomplete:
+                    entity_chunk.start(pool)
 
-            entity_index = ENTITY_INT_MAP[entity_name]
-            if ENTITY_REQUEST[entity_index] == -1:  # marked as bad
-                continue
-            result = pool.apply_async(
-                cache_passthrough,
-                (cache, entity_name, ENTITY_OFFSETS[entity_index]),
+            for entity_page in entity_chunk.entity_pages:
+                entity_page.poll()
+                if entity_page.state == EntityPageState.complete:
+                    continue
+                if entity_page.state == EntityPageState.failed:
+                    if isinstance(entity_page.exception, EntityPageNoData):
+                        entity_chunk.state = EntityChunkState.spent
+                        with open(os.path.join('cache', 'spent'), 'rb') as spent_fh:
+                            spent = pickle.load(spent_fh)
+                            spent.add(entity_chunk.entity_name)
+                        with open(os.path.join('cache', 'spent'), 'wb') as spent_fh:
+                            pickle.dump(spent, spent_fh)
+                    if isinstance(entity_page.exception, EntityPageDeAuth):
+                        api.setup_sesstion(True)
+            entity_chunk.done()  # do a bit of polling
+
+        done = (
+            (
+                entity_chunk.state == EntityChunkState.complete
+                or
+                entity_chunk.state == EntityChunkState.spent
             )
-            pending.append(result)
-            ENTITY_REQUEST[entity_index] += 1  # increment request count for
-                                               # this entity type
-        first_loop = False
+            for entity_chunk in entity_chunks
+        )
+        if all(done):
+            exit(1)  # move on
+        time.sleep(1)  # don’t spam
