@@ -6,7 +6,6 @@ import os
 import pickle
 import time
 import random
-import uuid
 
 from korben.cdms_api.connection import rest_connection as api
 
@@ -27,8 +26,8 @@ try:
 except FileNotFoundError:
     ENTITY_NAMES = constants.ENTITY_NAMES
 
-PROCESSES = 128
-CHUNKSIZE = 5000
+PROCESSES = 32
+CHUNKSIZE = 500
 
 
 def file_leaf(*args):
@@ -240,9 +239,7 @@ def main():
         spent = set()
         with open(spent_path, 'wb') as spent_fh:
             pickle.dump(spent, spent_fh)
-    print("The follow entities are spent, skipping:")
-    for entity_name in spent:
-        print("  {0}".format(entity_name))
+    print("The follow entities are spent, skipping {0} entity types".format(len(spent)))
     for entity_name in set(constants.ENTITY_NAMES) - spent:
         try:
             caches = os.listdir(os.path.join('cache', 'list', entity_name))
@@ -266,9 +263,15 @@ def main():
         if not all(report_conditions):
             continue  # this isn’t a report loop
 
+        print("Ping! {0}".format(now))
+
         last_report = now.second
 
         for entity_chunk in random.sample(entity_chunks, len(entity_chunks)):
+
+            if entity_chunk.state in (EntityChunkState.complete, EntityChunkState.spent):
+                continue
+
             pending = sum(
                 entity_chunk.pending() for entity_chunk in entity_chunks
             )
