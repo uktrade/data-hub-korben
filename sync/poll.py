@@ -3,19 +3,25 @@ Do some rough “polling” for entities that have a "ModifiedOn" column, this c
 operates under the assumption that there is a fully populated local database.
 '''
 import datetime
+import logging
 import multiprocessing
+
 from lxml import etree
 import sqlalchemy as sqla
+
 from ..cdms_api.rest.api import CDMSRestApi
 from . import constants
 from . import utils
 
 CDMS_API = None
+ENGINE = None
+
+LOGGER = logging.getLogger('korben.sync.poll')
+logging.basicConfig(level=logging.INFO)
 
 
 def reverse_scrape(entity_name, table, col_names, primary_key, offset):
-    engine = sqla.create_engine('postgresql://localhost/cdms_psql')
-    connection = engine.connect()
+    connection = ENGINE.connect()
     resp = CDMS_API.list(entity_name, order_by='ModifiedOn desc', skip=offset)
     rows = []
     for entry in etree.fromstring(resp.content).iter(constants.ENTRY_TAG):
@@ -39,7 +45,7 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
                     row['ModifiedOn'], "%Y-%m-%d %H:%M:%S"
                 )
             except TypeError:
-                print("Bad data in {0}".format(entity_name))
+                LOGGER.error("Bad data in {0}".format(entity_name))
                 continue
             uuid, local_modified = in_db
             if local_modified < remote_modified:
@@ -55,14 +61,17 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
             result = connection.execute(table.insert().values(**row))
             assert result.rowcount == 1
             new_rows += 1
-    print("{2}\n INSERT {0}\n UPDATE {1}".format(
+    LOGGER.info("{2}\n INSERT {0}\n UPDATE {1}".format(
         new_rows, updated_rows, entity_name
     ))
     if new_rows + updated_rows < 50:
         return offset + new_rows + updated_rows
-    print("Continuing reverse scrape for {0} (from offset {1})".format(entity_name, offset))
+    LOGGER.info(
+        "Continuing reverse scrape for {0} (from offset {1})".format(
+            entity_name, offset
+        )
+    )
     connection.close()
-    engine.dispose()
     return reverse_scrape(
         entity_name, table, col_names, primary_key, offset + 50
     )
@@ -70,6 +79,10 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
 
 def main():
     global CDMS_API
+    global ENGINE
+    ENGINE = sqla.create_engine(
+        'postgresql://localhost/cdms_psql', pool_size=20, max_overflow=0
+    )
     CDMS_API = CDMSRestApi()
     engine = sqla.create_engine('postgresql://localhost/cdms_psql')
     metadata = sqla.MetaData(bind=engine)
@@ -79,7 +92,7 @@ def main():
             x.strip() for x in fh.readlines()
             if x.strip() not in constants.FORBIDDEN_ENTITIES
         ]
-    # pool = multiprocessing.Pool()
+    pool = multiprocessing.Pool()
     results = []
     CDMS_API.auth.setup_session()
     for entity_name in pollable_entities:
@@ -89,7 +102,8 @@ def main():
         primary_key = next(
             col.name for col in table.primary_key.columns.values()
         )
-        print("Starting reverse scrape for {0}".format(entity_name))
+        '''
+        LOGGER.info("Starting reverse scrape for {0}".format(entity_name))
         reverse_scrape(entity_name, table, col_names, primary_key, 0)
         '''
         result = pool.apply_async(
@@ -99,5 +113,4 @@ def main():
 
     pool.close()
     pool.join()
-    print([x.get() for x in results])
-    '''
+    ENGINE.dispose()
