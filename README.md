@@ -16,16 +16,16 @@ be written back to CDMS.
  - [Search](#search)
  - [Client](#client)
 
-# Sync
+# [Sync](korben/sync)
 Pull data from CDMS, service to poll CDMS for new data, relation traversal for
 loading object dependencies. Make appropriate calls to ETL with fresh data.
 
-# ETL
+# [ETL](korben/sync)
 Map data from CDMS schema to Django schema, populate/update Django database.
 
-# Search
+# [Search](korben/sync)
 Load data into ElasticSearch.
 
-# Client
+# [Client](korben/sync)
 Provide CRUD functions which talk about Django model objects, but handle
 individual CDMS sync operations “behind the scenes”. Provide search API.
