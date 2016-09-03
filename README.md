@@ -9,13 +9,6 @@ search indexing. It offers a web API for search, to trigger sync. It also
 provides a Django client library for “reverse ETL” allowing Django objects to
 be written back to CDMS.
 
-# Contents
-
- - [Sync](#sync)
- - [ETL](#etl)
- - [Search](#search)
- - [Client](#client)
-
 # [Sync](korben/sync)
 Pull data from CDMS, service to poll CDMS for new data, relation traversal for
 loading object dependencies. Make appropriate calls to ETL with fresh data.

@@ -1,0 +1,12 @@
+cryptography
+django
+psycopg2
+pyquery
+pyslet
+pyyaml
+requests
+requests_ntlm
+responses
+sqlalchemy
+sqlparse
+git+https://github.com/UKTradeInvestment/pyslet.git@master#egg=pyslet
