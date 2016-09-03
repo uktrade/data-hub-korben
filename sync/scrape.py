@@ -269,7 +269,9 @@ class EntityPage(object):
         except (EntityPageNoData, EntityPageDeAuth) as exc:
             self.exception = exc
             self.state = EntityPageState.failed
-        except (EntityPageDynamicsBombed, reqs_excs.ConnectionError) as exc:
+        except (
+            EntityPageDynamicsBombed, reqs_excs.ConnectionError, RuntimeError
+        ) as exc:
             LOGGER.debug(exc)
             LOGGER.error("{0} errored, resetting".format(self))
             self.reset()
@@ -278,7 +280,7 @@ class EntityPage(object):
 def main():
     pool = multiprocessing.Pool(processes=PROCESSES)
     entity_chunks = []
-    spent_path = os.path.join('cache', 'spent')
+    spent_path = file_leaf('cache', 'spent')
     engine = sqla.create_engine('postgresql://localhost/cdms_psql')
     metadata = sqla.MetaData(bind=engine)
     metadata.reflect()
