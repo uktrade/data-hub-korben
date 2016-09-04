@@ -78,15 +78,16 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
 
 
 def main():
-    global CDMS_API
-    global ENGINE
+    global ENGINE  # NOQA
     ENGINE = sqla.create_engine(
-        'postgresql://localhost/cdms_psql', pool_size=20, max_overflow=0
+        'postgresql://postgres:postgres@postgres/cdms_psql',
+        pool_size=20,
+        max_overflow=0
     )
-    CDMS_API = CDMSRestApi()
-    engine = sqla.create_engine('postgresql://localhost/cdms_psql')
-    metadata = sqla.MetaData(bind=engine)
+    metadata = sqla.MetaData(bind=ENGINE)
     metadata.reflect()
+    global CDMS_API  # NOQA
+    CDMS_API = CDMSRestApi()
     with open('korben/odata_psql/entity-table-map/pollable-entities', 'r') as fh:
         pollable_entities = [
             x.strip() for x in fh.readlines()

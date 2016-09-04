@@ -2,16 +2,14 @@
 import setuptools
 
 
-
-
 DESCRIPTION = 'Codebase for sync/ETL/search service, Django "client" for CDMS'
-setup_kwargs = {
+SETUP_KWARGS = {
     'name': 'data-hub-korben',
     'version': '1.0',
     'description': DESCRIPTION,
     'author': 'B M Corser',
     'author_email': 'ben@steady.supply',
-    'packages': ['korben'],
+    'packages': setuptools.find_packages(),
     'setup_requires': [
         'pytest-runner',
     ],
@@ -41,4 +39,4 @@ setup_kwargs = {
     ]
 }
 
-setuptools.setup(**setup_kwargs)
+setuptools.setup(**SETUP_KWARGS)
