@@ -5,6 +5,7 @@ operates under the assumption that there is a fully populated local database.
 import datetime
 import logging
 import multiprocessing
+import time
 
 from lxml import etree
 import sqlalchemy as sqla
@@ -76,14 +77,22 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
         entity_name, table, col_names, primary_key, offset + 50
     )
 
+def poll_for_engine():
+    try:
+        return sqla.create_engine(
+            'postgresql://postgres:postgres@postgres/cdms_psql',
+            pool_size=20,
+            max_overflow=0
+        )
+    except sqla.exc.OperationalError:
+        LOGGER.info('Waiting for database')
+        time.sleep(1)
+        return poll_for_engine()
+
 
 def main():
-    global ENGINE  # NOQA
-    ENGINE = sqla.create_engine(
-        'postgresql://postgres:postgres@postgres/cdms_psql',
-        pool_size=20,
-        max_overflow=0
-    )
+    global ENGINE
+    ENGINE = poll_for_engine()
     metadata = sqla.MetaData(bind=ENGINE)
     metadata.reflect()
     global CDMS_API  # NOQA
