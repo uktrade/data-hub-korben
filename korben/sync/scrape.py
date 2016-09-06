@@ -9,13 +9,14 @@ import random
 from requests import exceptions as reqs_excs
 import sqlalchemy as sqla
 
-from korben.cdms_api.connection import rest_connection as api
+from korben.cdms_api.rest.api import CDMSRestApi
 from . import populate
 
 from lxml import etree
 
 from . import constants
 
+api = None
 
 class LoggingFilter(logging.Filter):
     def filter(self, record):
@@ -86,6 +87,7 @@ def cdms_list(entity_name, offset):
     caches the resulting response if it’s successful and raises an informative
     exception if it’s not.
     '''
+    global api
     cached, cache_path = is_cached(entity_name, offset)
     if cached:  # nothing to do, just load resp from cache
         with open(cache_path, 'rb') as cache_fh:
@@ -300,7 +302,8 @@ def main():
             start = 0
         end = start + (CHUNKSIZE * PAGESIZE)
         entity_chunks.append(EntityChunk(entity_name, start, end))
-
+    global api
+    api = CDMSRestApi()
     api.auth.setup_session(True)
     last_report = 0
 

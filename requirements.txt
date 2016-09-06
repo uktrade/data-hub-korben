@@ -1,5 +1,6 @@
 cryptography
 django
+flask
 psycopg2
 pyquery
 pyyaml
@@ -9,5 +10,3 @@ responses
 sqlalchemy
 sqlparse
 -e git://github.com/uktrade/pyslet.git@master#egg=pyslet
-
-ipdb

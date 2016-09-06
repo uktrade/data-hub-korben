@@ -1,9 +1,10 @@
 import sys
-from . import sync, odata_psql
+from . import sync, odata_psql, etl
 
 MODULES = {
     'sync': sync,
     'odata-psql': odata_psql,
+    'etl': etl,
 }
 
 
@@ -52,5 +53,6 @@ def main():
             print(
                 "Module {0} doesn’t offer a CLI".format(module.__name__)
             )
+            return exit(1)
 
     return func(*sys.argv[3:])

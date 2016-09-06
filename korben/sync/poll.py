@@ -13,6 +13,7 @@ import sqlalchemy as sqla
 from ..cdms_api.rest.api import CDMSRestApi
 from . import constants
 from . import utils
+from korben import db
 
 CDMS_API = None
 ENGINE = None
@@ -77,22 +78,9 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
         entity_name, table, col_names, primary_key, offset + 50
     )
 
-def poll_for_engine():
-    try:
-        return sqla.create_engine(
-            'postgresql://postgres:postgres@postgres/cdms_psql',
-            pool_size=20,
-            max_overflow=0
-        )
-    except sqla.exc.OperationalError:
-        LOGGER.info('Waiting for database')
-        time.sleep(1)
-        return poll_for_engine()
-
-
 def main():
     global ENGINE
-    ENGINE = poll_for_engine()
+    ENGINE = db.poll_for_engine()
     metadata = sqla.MetaData(bind=ENGINE)
     metadata.reflect()
     global CDMS_API  # NOQA
