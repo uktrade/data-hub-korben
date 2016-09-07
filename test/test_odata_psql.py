@@ -22,5 +22,5 @@ def test():
         )
         with open(os.path.join(fixtures_path, name_out), 'r') as out_fh:
             out = separate_constraints(os.path.join(fixtures_path, name_in))
-            expected = out_fh.read()
-            assert out == expected
+            expected = out_fh.read().strip()
+            assert '\n'.join(out) == expected

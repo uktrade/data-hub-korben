@@ -2,6 +2,7 @@ import os
 import tempfile
 
 import pyslet.odata2.metadata as edmx
+from pyslet.odata2.csdl import Schema
 
 from .. import config
 from . import pgsql_entitycontainer
@@ -19,7 +20,9 @@ def main(name_in):
     with open(name_in, 'rb') as metadata_fh:
         doc.read(metadata_fh)  # would love to be able to cache this but
                                # the `doc` object won't pickle
-    entity_container = doc.root.DataServices[config.entity_container_key]
+    entity_container = doc.root.DataServices[config.odata_entity_container_key]
+    if isinstance(entity_container, Schema):
+        entity_container = entity_container.EntityContainer[0]
     # we don't define pgsql_options arg here, since the sql won't load directly
     # into a database due to lack of dependency resultion
     container = pgsql_entitycontainer.PgSQLEntityContainer(

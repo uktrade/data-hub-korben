@@ -2,11 +2,13 @@ import logging
 import time
 import sqlalchemy as sqla
 
+from korben import config
+
 LOGGER = logging.getLogger('korben.db')
 logging.basicConfig(level=logging.INFO)
 
 ENGINE = sqla.create_engine(
-    'postgresql://postgres:postgres@postgres/cdms_psql',
+    config.etl_db_url,
     pool_size=20,
     max_overflow=0
 )

@@ -9,8 +9,6 @@ def is_parens(token):
     'Return a boolean representation of whether a token is a parenthesis'
     return isinstance(token, sqlparse.sql.Parenthesis)
 
-OUTPUT_TEMPLATE = '{0}\n{1}\n'
-
 
 def main(schema_name):
     '''
@@ -54,7 +52,4 @@ def main(schema_name):
                 table_name, ''.join(map(str, constraints))
             ).replace('CONSTRAINT', 'ADD CONSTRAINT')
         )
-    return OUTPUT_TEMPLATE.format(
-        ''.join((map(str, creates))),
-        ''.join((map(str, alters))),
-    )
+    return '\n'.join((map(str, creates))), '\n'.join((map(str, alters)))

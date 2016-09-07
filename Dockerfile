@@ -7,7 +7,7 @@ ADD . /src
 WORKDIR /src
 RUN python setup.py install
 
-#ADD staging.yml /src/config.yml
+ADD jenkins.yml /src/config.yml
 ENV KORBEN_CONF_PATH=/src/config.yml
 
-EXPOSE 8000
+EXPOSE 8080

@@ -6,4 +6,5 @@ cdms_cookie_key: RKfgWE-GYNy3mWHm5wEUZavralDzSMKDguBfyuBag8A=
 cdms_rsts_url: https://test.com
 cdms_cookie_path: /tmp/cdms-cookie
 
-odata_entity_container_key: Microsoft.Crm.Sdk.Data.Services.UKTIContext
+odata_entity_container_key: ODataDemo
+etl_db_url: postgresql://postgres:postgres@postgres-test/postgres
