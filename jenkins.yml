@@ -1,0 +1,9 @@
+cdms_adfs_url: https://test.com.
+cdms_base_url: https://test.com
+cdms_username: korben@test.com
+cdms_password: test
+cdms_cookie_key: RKfgWE-GYNy3mWHm5wEUZavralDzSMKDguBfyuBag8A=
+cdms_rsts_url: https://test.com
+cdms_cookie_path: /tmp/cdms-cookie
+
+odata_entity_container_key: Microsoft.Crm.Sdk.Data.Services.UKTIContext
