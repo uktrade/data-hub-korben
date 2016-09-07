@@ -6,15 +6,14 @@ import os
 import pickle
 import time
 import random
+
 from requests import exceptions as reqs_excs
 import sqlalchemy as sqla
-
-from korben.cdms_api.rest.api import CDMSRestApi
-from . import populate
-
 from lxml import etree
 
+from korben.cdms_api.rest.api import CDMSRestApi
 from . import constants
+from . import populate
 
 api = None
 
