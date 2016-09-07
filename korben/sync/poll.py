@@ -16,14 +16,14 @@ from . import utils
 from korben import db
 
 CDMS_API = None
-ENGINE = None
+DATABASE_CONNECTION = None
 
 LOGGER = logging.getLogger('korben.sync.poll')
 logging.basicConfig(level=logging.INFO)
 
 
 def reverse_scrape(entity_name, table, col_names, primary_key, offset):
-    connection = ENGINE.connect()
+    global DATABASE_CONNECTION
     resp = CDMS_API.list(entity_name, order_by='ModifiedOn desc', skip=offset)
     rows = []
     for entry in etree.fromstring(resp.content).iter(constants.ENTRY_TAG):
@@ -79,12 +79,14 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
     )
 
 def main():
-    global ENGINE
-    ENGINE = db.poll_for_engine()
-    metadata = sqla.MetaData(bind=ENGINE)
-    metadata.reflect()
+    global DATABASE_CONNECTION
+    DATABASE_CONNECTION = db.poll_for_connection()
     global CDMS_API  # NOQA
     CDMS_API = CDMSRestApi()
+
+    metadata = sqla.MetaData(bind=DATABASE_CONNECTION)
+    metadata.reflect()
+
     with open('korben/odata_psql/entity-table-map/pollable-entities', 'r') as fh:
         pollable_entities = [
             x.strip() for x in fh.readlines()
