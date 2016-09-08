@@ -18,7 +18,8 @@ __config_spec = {
     'cdms_password':               (True, True, None, __noop),
     'cdms_adfs_url':               (True, True, None, __noop),
     'odata_entity_container_key':  (True, True, None, __noop),
-    'etl_db_url':                  (True, True, None, __noop),
+    'database_odata_url':          (True, True, None, __noop),
+    'database_url':                (True, True, None, __noop),
 }
 
 
@@ -35,14 +36,12 @@ def __set_config(name, value=None):
         )
     value = __config_yaml.get(name)
     if read_env:
-        env_name = "KORBEN_{0}".format(name.upper())
         try:
-            value = __os.environ[env_name]
-            print('Actually got env var value for {0}'.format(env_name))
+            value = __os.environ[name.upper()]
         except KeyError:
             here = __os.path.dirname(__file__)
             try:
-                constant_filename = __os.path.join(here, '..', env_name)
+                constant_filename = __os.path.join(here, '..', name.upper())
                 with open(constant_filename, 'r') as constant_fh:
                     value = constant_fh.read().rstrip('\n')
             except IOError as exc:

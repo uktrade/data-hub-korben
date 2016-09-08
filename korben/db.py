@@ -8,7 +8,7 @@ LOGGER = logging.getLogger('korben.db')
 logging.basicConfig(level=logging.INFO)
 
 ENGINE = sqla.create_engine(
-    config.etl_db_url,
+    config.database_odata_url,
     pool_size=20,
     max_overflow=0
 )
