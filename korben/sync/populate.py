@@ -3,7 +3,7 @@ import csv
 import os
 import pickle
 import subprocess
-from urlparse import urlparse
+import urllib
 
 import sqlalchemy as sqla
 from lxml import etree
@@ -93,7 +93,7 @@ def csv_psql(cache_dir, csv_path, table):
         psql_fh.write(
             CSV_PSQL_TEMPLATE.format(table.name, os.path.abspath(csv_path))
         )
-    url = urlparse(config.database_odata_url)
+    url = urllib.parse(config.database_odata_url)
     return subprocess.check_output([
         'psql',
         '-h', url.netloc,
