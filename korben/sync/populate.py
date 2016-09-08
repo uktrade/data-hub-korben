@@ -3,10 +3,12 @@ import csv
 import os
 import pickle
 import subprocess
+from urlparse import urlparse
 
 import sqlalchemy as sqla
 from lxml import etree
 
+from korben import config
 from . import constants
 from . import utils
 
@@ -91,8 +93,12 @@ def csv_psql(cache_dir, csv_path, table):
         psql_fh.write(
             CSV_PSQL_TEMPLATE.format(table.name, os.path.abspath(csv_path))
         )
+    url = urlparse(config.database_odata_url)
     return subprocess.check_output([
-        'psql', '-d', 'cdms_psql', '-f', psql_path
+        'psql',
+        '-h', url.netloc,
+        '-d', url.path.lstrip('/'),
+        '-f', psql_path
     ])
 
 
@@ -120,7 +126,7 @@ def populate_entity(cache_dir, metadata, entity_name):
 
 def main(cache_dir='cache', entity_name=None, metadata=None):
     if not metadata:
-        engine = sqla.create_engine('postgresql://localhost/cdms_psql')
+        engine = sqla.create_engine(config.database_odata_url)
         metadata = sqla.MetaData(bind=engine)
         metadata.reflect()
     if entity_name:

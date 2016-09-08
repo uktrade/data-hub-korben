@@ -11,6 +11,7 @@ from requests import exceptions as reqs_excs
 import sqlalchemy as sqla
 from lxml import etree
 
+from korben import config
 from korben.cdms_api.rest.api import CDMSRestApi
 from . import constants
 from . import populate
@@ -282,7 +283,7 @@ def main():
     pool = multiprocessing.Pool(processes=PROCESSES)
     entity_chunks = []
     spent_path = file_leaf('cache', 'spent')
-    engine = sqla.create_engine('postgresql://localhost/cdms_psql')
+    engine = sqla.create_engine(config.database_odata_url)
     metadata = sqla.MetaData(bind=engine)
     metadata.reflect()
     try:
