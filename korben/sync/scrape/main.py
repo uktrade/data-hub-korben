@@ -14,7 +14,7 @@ from korben.cdms_api.rest.api import CDMSRestApi
 
 from .. import constants
 from .. import populate
-from . import utils
+from .. import utils as sync_utils
 from . import constants as scrape_constants
 from . import types
 from . import classes
@@ -47,7 +47,7 @@ PROCESSES = 32
 def main():
     pool = multiprocessing.Pool(processes=PROCESSES)
     entity_chunks = []
-    spent_path = utils.file_leaf('cache', 'spent')
+    spent_path = sync_utils.file_leaf('cache', 'spent')
     engine = sqla.create_engine(config.database_odata_url)
     metadata = sqla.MetaData(bind=engine)
     metadata.reflect()

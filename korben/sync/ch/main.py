@@ -2,11 +2,13 @@ import datetime
 import os
 import csv
 import logging
+import tempfile
 
 import sqlalchemy as sqla
 from sqlalchemy.dialects.postgresql import insert
 
 from korben import config, db
+from . import download, constants
 
 
 LOGGER = logging.getLogger('korben.sync.ch')
@@ -47,25 +49,35 @@ def csv_chcompany(row):
 
 
 def main(filename='/src/korben/test.csv'):
-    urls = download.urls()
+    csv_paths = download.extract(download.zips(download.filenames()))
     metadata = db.poll_for_metadata(config.database_url)
     ch_company_table = metadata.tables['api_chcompany']
-    start = datetime.datetime.now()
-    with open(filename, 'r') as csv_fh:
-        rows = csv.DictReader(csv_fh)
-        for row in rows:
-            # do upsert
-            ch_company = csv_chcompany(row)
-            upsert = insert(ch_company_table)\
-                .values(**ch_company)\
-                .on_conflict_do_update(
-                    # this is alternative
-                    # constraint='api_chcompany_company_number_59a1c16c_pk',
-                    index_elements=['company_number'],
-                    set_=ch_company,
-                )
-            result = connection.execute(upsert)
-            LOGGER.debug(result)
-    print("{0.seconds}.{0.microseconds}".format(
-        datetime.datetime.now() - start
+    start_all = datetime.datetime.now()
+    chunk_log_fmt = '{0.seconds}.{0.microseconds} for {1} chunk {2}'
+    for csv_path in csv_paths:
+        start_csv = datetime.datetime.now()
+        csv_rows = []
+        with open(csv_path, 'r') as csv_fh:
+            reader = csv.DictReader(
+                csv_fh, fieldnames=constants.SUPPORTED_CSV_FIELDNAMES
+            )
+            start_chunk = datetime.datetime.now()
+            for index, row in enumerate(reader):
+                if index == 0:
+                    continue  # skip 0th row, since we’re using our own names
+                csv_rows.append(csv_chcompany(row))
+                if index % 500 == 0:  # periodically puke rows into the db
+                    metadata.bind.execute(
+                        insert(ch_company_table).values(csv_rows)
+                    )
+                    csv_rows = []
+                    LOGGER.debug(chunk_log_fmt.format(
+                        datetime.datetime.now() - start_chunk, csv_path, index
+                    ))
+                    start_chunk = datetime.datetime.now()
+        LOGGER.debug("{0.seconds}.{0.microseconds} for {1}".format(
+            datetime.datetime.now() - start_csv, csv_path
+        ))
+    LOGGER.info("{0.seconds}.{0.microseconds} overall".format(
+        datetime.datetime.now() - start_all
     ))

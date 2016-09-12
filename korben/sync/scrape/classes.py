@@ -6,6 +6,7 @@ import pickle
 from requests import exceptions as reqs_excs
 
 from korben.cdms_api.rest.api import CDMSRestApi
+from .. import utils as sync_utils
 from . import types
 from . import constants
 from . import utils
@@ -16,12 +17,12 @@ api = CDMSRestApi()
 
 def request_cache_key(entity_name, offset):
     'Return the path where a request cache entry should be written'
-    return utils.file_leaf('cache', 'request', entity_name, offset)
+    return sync_utils.file_leaf('cache', 'request', entity_name, offset)
 
 
 def duration_record(entity_name, offset):
     'Return the path where a request duration record should be written'
-    return utils.file_leaf('cache', 'duration', entity_name, offset)
+    return sync_utils.file_leaf('cache', 'duration', entity_name, offset)
 
 
 def is_cached(entity_name, offset):
