@@ -59,7 +59,7 @@ def main():
     metadata.bind.execute(ch_company_table.delete())
     start_all = datetime.datetime.now()
     chunk_log_fmt = '{0.seconds}.{0.microseconds} for {1} chunk {2}'
-    for csv_path in csv_paths[:1]:
+    for csv_path in csv_paths:
         start_csv = datetime.datetime.now()
         csv_rows = []
         with open(csv_path, 'r') as csv_fh:
@@ -70,19 +70,11 @@ def main():
             for index, row in enumerate(reader):
                 if index == 0:
                     continue  # skip 0th row, since we’re using our own names
-                try:
-                    csv_rows.append(csv_chcompany(row))
-                except:
-                    metadata.bind.execute('ROLLBACK')
-                    exit(1)
+                csv_rows.append(csv_chcompany(row))
                 if index % 500 == 0:  # periodically puke rows into the db
-                    try:
-                        metadata.bind.execute(
-                            insert(ch_company_table).values(csv_rows)
-                        )
-                    except:
-                        metadata.bind.execute('ROLLBACK')
-                        exit(1)
+                    metadata.bind.execute(
+                        insert(ch_company_table).values(csv_rows)
+                    )
                     csv_rows = []
                     LOGGER.debug(chunk_log_fmt.format(
                         datetime.datetime.now() - start_chunk, csv_path, index
