@@ -5,7 +5,6 @@ import sqlalchemy as sqla
 from korben import config
 
 LOGGER = logging.getLogger('korben.db')
-logging.basicConfig(level=logging.INFO)
 
 __CACHE__ = {}
 
