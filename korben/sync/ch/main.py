@@ -40,7 +40,7 @@ def ch_date(row, column):
         day, month, year = row[column].split('/')
         return datetime.date(int(year), int(month), int(day))
     except ValueError:
-        return ''
+        return None
 
 
 def csv_chcompany(row):
@@ -55,11 +55,11 @@ def main():
     csv_paths = download.extract(download.zips(download.filenames()))
     metadata = db.poll_for_metadata(config.database_url)
     ch_company_table = metadata.tables['api_chcompany']
-    metadata.bind.execute('BEGIN TRANSACTION')
     metadata.bind.execute(ch_company_table.delete())
     start_all = datetime.datetime.now()
     chunk_log_fmt = '{0.seconds}.{0.microseconds} for {1} chunk {2}'
     for csv_path in csv_paths:
+        LOGGER.info("Starting {0}".format(csv_path))
         start_csv = datetime.datetime.now()
         csv_rows = []
         with open(csv_path, 'r') as csv_fh:
@@ -80,10 +80,9 @@ def main():
                         datetime.datetime.now() - start_chunk, csv_path, index
                     ))
                     start_chunk = datetime.datetime.now()
-        LOGGER.debug("{0.seconds}.{0.microseconds} for {1}".format(
+        LOGGER.info("{0.seconds}.{0.microseconds} for {1}".format(
             datetime.datetime.now() - start_csv, csv_path
         ))
-    metadata.bind.execute('COMMIT')
     LOGGER.info("{0.seconds}.{0.microseconds} overall".format(
         datetime.datetime.now() - start_all
     ))

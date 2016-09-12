@@ -27,7 +27,9 @@ def poll_for_connection(url):
     )
     if connection is not None:
         return connection
-    engine = sqla.create_engine(url, pool_size=20, max_overflow=0)
+    engine = sqla.create_engine(
+        url, pool_size=20, max_overflow=0, client_encoding='utf8'
+    )
     interval = 1
     while True:
         try:

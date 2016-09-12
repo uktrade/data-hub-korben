@@ -4,13 +4,15 @@ operates under the assumption that there is a fully populated local database.
 '''
 import datetime
 import logging
+'''
 import multiprocessing
-import time
+'''
 
 from lxml import etree
 import sqlalchemy as sqla
 
 from ..cdms_api.rest.api import CDMSRestApi
+from ..etl.main import from_cdms_psql
 from . import constants
 from . import utils
 from korben import config, db
@@ -32,17 +34,12 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
     connection = db.poll_for_connection(config.database_odata_url)
     for row in rows:
         select_statement = (
-            sqla
-            .select(
-                [table.columns[primary_key], table.c.ModifiedOn], table
-            )
-            .where(
-                table.columns[primary_key] == row[primary_key]
-            )
+            sqla.select([table.c.ModifiedOn], table)
+                .where(table.columns[primary_key] == row[primary_key])
         )
-        in_db = connection.execute(select_statement).fetchone()
-        if in_db:
-            LOGGER.info("row in {0} exists".format(entity_name))
+        local_modified = connection.execute(select_statement).scalar()
+        if local_modified:
+            LOGGER.debug("row in {0} exists".format(entity_name))
             try:
                 remote_modified = datetime.datetime.strptime(
                     row['ModifiedOn'], "%Y-%m-%d %H:%M:%S"
@@ -50,24 +47,24 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
             except TypeError:
                 LOGGER.error("Bad data in {0}".format(entity_name))
                 continue
-            uuid, local_modified = in_db
             if local_modified < remote_modified:
-                LOGGER.info("row in {0} outdated".format(entity_name))
+                LOGGER.debug("row in {0} outdated".format(entity_name))
                 update_statement = (
                     table.update()
                          .where(table.columns[primary_key] == row[primary_key])
                          .values(**row)
                 )
                 result = connection.execute(update_statement)
-                assert result.rowcount == 1
+                from_cdms_psql(entity_name, [row[primary_key]])
                 updated_rows += 1
         else:
-            LOGGER.info("row in {0} doesn't exist".format(entity_name))
+            LOGGER.debug("row in {0} doesn't exist".format(entity_name))
             result = connection.execute(table.insert().values(**row))
             assert result.rowcount == 1
+            from_cdms_psql(entity_name, [row[primary_key]])
             new_rows += 1
-    LOGGER.info("{2}\n INSERT {0}\n UPDATE {1}".format(
-        new_rows, updated_rows, entity_name
+    LOGGER.info("{2} {3} INSERT {0} UPDATE {1}".format(
+        new_rows, updated_rows, entity_name, datetime.datetime.now()
     ))
     if new_rows + updated_rows < 50:
         return offset + new_rows + updated_rows
@@ -78,12 +75,14 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
         entity_name, table, col_names, primary_key, offset + 50
     )
 
-def main():
+
+def poll_():
     global CDMS_API  # NOQA
     CDMS_API = CDMSRestApi()
 
     metadata = db.poll_for_metadata(config.database_odata_url)
 
+    '''
     with open('korben/odata_psql/entity-table-map/pollable-entities', 'r') as fh:
         pollable_entities = [
             x.strip() for x in fh.readlines()
@@ -91,18 +90,21 @@ def main():
         ]
     pool = multiprocessing.Pool()
     results = []
+    '''
     CDMS_API.auth.setup_session()
-    for entity_name in pollable_entities:
+    live_entities = [
+         'Account', 'Contact', 'optevia_activitylink', 'optevia_interaction',
+    ]
+    for entity_name in live_entities:
         table = metadata.tables[entity_name + 'Set']
         col_names = [x.name for x in table.columns]
         # assume a single column
         primary_key = next(
             col.name for col in table.primary_key.columns.values()
         )
-        '''
         LOGGER.info("Starting reverse scrape for {0}".format(entity_name))
         reverse_scrape(entity_name, table, col_names, primary_key, 0)
-        '''
+    '''
         result = pool.apply_async(
             reverse_scrape, (entity_name, table, col_names, primary_key, 0)
         )
@@ -110,3 +112,8 @@ def main():
 
     pool.close()
     pool.join()
+    '''
+
+def main():
+    while True:
+        poll_()
