@@ -13,7 +13,7 @@ import sqlalchemy as sqla
 from ..cdms_api.rest.api import CDMSRestApi
 from . import constants
 from . import utils
-from korben import db
+from korben import config, db
 
 CDMS_API = None
 DATABASE_CONNECTION = None
@@ -23,13 +23,13 @@ logging.basicConfig(level=logging.INFO)
 
 
 def reverse_scrape(entity_name, table, col_names, primary_key, offset):
-    global DATABASE_CONNECTION
     resp = CDMS_API.list(entity_name, order_by='ModifiedOn desc', skip=offset)
     rows = []
     for entry in etree.fromstring(resp.content).iter(constants.ENTRY_TAG):
         rows.append(utils.entry_row(col_names, None, entry))
     new_rows = 0
     updated_rows = 0
+    connection = db.poll_for_connection(config.database_odata_url)
     for row in rows:
         select_statement = (
             sqla
@@ -42,6 +42,7 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
         )
         in_db = connection.execute(select_statement).fetchone()
         if in_db:
+            LOGGER.info("row in {0} exists".format(entity_name))
             try:
                 remote_modified = datetime.datetime.strptime(
                     row['ModifiedOn'], "%Y-%m-%d %H:%M:%S"
@@ -51,6 +52,7 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
                 continue
             uuid, local_modified = in_db
             if local_modified < remote_modified:
+                LOGGER.info("row in {0} outdated".format(entity_name))
                 update_statement = (
                     table.update()
                          .where(table.columns[primary_key] == row[primary_key])
@@ -60,6 +62,7 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
                 assert result.rowcount == 1
                 updated_rows += 1
         else:
+            LOGGER.info("row in {0} doesn't exist".format(entity_name))
             result = connection.execute(table.insert().values(**row))
             assert result.rowcount == 1
             new_rows += 1
@@ -68,24 +71,18 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
     ))
     if new_rows + updated_rows < 50:
         return offset + new_rows + updated_rows
-    LOGGER.info(
-        "Continuing reverse scrape for {0} (from offset {1})".format(
-            entity_name, offset
-        )
-    )
-    connection.close()
+    LOGGER.info("Continuing reverse scrape for {0} (from offset {1})".format(
+        entity_name, offset
+    ))
     return reverse_scrape(
         entity_name, table, col_names, primary_key, offset + 50
     )
 
 def main():
-    global DATABASE_CONNECTION
-    DATABASE_CONNECTION = db.poll_for_connection()
     global CDMS_API  # NOQA
     CDMS_API = CDMSRestApi()
 
-    metadata = sqla.MetaData(bind=DATABASE_CONNECTION)
-    metadata.reflect()
+    metadata = db.poll_for_metadata(config.database_odata_url)
 
     with open('korben/odata_psql/entity-table-map/pollable-entities', 'r') as fh:
         pollable_entities = [
@@ -113,4 +110,3 @@ def main():
 
     pool.close()
     pool.join()
-    ENGINE.dispose()

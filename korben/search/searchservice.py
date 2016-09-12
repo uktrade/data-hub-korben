@@ -70,34 +70,6 @@ def search_item_from_ch(ch):
         incorporation_date=ch.incorporation_date
     )
 
-def search_item_from_company(company):
-    ch = CHCompany.objects.get(pk=company.company_number)   # Go and get the companies house entry from the DB
-    if company.company_number and len(company.company_number) > 0:
-        result_source = 'COMBINED'
-    else:
-        result_source = 'DIT'
-
-    return SearchItem(      # Do your thing and turn this into a dictionary.
-        source_id=company.id,
-        result_source=result_source,
-        result_type='COMPANY',
-        title=ch.company_name,
-        address_1=ch.registered_address_address_1,
-        address_2=ch.registered_address_address_2,
-        address_town=ch.registered_address_town,
-        address_county=ch.registered_address_county,
-        address_country=ch.registered_address_country,
-        address_postcode=ch.registered_address_postcode,
-        alt_title=company.trading_name,
-        alt_address_1=company.trading_address_1,
-        alt_address_2=company.trading_address_2,
-        alt_address_town=company.trading_address_town,
-        alt_address_county=company.trading_address_county,
-        alt_address_country=company.trading_address_country,
-        alt_address_postcode=company.trading_address_postcode,
-        company_number=company.company_number,
-        incorporation_date=ch.incorporation_date
-    )
 
 
 # Generate an elastic search item from a contact record

@@ -1,35 +1,22 @@
-import gc
-from django.core.management.base import BaseCommand
-from django.core.paginator import Paginator
-
 from elasticsearch.client import IndicesClient
-from elasticsearch.helpers import bulk
-
-from datahubapi import settings
-from api.models.chcompany import CHCompany
-from api.models.searchitem import SearchItem
-from api.serializers import SearchItemSerializer
+from elasticsearch.helpers import bulk as es_bulk
 
 
-def create_index_item(ch: CHCompany, action="create"):
+def create_index_item(ch_company, action="create"):
 
-    search_item = SearchItem(
-        source_id=ch.company_number,
-        result_source="CH",
-        result_type="COMPANY",
-        title=ch.company_name,
-        address_1=ch.registered_address_address_1,
-        address_2=ch.registered_address_address_2,
-        address_town=ch.registered_address_town,
-        address_county=ch.registered_address_county,
-        address_country=ch.registered_address_country,
-        address_postcode=ch.registered_address_postcode,
-        company_number=ch.company_number,
-        incorporation_date=ch.incorporation_date
-    )
+    search_item = {
+        'id': ch_company.company_number,
+        'title': ch_company.company_name,
+        'address_1': ch_company.registered_address_address_1,
+        'address_2': ch_company.registered_address_address_2,
+        'address_town': ch_company.registered_address_town,
+        'address_county': ch_company.registered_address_county,
+        'address_country': ch_company.registered_address_country,
+        'address_postcode': ch_company.registered_address_postcode,
+        'company_number': ch_company.company_number,
+        'incorporation_date': ch_company.incorporation_date
+    }
 
-    serializer = SearchItemSerializer(search_item)
-    data = serializer.data
     metadata = {
         '_op_type': action,
         "_index": search_item.Meta.es_index_name,
@@ -41,7 +28,7 @@ def create_index_item(ch: CHCompany, action="create"):
 
 def dump_buffer(buffer):
     print("Saving")
-    bulk(
+    es_bulk(
         client=settings.ES_CLIENT,
         actions=buffer,
         stats_only=True,
@@ -76,25 +63,15 @@ def index_ch():
 
 
 def recreate_index():
-    indices_client = IndicesClient(client=settings.ES_CLIENT)
-    index_name = SearchItem.Meta.es_index_name
+    indices_client = IndicesClient(client=client)
 
-    if indices_client.exists(index_name):
-        indices_client.delete(index=index_name)
+    if indices_client.exists(schema.es_index_name):
+        indices_client.delete(index=schema.es_index_name)
 
-    indices_client.create(index=index_name)
+    indices_client.create(index=schema.es_index_name)
 
     indices_client.put_mapping(
-        doc_type=SearchItem.Meta.es_type_name,
-        body=SearchItem.Meta.es_mapping,
-        index=index_name
+        doc_type=schema.es_type_name,
+        body=schema.es_mapping,
+        index=schema.es_index_name
     )
-
-
-class Command(BaseCommand):
-
-    help = 'Recreate CH Index'
-
-    def handle(self, *args, **options):
-        recreate_index()
-        index_ch()
