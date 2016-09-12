@@ -1,6 +1,8 @@
 from contextlib import contextmanager as __ctxmgr
 import os as __os
 import yaml as __yaml
+import logging as __logging
+__logger = __logging.getLogger('korben.config')
 
 class ConfigError(Exception):
     pass
@@ -20,6 +22,11 @@ __config_spec = {
     'odata_entity_container_key':  (True, True, None, __noop),
     'database_odata_url':          (True, True, None, __noop),
     'database_url':                (True, True, None, __noop),
+    'es_host':                    (False, True, None, __noop),
+    'es_port':                    (False, True, None, __noop),
+    'es_access':                  (False, True, None, __noop),
+    'es_secret':                  (False, True, None, __noop),
+    'es_region':                  (False, True, None, __noop),
 }
 
 
@@ -38,6 +45,7 @@ def __set_config(name, value=None):
     if read_env:
         try:
             value = __os.environ[name.upper()]
+            __logger.debug("Reading {0} from envronment".format(name.upper()))
         except KeyError:
             here = __os.path.dirname(__file__)
             try:
@@ -59,7 +67,7 @@ def __set_config(name, value=None):
         )
 
 
-def populate(path=None):
+def populate(path=None, ignore=True):
     if not path:
         try:
             path = __os.environ['KORBEN_CONF_PATH']
@@ -80,7 +88,13 @@ def populate(path=None):
         globals()['__config_yaml'] = {}
 
     for name in __config_spec.keys():
-        __set_config(name)
+        try:
+            __set_config(name)
+        except ConfigError as exc:
+            if not ignore:
+                raise
+            __logger.info('Ignoring config exception:')
+            __logger.info(exc)
     pass
 
 
@@ -95,9 +109,4 @@ def temporarily(**changes):
         globals()[name] = value
 
 
-try:
-    populate()
-except ConfigError as exc:
-    print('Ignoring config exception:')
-    print(exc)
-    pass
+populate(ignore=True)
