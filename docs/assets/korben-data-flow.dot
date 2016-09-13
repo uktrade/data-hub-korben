@@ -1,0 +1,16 @@
+digraph "Build Process" {
+    psql_django[label="psql django"];
+    psql_odata[label="psql odata"];
+
+    cdms -> psql_odata;
+    subgraph cluster_korben {
+        psql_odata -> psql_django;
+        psql_django -> es;
+        es;
+        label="";
+        graph[style=dotted];
+    }
+    ch -> psql_django;
+    psql_django -> django;
+    es -> django;
+}
