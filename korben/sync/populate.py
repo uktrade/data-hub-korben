@@ -6,10 +6,10 @@ import pickle
 import subprocess
 import urllib
 
-import sqlalchemy as sqla
 from lxml import etree
 
 from korben import config
+from korben import services
 from . import constants
 from . import utils
 
@@ -128,9 +128,7 @@ def populate_entity(cache_dir, metadata, entity_name):
 
 def main(cache_dir='cache', entity_name=None, metadata=None):
     if not metadata:
-        engine = sqla.create_engine(config.database_odata_url)
-        metadata = sqla.MetaData(bind=engine)
-        metadata.reflect()
+        metadata = services.db.poll_for_metadata(config.database_odata_url)
     if entity_name:
         populate_entity(cache_dir, metadata, entity_name)
         return
