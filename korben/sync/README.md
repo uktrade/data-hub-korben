@@ -8,3 +8,7 @@ Get a single object, traversing required dependencies.
 
 ## [`poll`](poll.py)
 Poll all supported entity types (ie. those with `ModifiedOn` attribute).
+
+## [`populate`](populate.py)
+Load pickled responses, convert their XML content into CSV files and use `COPY`
+to throw them into the database.

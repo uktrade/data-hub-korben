@@ -26,8 +26,7 @@ def unpickle_resp(cache_dir, entity_name, name):
         try:
             resp = pickle.load(resp_fh)
         except:
-            LOGGER.error('Bad pickle!')
-            # unpickle failed
+            LOGGER.error('Bad pickle %s!', path)
             return
     try:
         return etree.fromstring(resp.content)
