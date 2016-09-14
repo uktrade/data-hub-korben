@@ -34,12 +34,13 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
     updated_rows = 0
     connection = services.db.poll_for_connection(config.database_odata_url)
     for row in rows:
+        from_cdms_psql(entity_name, [row[primary_key]])
         select_statement = (
             sqla.select([table.c.ModifiedOn], table)
                 .where(table.columns[primary_key] == row[primary_key])
         )
         local_modified = connection.execute(select_statement).scalar()
-        LOGGER.info("local_modified {0}".format(local_modified))
+        LOGGER.debug("local_modified {0}".format(local_modified))
         if local_modified:
             LOGGER.debug("row in {0} exists".format(entity_name))
             try:
@@ -50,17 +51,17 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
                 LOGGER.error("Bad data in {0}".format(entity_name))
                 continue
             if local_modified < remote_modified:
-                LOGGER.debug("row in {0} outdated".format(entity_name))
+                LOGGER.info("row in {0} outdated".format(entity_name))
                 update_statement = (
                     table.update()
                          .where(table.columns[primary_key] == row[primary_key])
                          .values(**row)
                 )
                 result = connection.execute(update_statement)
-                from_cdms_psql(entity_name, [row[primary_key]], idempotent=True)
+                from_cdms_psql(entity_name, [row[primary_key]])
                 updated_rows += 1
         else:
-            LOGGER.debug("row in {0} doesn't exist".format(entity_name))
+            LOGGER.info("row in {0} doesn't exist".format(entity_name))
             result = connection.execute(table.insert().values(**row))
             assert result.rowcount == 1
             from_cdms_psql(entity_name, [row[primary_key]])
@@ -95,7 +96,16 @@ def poll_():
     '''
     CDMS_API.auth.setup_session()
     live_entities = [
-         'Account', 'Contact', 'optevia_activitylink', 'optevia_interaction',
+        'optevia_businesstype',
+        'optevia_sector',
+        'optevia_employeerange',
+        'optevia_turnoverrange',
+        'optevia_ukregion',
+        'optevia_country',
+        'Account',
+        'Contact',
+        'optevia_activitylink',
+        'optevia_interaction',
     ]
     for entity_name in live_entities:
         table = metadata.tables[entity_name + 'Set']
