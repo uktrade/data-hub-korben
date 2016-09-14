@@ -8,7 +8,7 @@ from . import constants
 def main(cache_dir, dry_run=False):
     for entity_name in constants.ENTITY_NAMES:
         pages = sorted(
-            os.listdir(os.path.join('cache', 'list', entity_name)),
+            os.listdir(os.path.join(cache_dir, entity_name)),
             key=int,
             reverse=True,
         )

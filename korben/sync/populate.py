@@ -1,5 +1,6 @@
 'Parse database rows in the form of CSV files from XML, throw into database'
 import csv
+import logging
 import os
 import pickle
 import subprocess
@@ -16,6 +17,8 @@ CSV_PSQL_TEMPLATE = '''
 COPY "{0}" FROM '{1}' DELIMITER ',' CSV;
 '''
 
+LOGGER = logging.getLogger('korben.sync.populate')
+
 
 def unpickle_resp(cache_dir, entity_name, name):
     path = os.path.join(cache_dir, 'list', entity_name, name)
@@ -23,13 +26,13 @@ def unpickle_resp(cache_dir, entity_name, name):
         try:
             resp = pickle.load(resp_fh)
         except:
-            print('Bad pickle!')
+            LOGGER.error('Bad pickle!')
             # unpickle failed
             return
     try:
         return etree.fromstring(resp.content)
     except etree.XMLSyntaxError:
-        print('Bad resp!')
+        LOGGER.error('Bad resp!')
         # scrape failed
         return
 
@@ -37,7 +40,7 @@ def unpickle_resp(cache_dir, entity_name, name):
 def resp_csv(cache_dir, csv_dir, col_names, entity_name, page):
     root = unpickle_resp(cache_dir, entity_name, page)
     if root is None:
-        print("Unpickle of {0} failed on page {1}".format(
+        LOGGER.error("Unpickle of {0} failed on page {1}".format(
             entity_name, page
         ))
         return None, None
@@ -72,7 +75,7 @@ def entity_csv(cache_dir, col_names, entity_name, start=0):
             )
         )
     )
-    print("{0} pages for {1}".format(len(pages), entity_name))
+    LOGGER.info("{0} pages for {1}".format(len(pages), entity_name))
     csv_paths = []
     rowcount = 0
     for page in pages:
@@ -82,8 +85,7 @@ def entity_csv(cache_dir, col_names, entity_name, start=0):
         if n_rows and csv_path:
             csv_paths.append(csv_path)
             rowcount += n_rows
-    print("{0} rows for {1}".format(rowcount, entity_name))
-    print("")
+    LOGGER.info("{0} rows for {1}".format(rowcount, entity_name))
     return csv_paths
 
 
@@ -108,8 +110,8 @@ def populate_entity(cache_dir, metadata, entity_name):
     rowcount = metadata.bind.connect().execute(table.count()).scalar()
     '''
     if rowcount and rowcount % 50:
-        print(
-            '"{0}" appears to be fully populated, skipping'.format(
+        LOGGER.info(
+            '"{0}" appears it may be fully populated, skipping'.format(
                 table.name
             )
         )

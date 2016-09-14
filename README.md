@@ -1,5 +1,5 @@
 # Korben
-![Korben](korben-dallas.jpg)
+![Korben](docs/assets/korben-dallas.jpg)
 
 _Korben talks to CDMS_
 
@@ -17,12 +17,10 @@ be written back to CDMS.
 Pull data from CDMS, service to poll CDMS for new data, relation traversal for
 loading object dependencies. Make appropriate calls to ETL with fresh data.
 
-# [ETL](korben/sync)
-Map data from CDMS schema to Django schema, populate/update Django database.
+# [ETL](korben/etl)
+Map data from CDMS schema to Django schema, populate/update Django database and
+ElasticSearch index.
 
-# [Search](korben/sync)
-Load data into ElasticSearch.
-
-# [Client](korben/sync)
+# [Client](korben/client)
 Provide CRUD functions which talk about Django model objects, but handle
 individual CDMS sync operations “behind the scenes”. Provide search API.

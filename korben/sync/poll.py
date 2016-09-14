@@ -5,6 +5,7 @@ operates under the assumption that there is a fully populated local database.
 import datetime
 import logging
 '''
+this code is currently in "debug" mode, multiprocessing stuff is commented
 import multiprocessing
 '''
 
