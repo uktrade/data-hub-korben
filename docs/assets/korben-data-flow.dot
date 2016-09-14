@@ -1,4 +1,6 @@
-digraph "Build Process" {
+digraph "Korben" {
+    client[label="korben client"];
+
     // default
     node[style=filled];
 
@@ -21,4 +23,5 @@ digraph "Build Process" {
     ch -> psql_django;
     psql_django -> django;
     es -> django;
+    django -> client -> cdms [constraint=false];
 }
