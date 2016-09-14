@@ -1,6 +1,6 @@
 'Namespace for sync module'
 from . import poll, traverse, scrape  # NOQA
-from . import clean_cache, populate, ch
+from . import populate, ch
 
 COMMANDS = {
     'scrape': scrape.main,

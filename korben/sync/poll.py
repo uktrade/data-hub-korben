@@ -39,6 +39,7 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
                 .where(table.columns[primary_key] == row[primary_key])
         )
         local_modified = connection.execute(select_statement).scalar()
+        LOGGER.info("local_modified {0}".format(local_modified))
         if local_modified:
             LOGGER.debug("row in {0} exists".format(entity_name))
             try:
@@ -56,7 +57,7 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
                          .values(**row)
                 )
                 result = connection.execute(update_statement)
-                from_cdms_psql(entity_name, [row[primary_key]])
+                from_cdms_psql(entity_name, [row[primary_key]], idempotent=True)
                 updated_rows += 1
         else:
             LOGGER.debug("row in {0} doesn't exist".format(entity_name))
