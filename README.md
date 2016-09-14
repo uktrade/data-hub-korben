@@ -5,7 +5,7 @@ _Korben talks to CDMS_
 
 ![Data flow](docs/assets/korben-data-flow.png)
 
-_The dotted box is Korben’s “sphere” of influence_
+_The dotted box is Korben’s sphere of influence_
 
 This repo contains application code for a service providing CDMS sync, an ETL
 “pipeline” for getting data to a standard Django-controlled database, and

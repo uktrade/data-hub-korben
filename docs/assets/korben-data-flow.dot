@@ -1,6 +1,14 @@
 digraph "Build Process" {
-    psql_django[label="psql django"];
-    psql_odata[label="psql odata"];
+    // default
+    node[style=filled];
+
+    // fills, labels
+    cdms[fillcolor="#FF4136"];
+    psql_odata[fillcolor="#FF851B" label="psql odata"];
+    ch[fillcolor="#3D9970"];
+    psql_django[fillcolor="#FFDC00" label="psql django"];
+    es[fillcolor="#FFDC00"];
+    django[fillcolor="#2ECC40"];
 
     cdms -> psql_odata;
     subgraph cluster_korben {
