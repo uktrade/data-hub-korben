@@ -52,7 +52,6 @@ def create_index():
 
 
 def dump_buffers(ch_buffer, index_buffer):
-    CHCompany.objects.bulk_create(ch_buffer)
     bulk(
         client=client,
         actions=index_buffer,

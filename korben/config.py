@@ -24,9 +24,6 @@ __config_spec = {
     'database_url':                (True, True, None, __noop),
     'es_host':                    (False, True, None, __noop),
     'es_port':                    (False, True, None, __noop),
-    'es_access':                  (False, True, None, __noop),
-    'es_secret':                  (False, True, None, __noop),
-    'es_region':                  (False, True, None, __noop),
 }
 
 

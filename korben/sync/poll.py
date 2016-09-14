@@ -15,7 +15,7 @@ from ..cdms_api.rest.api import CDMSRestApi
 from ..etl.main import from_cdms_psql
 from . import constants
 from . import utils
-from korben import config, db
+from korben import config, services
 
 CDMS_API = None
 DATABASE_CONNECTION = None
@@ -31,7 +31,7 @@ def reverse_scrape(entity_name, table, col_names, primary_key, offset):
         rows.append(utils.entry_row(col_names, None, entry))
     new_rows = 0
     updated_rows = 0
-    connection = db.poll_for_connection(config.database_odata_url)
+    connection = services.db.poll_for_connection(config.database_odata_url)
     for row in rows:
         select_statement = (
             sqla.select([table.c.ModifiedOn], table)
@@ -80,7 +80,7 @@ def poll_():
     global CDMS_API  # NOQA
     CDMS_API = CDMSRestApi()
 
-    metadata = db.poll_for_metadata(config.database_odata_url)
+    metadata = services.db.poll_for_metadata(config.database_odata_url)
 
     '''
     with open('korben/odata_psql/entity-table-map/pollable-entities', 'r') as fh:
