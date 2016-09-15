@@ -31,4 +31,4 @@ def main():
             sqla.select([table.columns[primary_key]])
         ).fetchall()
         guids = map(operator.itemgetter(primary_key), rows)
-        from_cdms_psql(table, guids, idempotent=False)
+        from_cdms_psql(table, guids)

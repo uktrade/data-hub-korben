@@ -35,10 +35,13 @@ def setup_index():
                 index=etl.spec.ES_INDEX,
             )
 
+
 def main():
     django_metadata = services.db.poll_for_metadata(config.database_url)
     setup_index()
     for name in etl.spec.DJANGO_LOOKUP:
+        if name == 'company_companyhousecompany':
+            continue
         table = django_metadata.tables[name]
         rows = django_metadata.bind.execute(table.select()).fetchall()
         actions = map(functools.partial(row_es_add, name), rows)
@@ -49,3 +52,10 @@ def main():
             chunk_size=1000,
             request_timeout=300,
         )
+    company_table = django_metadata.tables['company_company']
+    result = django_metadata.bind.execute(
+        sqla.select([company_table.columns['company_number']])
+    ).fetchall()
+    linked_companies = set([x.company_number for x in result])
+    if name == 'company_companyhousecompany':
+        pass
