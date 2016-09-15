@@ -15,8 +15,17 @@ def poll_for_metadata(url):
         connection = __CACHE__.get("{0}-{1}".format('connection', url), None)
         if connection is None:
             connection = poll_for_connection(url)
-        metadata = sqla.MetaData(bind=connection)
-        metadata.reflect()
+        interval = 1
+        while True:
+            metadata = sqla.MetaData(bind=connection)
+            metadata.reflect()
+            if len(metadata.tables) == 0:
+                # initial set up case, before database have tables created.
+                # just keep polling
+                time.sleep(interval)
+                interval += 2
+            else:
+                break  # there are some tables there
         __CACHE__["{0}-{1}".format('metadata', url)] = metadata
     return metadata
 
