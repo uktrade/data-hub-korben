@@ -1,21 +1,23 @@
 import functools
 
 import elasticsearch
+from elasticsearch import helpers as es_helpers
+import sqlalchemy as sqla
 
 from korben import services
 from korben import config
 from korben import etl
 
 
-def row_es_add(doc_type, row):
+def row_es_add(doc_type, id_key, row):
     'Create an ES add action from a database row'
-    es_document = dict(row)
-    es_document.update({
-        '_op_type': 'add',
-        "_index": etl.spec.ES_INDEX,
-        "_type": doc_type,
-    })
-    return es_document
+    return {
+            '_op_type': 'index',
+            "_index": etl.spec.ES_INDEX,
+            "_type": doc_type,
+            "_id": row[id_key],
+            "_source": dict(row),
+    }
 
 
 def setup_index():
@@ -40,22 +42,41 @@ def main():
     django_metadata = services.db.poll_for_metadata(config.database_url)
     setup_index()
     for name in etl.spec.DJANGO_LOOKUP:
-        if name == 'company_companyhousecompany':
+        if name == 'company_companieshousecompany':
             continue
         table = django_metadata.tables[name]
         rows = django_metadata.bind.execute(table.select()).fetchall()
-        actions = map(functools.partial(row_es_add, name), rows)
-        elasticsearch.helpers.bulk(
+        actions = map(functools.partial(row_es_add, name, 'id'), rows)
+        es_helpers.bulk(
             client=services.es.client,
             actions=actions,
             stats_only=True,
             chunk_size=1000,
             request_timeout=300,
         )
+
+    # do ch company logic
+    name = 'company_companieshousecompany'
     company_table = django_metadata.tables['company_company']
     result = django_metadata.bind.execute(
         sqla.select([company_table.columns['company_number']])
+            .where(company_table.columns['company_number'] != None)
     ).fetchall()
-    linked_companies = set([x.company_number for x in result])
-    if name == 'company_companyhousecompany':
-        pass
+    linked_companies = frozenset([x.company_number for x in result])
+    table = django_metadata.tables[name]
+    rows = django_metadata.bind.execute(table.select()).fetchall()
+    filtered_rows = filter(
+        lambda row: row.company_number in linked_companies, rows
+    )
+    actions = map(
+        functools.partial(row_es_add, name, 'company_number'), filtered_rows
+    )
+    elasticsearch.helpers.bulk(
+        client=services.es.client,
+        actions=actions,
+        stats_only=True,
+        chunk_size=10,
+        request_timeout=300,
+        raise_on_error=True,
+        raise_on_exception=True,
+    )

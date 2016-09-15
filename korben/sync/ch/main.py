@@ -54,7 +54,7 @@ def csv_chcompany(row):
 def main():
     csv_paths = download.extract(download.zips(download.filenames()))
     metadata = services.db.poll_for_metadata(config.database_url)
-    ch_company_table = metadata.tables['api_chcompany']
+    ch_company_table = metadata.tables['company_companieshousecompany']
     metadata.bind.execute(ch_company_table.delete())
     start_all = datetime.datetime.now()
     chunk_log_fmt = '{0.seconds}.{0.microseconds} for {1} chunk {2}'
