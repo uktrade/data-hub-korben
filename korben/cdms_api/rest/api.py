@@ -45,7 +45,7 @@ class CDMSRestApi(object):
                 order_by = [order_by]
             params['$orderby'] = ','.join(order_by)
 
-        url = "{base_url}/{service}Set?$top={top}&$skip={skip}&{params}".format(
+        url = "{base_url}/{service}?$top={top}&$skip={skip}&{params}".format(
             base_url=self.CRM_REST_BASE_URL,
             service=service,
             top=top,
@@ -73,7 +73,7 @@ class CDMSRestApi(object):
                 found or resource that matches service name does not exist.
             ErrorResponseException: If guid is not valid.
         """
-        url = "{base_url}/{service}Set(guid'{guid}')".format(
+        url = "{base_url}/{service}(guid'{guid}')".format(
             base_url=self.CRM_REST_BASE_URL,
             service=service,
             guid=guid
@@ -102,7 +102,7 @@ class CDMSRestApi(object):
             ErrorResponseException: If there is an error with the POST request
                 that makes the update.
         """
-        url = "{base_url}/{service}Set(guid'{guid}')".format(
+        url = "{base_url}/{service}(guid'{guid}')".format(
             base_url=self.CRM_REST_BASE_URL,
             service=service,
             guid=guid
@@ -133,7 +133,7 @@ class CDMSRestApi(object):
             ErrorResponseException: If any data keys are provided that are not
                 valid for the entity.
         """
-        url = "{base_url}/{service}Set".format(
+        url = "{base_url}/{service}".format(
             base_url=self.CRM_REST_BASE_URL,
             service=service
         )
@@ -157,7 +157,7 @@ class CDMSRestApi(object):
                 found.
             ErrorResponseException: If provided guid is not valid.
         """
-        url = "{base_url}/{service}Set(guid'{guid}')".format(
+        url = "{base_url}/{service}(guid'{guid}')".format(
             base_url=self.CRM_REST_BASE_URL,
             service=service,
             guid=guid
