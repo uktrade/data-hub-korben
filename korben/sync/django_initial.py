@@ -1,3 +1,4 @@
+import logging
 import operator
 
 import sqlalchemy as sqla
@@ -6,6 +7,8 @@ from korben import config
 from korben import services
 from korben import etl
 from korben.etl.main import from_cdms_psql
+
+LOGGER = logging.getLogger('korben.sync.django_initial')
 
 
 def main():
@@ -19,6 +22,7 @@ def main():
             if table_name in etl.spec.DJANGO_LOOKUP:
                 odata_tables.append(etl.spec.DJANGO_LOOKUP[table_name])
     for name in odata_tables:
+        LOGGER.info("Dumping OData to Django for {0}".format(name))
         table = odata_metadata.tables[name]
         primary_key = next(
             col.name for col in table.primary_key.columns.values()

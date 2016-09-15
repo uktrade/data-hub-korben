@@ -4,7 +4,6 @@ operates under the assumption that there is a fully populated local database.
 '''
 import datetime
 import logging
-import multiprocessing
 
 from lxml import etree
 import sqlalchemy as sqla
@@ -20,7 +19,6 @@ CDMS_API = None
 DATABASE_CONNECTION = None
 
 LOGGER = logging.getLogger('korben.sync.poll')
-LOGGER.addHandler(utils.MultiProcessingLog)
 
 
 def reverse_scrape(table, col_names, primary_key, offset):
@@ -82,9 +80,6 @@ def poll_():
     odata_metadata = services.db.poll_for_metadata(config.database_odata_url)
     django_metadata = services.db.poll_for_metadata(config.database_url)
 
-    pool = multiprocessing.Pool()
-    results = []
-
     live_entities = []
     django_fkey_deps = etl.utils.fkey_deps(django_metadata)
     for depth in sorted(django_fkey_deps.keys()):
@@ -101,17 +96,8 @@ def poll_():
         primary_key = next(
             col.name for col in table.primary_key.columns.values()
         )
-        '''
         LOGGER.info("Starting reverse scrape for {0}".format(table.name))
         reverse_scrape(table, col_names, primary_key, 0)
-        '''
-        result = pool.apply_async(
-            reverse_scrape, (table, col_names, primary_key, 0)
-        )
-        results.append(result)
-
-    pool.close()
-    pool.join()
 
 
 def main():
