@@ -14,6 +14,7 @@ from korben.cdms_api.rest.api import CDMSRestApi
 
 from .. import constants
 from .. import populate
+from .. import etl
 from .. import utils as sync_utils
 from . import constants as scrape_constants
 from . import types
@@ -42,9 +43,7 @@ except FileNotFoundError:
 PROCESSES = 32
 
 
-
-
-def main():
+def main(names=None):
     pool = multiprocessing.Pool(processes=PROCESSES)
     entity_chunks = []
     spent_path = sync_utils.file_leaf('cache', 'spent')
@@ -59,9 +58,11 @@ def main():
         spent = set()
         with open(spent_path, 'wb') as spent_fh:
             pickle.dump(spent, spent_fh)
-    for entity_name in set(constants.ENTITY_NAMES) - spent:
+    if names is None:
+        names = etl.spec.MAPPINGS.keys()
+    for entity_name in set(names) - spent:
         try:
-            caches = os.listdir(os.path.join('cache', 'list', entity_name))
+            caches = os.listdir(os.path.join('cache', 'atom', entity_name))
             start = max(map(int, caches)) + 50
         except (FileNotFoundError, ValueError):
             start = 0

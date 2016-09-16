@@ -1,7 +1,7 @@
 import datetime
 import logging
 import os
-import pickle
+from lxml import etree
 
 from requests import exceptions as reqs_excs
 
@@ -15,9 +15,9 @@ LOGGER = logging.getLogger('korben.sync.scrape.classes')
 
 api = CDMSRestApi()
 
-def request_cache_key(entity_name, offset):
-    'Return the path where a request cache entry should be written'
-    return sync_utils.file_leaf('cache', 'request', entity_name, offset)
+def atom_cache_key(entity_name, offset):
+    'Return the path where atom reqponses are cached'
+    return sync_utils.file_leaf('cache', 'atom', entity_name, offset)
 
 
 def duration_record(entity_name, offset):
@@ -31,13 +31,12 @@ def is_cached(entity_name, offset):
     where the bool is whether or not the request is cached and the str is the
     path it either is or should be cached at.
     '''
-    path = request_cache_key(entity_name, offset)
+    path = atom_cache_key(entity_name, offset)
     if not os.path.isfile(path):
         return False, path
     try:
         with open(path, 'rb') as cache_fh:
-            resp = pickle.load(cache_fh)
-            etree.fromstring(resp.content)
+            etree.fromstring(cache_fh.read())
     except etree.XMLSyntaxError as exc:
         return False, path
     return True, path
@@ -58,7 +57,7 @@ def cdms_list(entity_name, offset):
     cached, cache_path = is_cached(entity_name, offset)
     if cached:  # nothing to do, just load resp from cache
         with open(cache_path, 'rb') as cache_fh:
-            return pickle.load(cache_fh)
+            return cache_fh.read()
     start_time = datetime.datetime.now()
     resp = api.list(entity_name, skip=offset)  # the actual request
     time_delta = (datetime.datetime.now() - start_time).seconds
@@ -70,9 +69,9 @@ def cdms_list(entity_name, offset):
     with open(duration_record(entity_name, offset), 'w') as duration_fh:
         duration_fh.write(str(time_delta))
     with open(cache_path, 'wb') as cache_fh:
-        pickle.dump(resp, cache_fh)
+        cache_fh.write(resp.content)
     LOGGER.info("{0} ({1}) {2}s".format(entity_name, offset, time_delta))
-    return resp
+    return resp.content
 
 
 class EntityChunk(object):
