@@ -9,12 +9,12 @@ from korben import config
 from korben import etl
 
 
-def row_es_add(table_name, es_id_col, row):
+def row_es_add(table, es_id_col, row):
     'Create an ES `index` action from a database row'
     return {
         '_op_type': 'index',
         "_index": etl.spec.ES_INDEX,
-        "_type": table_name,
+        "_type": table.name,
         "_id": row[es_id_col],
         "_source": dict(row),
     }
@@ -38,6 +38,23 @@ def setup_index():
             )
 
 
+def joined_select(table):
+    joined = table
+    for fkey in table.foreign_keys:
+        joined = joined.join(fkey.column.table)
+    cols = list(filter(lambda col: not bool(col.foreign_keys), table.columns))
+    fkeys = list(
+        # assume fkeys are non-composite, assume remote has `name` column
+        # label them djangoeyways
+        next(
+            fkey.column.table.c.name.label(fkey_col.name[:-3])
+            for fkey in fkey_col.foreign_keys
+        )
+        for fkey_col in table.foreign_keys
+    )
+    return sqla.select(cols + fkeys, from_obj=joined)
+
+
 def main():
     django_metadata = services.db.poll_for_metadata(config.database_url)
     setup_index()
@@ -45,8 +62,8 @@ def main():
         if name == 'company_companieshousecompany':
             continue
         table = django_metadata.tables[name]
-        rows = django_metadata.bind.execute(table.select()).fetchall()
-        actions = map(functools.partial(row_es_add, name, 'id'), rows)
+        rows = django_metadata.bind.execute(joined_select(table)).fetchall()
+        actions = map(functools.partial(row_es_add, table, 'id'), rows)
         es_helpers.bulk(
             client=services.es.client,
             actions=actions,

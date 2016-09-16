@@ -10,11 +10,11 @@ import sqlalchemy as sqla
 from lxml import etree
 
 from korben import config
+from korben import etl
 from korben.cdms_api.rest.api import CDMSRestApi
 
 from .. import constants
 from .. import populate
-from .. import etl
 from .. import utils as sync_utils
 from . import constants as scrape_constants
 from . import types
