@@ -9,14 +9,14 @@ from korben import config
 from korben import etl
 
 
-def row_es_add(doc_type, id_key, row):
-    'Create an ES add action from a database row'
+def row_es_add(table_name, es_id_col, row):
+    'Create an ES `index` action from a database row'
     return {
-            '_op_type': 'index',
-            "_index": etl.spec.ES_INDEX,
-            "_type": doc_type,
-            "_id": row[id_key],
-            "_source": dict(row),
+        '_op_type': 'index',
+        "_index": etl.spec.ES_INDEX,
+        "_type": table_name,
+        "_id": row[es_id_col],
+        "_source": dict(row),
     }
 
 
