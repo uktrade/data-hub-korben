@@ -1,19 +1,18 @@
 # Tools for converting OData `metadata.xml` to PostgreSQL schema
 
-CDMS exposes an OData endpoint, which in turn exposes what is hoped to be the
-schema for the underlying MS Dynamics instance. This directory contains scripts
-that take in the `metadata.xml` file describing the OData endpoint’s schema and
-output an SQL file describing the same schema for Postgres.
+CDMS exposes an OData endpoint, which provides access to data in what is hoped to be the
+schema for the MSSQL(?) databases underlying MS Dynamics instance. This
+directory contains scripts that take in the XML file exposed at `/$metadata`
+describing the data’s schema and output SQL files describing the same schema
+for Postgres.
 
-There is also a Bash script and Git patch for producing a properly configured
-Postgres installation (allowing for long column names). It is tested on OSX El
-Capitan, but should run on Linux too.
+In the case of CDMS, the SQL schema output by these scripts has very long
+column names. There is a Docker container [here](../../../postgres-namedatalen)
+that can handle these.
 
 ## Usage
-
-The scripts are “packaged” by the entrypoint `main.py` which can be run from
-the command line and takes two arguments; the name of the input metadata file
-and the name of the output SQL file. For example:
+The command line interface to these scripts takes two arguments; the name of
+the input metadata file and the name of the output SQL file. For example:
 
 ```
 korben odata-psql metadata.xml schema.sql
