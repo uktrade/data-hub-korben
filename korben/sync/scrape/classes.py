@@ -15,6 +15,7 @@ LOGGER = logging.getLogger('korben.sync.scrape.classes')
 
 api = CDMSRestApi()
 
+
 def atom_cache_key(entity_name, offset):
     'Return the path where atom reqponses are cached'
     return sync_utils.file_leaf('cache', 'atom', entity_name, offset)

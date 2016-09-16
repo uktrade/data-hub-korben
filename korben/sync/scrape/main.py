@@ -107,7 +107,7 @@ def main(names=None):
                 entity_page.poll()  # updates the state of the EntityPage
                 if entity_page.state == types.EntityPageState.complete:
                     # make cheeky call to populate
-                    # populate.main('cache', entity_page.entity_name, metadata)
+                    populate.main('cache', entity_page.entity_name, metadata)
                     continue
                 if entity_page.state == types.EntityPageState.failed:
                     # handle various failure cases

@@ -2,7 +2,6 @@
 import csv
 import logging
 import os
-import pickle
 import subprocess
 import urllib
 
@@ -20,24 +19,19 @@ COPY "{0}" FROM '{1}' DELIMITER ',' CSV;
 LOGGER = logging.getLogger('korben.sync.populate')
 
 
-def unpickle_resp(cache_dir, entity_name, name):
-    path = os.path.join(cache_dir, 'list', entity_name, name)
-    with open(path, 'rb') as resp_fh:
+def parse_atom(cache_dir, entity_name, name):
+    path = os.path.join(cache_dir, 'atom', entity_name, name)
+    with open(path, 'rb') as cache_fh:
         try:
-            resp = pickle.load(resp_fh)
-        except:
-            LOGGER.error('Bad pickle %s!', path)
+            return etree.fromstring(cache_fh.read())
+        except etree.XMLSyntaxError:
+            LOGGER.error('Bad XML!')
+            # scrape failed
             return
-    try:
-        return etree.fromstring(resp.content)
-    except etree.XMLSyntaxError:
-        LOGGER.error('Bad resp!')
-        # scrape failed
-        return
 
 
 def resp_csv(cache_dir, csv_dir, col_names, entity_name, page):
-    root = unpickle_resp(cache_dir, entity_name, page)
+    root = parse_atom(cache_dir, entity_name, page)
     if root is None:
         LOGGER.error("Unpickle of {0} failed on page {1}".format(
             entity_name, page
@@ -131,5 +125,5 @@ def main(cache_dir='cache', entity_name=None, metadata=None):
     if entity_name:
         populate_entity(cache_dir, metadata, entity_name)
         return
-    for entity_name in os.listdir(os.path.join(cache_dir, 'list')):
+    for entity_name in os.listdir(os.path.join(cache_dir, 'atom')):
         populate_entity(cache_dir, metadata, entity_name)
