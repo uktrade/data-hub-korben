@@ -6,12 +6,12 @@ import sqlalchemy as sqla
 from korben import config
 from korben import services
 from korben import etl
-from korben.etl.main import from_cdms_psql
 
 LOGGER = logging.getLogger('korben.sync.django_initial')
 
 
 def main():
+    from korben.etl.main import from_cdms_psql  # TODO: sort out circluar dep with sync.utils
     odata_metadata = services.db.poll_for_metadata(config.database_odata_url)
     django_metadata = services.db.poll_for_metadata(config.database_url)
 
@@ -31,4 +31,4 @@ def main():
             sqla.select([table.columns[primary_key]])
         ).fetchall()
         guids = map(operator.itemgetter(primary_key), rows)
-        from_cdms_psql(table, guids)
+        from_cdms_psql(table, guids, idempotent=True)

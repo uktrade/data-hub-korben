@@ -2,8 +2,6 @@
 import csv
 import logging
 import os
-import subprocess
-import urllib
 
 from lxml import etree
 
@@ -12,27 +10,12 @@ from korben import services
 from . import constants
 from . import utils
 
-CSV_PSQL_TEMPLATE = '''
-COPY "{0}" FROM '{1}' DELIMITER ',' CSV;
-'''
-
 LOGGER = logging.getLogger('korben.sync.populate')
 
 
-def parse_atom(cache_dir, entity_name, name):
-    path = os.path.join(cache_dir, 'atom', entity_name, name)
-    with open(path, 'rb') as cache_fh:
-        try:
-            return etree.fromstring(cache_fh.read())
-        except etree.XMLSyntaxError:
-            LOGGER.error('Bad XML!')
-            # scrape failed
-            return
-
-
 def resp_csv(cache_dir, csv_dir, col_names, entity_name, page):
-    root = parse_atom(cache_dir, entity_name, page)
-    if root is None:
+    entries = utils.parse_atom_entries(cache_dir, entity_name, page)
+    if entries is None:
         LOGGER.error("Unpickle of {0} failed on page {1}".format(
             entity_name, page
         ))
@@ -47,8 +30,6 @@ def resp_csv(cache_dir, csv_dir, col_names, entity_name, page):
         return None, csv_path
     csv_fh = open(csv_path, 'w')
     writer = csv.DictWriter(csv_fh, col_names, dialect='excel')
-    # print(index + 1, end=' ', flush=True)
-    entries = root.findall(constants.ENTRY_TAG)
     rowcount = 0
     for entry in entries:
         writer.writerow(utils.entry_row(col_names, None, entry))
@@ -63,7 +44,7 @@ def entity_csv(cache_dir, col_names, entity_name, start=0):
         filter(
             lambda P: int(P) > start,
             sorted(
-                os.listdir(os.path.join(cache_dir, 'list', entity_name)),
+                os.listdir(os.path.join(cache_dir, 'atom', entity_name)),
                 key=int,
             )
         )
@@ -78,45 +59,38 @@ def entity_csv(cache_dir, col_names, entity_name, start=0):
         if n_rows and csv_path:
             csv_paths.append(csv_path)
             rowcount += n_rows
+        elif csv_path:
+            csv_paths.append(csv_path)
+            rowcount += 49.9
     LOGGER.info("{0} rows for {1}".format(rowcount, entity_name))
+    if len(pages) and not rowcount:
+        raise Exception(csv_path)
     return csv_paths
 
 
-def csv_psql(cache_dir, csv_path, table):
-    psql_path = os.path.join(cache_dir, "{0}.csv".format(table.name))
-    with open(psql_path, 'w') as psql_fh:
-        psql_fh.write(
-            CSV_PSQL_TEMPLATE.format(table.name, os.path.abspath(csv_path))
+def csv_psql(cursor, csv_path, table):
+    LOGGER.info("Using COPY FROM on {0}".format(csv_path))
+    with open(csv_path, 'r') as csv_fh:
+        cursor.copy_expert(
+            '''COPY "{0}" FROM STDIN DELIMITER ',' CSV'''.format(table.name),
+            csv_fh
         )
-    url = urllib.parse(config.database_odata_url)
-    return subprocess.check_output([
-        'psql',
-        '-h', url.netloc,
-        '-d', url.path.lstrip('/'),
-        '-f', psql_path
-    ])
+        # cursor.copy_from(csv_fh, '"{0}"'.format(table.name), sep=',', null=None)
 
 
 def populate_entity(cache_dir, metadata, entity_name):
     os.makedirs(os.path.join(cache_dir, 'csv', entity_name), exist_ok=True)
-    table = metadata.tables[entity_name + 'Set']
+    table = metadata.tables[entity_name]
     rowcount = metadata.bind.connect().execute(table.count()).scalar()
-    '''
-    if rowcount and rowcount % 50:
-        LOGGER.info(
-            '"{0}" appears it may be fully populated, skipping'.format(
-                table.name
-            )
-        )
-        continue
-    '''
     col_names = [col.name for col in table.columns]
     csv_paths = entity_csv(cache_dir, col_names, entity_name, rowcount)
     for csv_path in csv_paths:
         try:
-            csv_psql(cache_dir, csv_path, table)
-        except subprocess.CalledProcessError:
-            print("COPY command for {0} failed".format(csv_path))
+            cursor = metadata.bind.connection.cursor()
+            csv_psql(cursor, csv_path, table)
+        except Exception as exc:
+            print("csv_psq call failed for {0} failed".format(csv_path))
+            print(exc)
 
 
 def main(cache_dir='cache', entity_name=None, metadata=None):

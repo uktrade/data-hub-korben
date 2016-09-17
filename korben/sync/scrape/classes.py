@@ -5,75 +5,12 @@ from lxml import etree
 
 from requests import exceptions as reqs_excs
 
-from korben.cdms_api.rest.api import CDMSRestApi
 from .. import utils as sync_utils
 from . import types
 from . import constants
 from . import utils
 
 LOGGER = logging.getLogger('korben.sync.scrape.classes')
-
-api = CDMSRestApi()
-
-
-def atom_cache_key(entity_name, offset):
-    'Return the path where atom reqponses are cached'
-    return sync_utils.file_leaf('cache', 'atom', entity_name, offset)
-
-
-def duration_record(entity_name, offset):
-    'Return the path where a request duration record should be written'
-    return sync_utils.file_leaf('cache', 'duration', entity_name, offset)
-
-
-def is_cached(entity_name, offset):
-    '''
-    Determine if a certain request is cached, return is a 2-tup (bool, str)
-    where the bool is whether or not the request is cached and the str is the
-    path it either is or should be cached at.
-    '''
-    path = atom_cache_key(entity_name, offset)
-    if not os.path.isfile(path):
-        return False, path
-    try:
-        with open(path, 'rb') as cache_fh:
-            etree.fromstring(cache_fh.read())
-    except etree.XMLSyntaxError as exc:
-        return False, path
-    return True, path
-
-
-def is_pending(entity_page):
-    'Convenience function to test if an EntityPage object is in pending state'
-    return entity_page.state == types.EntityPageState.pending
-
-
-def cdms_list(entity_name, offset):
-    '''
-    Call the `cdms_api.list` method, passing through the entity_name and
-    offset. This function records the duration of the network request. It also
-    caches the resulting response if it’s successful and raises an informative
-    exception if it’s not.
-    '''
-    cached, cache_path = is_cached(entity_name, offset)
-    if cached:  # nothing to do, just load resp from cache
-        with open(cache_path, 'rb') as cache_fh:
-            return cache_fh.read()
-    start_time = datetime.datetime.now()
-    resp = api.list(entity_name, skip=offset)  # the actual request
-    time_delta = (datetime.datetime.now() - start_time).seconds
-
-    # the below will raise if the response is no good
-    utils.raise_on_cdms_resp_errors(entity_name, offset, resp)
-
-    # record our expensive network request
-    with open(duration_record(entity_name, offset), 'w') as duration_fh:
-        duration_fh.write(str(time_delta))
-    with open(cache_path, 'wb') as cache_fh:
-        cache_fh.write(resp.content)
-    LOGGER.info("{0} ({1}) {2}s".format(entity_name, offset, time_delta))
-    return resp.content
-
 
 class EntityChunk(object):
     '''
@@ -101,7 +38,7 @@ class EntityChunk(object):
 
     def pending(self):
         'Return number of pending tasks'
-        return len(list(filter(is_pending, self.entity_pages)))
+        return len(list(filter(utils.is_pending, self.entity_pages)))
 
     def start(self, pool):
         'Start the first "unstarted" task'
@@ -150,7 +87,7 @@ class EntityPage(object):
 
     def start(self, pool):
         'Send this task to the pool and store the AysyncResult object locally'
-        self.task = pool.apply_async(cdms_list, (
+        self.task = pool.apply_async(utils.cdms_list, (
             self.entity_name, self.offset
         ))
         self.state = types.EntityPageState.pending

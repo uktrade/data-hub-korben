@@ -9,7 +9,6 @@ from lxml import etree
 import sqlalchemy as sqla
 
 from ..cdms_api.rest.api import CDMSRestApi
-from ..etl.main import from_cdms_psql
 from .. import etl
 from . import constants
 from . import utils
@@ -22,6 +21,7 @@ LOGGER = logging.getLogger('korben.sync.poll')
 
 
 def reverse_scrape(table, col_names, primary_key, offset):
+    from ..etl.main import from_cdms_psql  # TODO: fix sync.utils circular dep
     resp = CDMS_API.list(table.name, order_by='ModifiedOn desc', skip=offset)
     rows = []
     for entry in etree.fromstring(resp.content).iter(constants.ENTRY_TAG):
@@ -30,7 +30,7 @@ def reverse_scrape(table, col_names, primary_key, offset):
     updated_rows = 0
     connection = services.db.poll_for_connection(config.database_odata_url)
     for row in rows:
-        from_cdms_psql(table, [row[primary_key]])
+        from_cdms_psql(table, [row[primary_key]])  # to django
         select_statement = (
             sqla.select([table.c.ModifiedOn], table)
                 .where(table.columns[primary_key] == row[primary_key])

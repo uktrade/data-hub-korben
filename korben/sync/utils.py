@@ -11,6 +11,9 @@ from lxml import etree
 from . import constants
 
 
+LOGGER = logging.getLogger('korben.sync.utils')
+
+
 def file_leaf(*args):
     '''
     Where *args are str, the last str is the name of a file and the preceding
@@ -68,11 +71,13 @@ def entry_row(col_names, link_fkey_map, entry):
         import ipdb;ipdb.set_trace()
         pass
     '''
-    for key in row:
-        if key not in col_names:
-            to_pop.append(key)
-    for key in to_pop:
-        row.pop(key)
+    if col_names:
+        # optionally filter by a column set
+        for key in row:
+            if key not in col_names:
+                to_pop.append(key)
+        for key in to_pop:
+            row.pop(key)
     return row
 
 
@@ -153,3 +158,17 @@ class MultiProcessingLog(logging.Handler):
     def close(self):
         self._handler.close()
         logging.Handler.close(self)
+
+
+def parse_atom_entries(cache_dir, entity_name, name, path=None):
+    'Parse <entry> elements from an XML document in Atom format'
+    if path is None:
+        path = os.path.join(cache_dir, 'atom', entity_name, name)
+    with open(path, 'rb') as cache_fh:
+        try:
+            root = etree.fromstring(cache_fh.read())
+            return root.findall(constants.ENTRY_TAG)
+        except etree.XMLSyntaxError:
+            LOGGER.error('Bad XML!')
+            # scrape failed
+            return

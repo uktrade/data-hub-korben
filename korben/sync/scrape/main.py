@@ -6,16 +6,16 @@ import pickle
 import time
 import random
 
-import sqlalchemy as sqla
 from lxml import etree
 
 from korben import config
 from korben import etl
+from korben import services
 from korben.cdms_api.rest.api import CDMSRestApi
 
 from .. import constants
-from .. import populate
 from .. import utils as sync_utils
+from . import utils
 from . import constants as scrape_constants
 from . import types
 from . import classes
@@ -27,7 +27,7 @@ class LoggingFilter(logging.Filter):
         return not record.getMessage().startswith('requests')
 
 
-logging.basicConfig(level=logging.DEBUG)
+logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('korben.sync.scrape.main')
 logging.getLogger().addFilter(LoggingFilter())
 
@@ -44,12 +44,11 @@ PROCESSES = 32
 
 
 def main(names=None):
+    from korben.etl.main import from_odata_xml  # TODO: fix circular dep with sunc.utils
     pool = multiprocessing.Pool(processes=PROCESSES)
     entity_chunks = []
     spent_path = sync_utils.file_leaf('cache', 'spent')
-    engine = sqla.create_engine(config.database_odata_url)
-    metadata = sqla.MetaData(bind=engine)
-    metadata.reflect()
+    metadata = services.db.poll_for_metadata(config.database_odata_url)
     try:
         with open(spent_path, 'rb') as spent_fh:
             spent = pickle.load(spent_fh)
@@ -106,8 +105,13 @@ def main(names=None):
             for entity_page in entity_chunk.entity_pages:
                 entity_page.poll()  # updates the state of the EntityPage
                 if entity_page.state == types.EntityPageState.complete:
-                    # make cheeky call to populate
-                    populate.main('cache', entity_page.entity_name, metadata)
+                    # make cheeky call to etl.load
+                    from_odata_xml(
+                        metadata.tables[entity_page.entity_name],
+                        utils.atom_cache_key(
+                            entity_page.entity_name, entity_page.offset
+                        )
+                    )
                     continue
                 if entity_page.state == types.EntityPageState.failed:
                     # handle various failure cases

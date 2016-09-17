@@ -18,9 +18,9 @@ CH_FIELDS = (
     'company_number',
     'name',
     'address_care_of',
-    'address_po_box',
-    'address_address_1',
-    'address_address_2',
+    'po_box',
+    'address_1',
+    'address_2',
     'address_town',
     'address_county',
     'address_country',
@@ -71,7 +71,7 @@ def main():
                 if index == 0:
                     continue  # skip 0th row, since we’re using our own names
                 csv_rows.append(csv_chcompany(row))
-                if index % 500 == 0:  # periodically puke rows into the db
+                if index % 10000 == 0:  # periodically puke rows into the db
                     metadata.bind.execute(
                         insert(ch_company_table).values(csv_rows)
                     )
