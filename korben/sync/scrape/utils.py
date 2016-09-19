@@ -41,7 +41,7 @@ def raise_on_cdms_resp_errors(entity_name, offset, resp):
         raise RuntimeError("{0} {1} unhandled".format(entity_name, offset))
     try:
         root = etree.fromstring(resp.content)  # check XML is parseable
-        if not root.findall('{http://www.w3.org/2005/Atom}entry'):
+        if not root.findall('{http://www.w3.org/2005/Atom}entry'):  # TODO: use constant
             # paged out in a useless way
             raise types.EntityPageNoData("{0} {1}".format(entity_name, offset))
     except etree.XMLSyntaxError:

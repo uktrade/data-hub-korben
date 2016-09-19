@@ -84,7 +84,7 @@ def main(names=None):
         if not all(report_conditions):
             continue  # this isn’t a report loop
 
-        print("Ping! {0}".format(now))
+        LOGGER.info("Ping! {0}".format(now))
 
         last_report = now.second
 
@@ -92,7 +92,9 @@ def main(names=None):
 
             if entity_chunk.state in (
                 types.EntityChunkState.complete, types.EntityChunkState.spent
-            ): continue  # NOQA
+            ):
+                LOGGER.info("{0} reports complete".format(entity_chunk))
+                continue  # NOQA
 
             # how many tasks pending in total
             pending = sum(
@@ -106,10 +108,16 @@ def main(names=None):
                 entity_page.poll()  # updates the state of the EntityPage
                 if entity_page.state == types.EntityPageState.complete:
                     # make cheeky call to etl.load
-                    from_odata_xml(
+                    results = from_odata_xml(
                         metadata.tables[entity_page.entity_name],
                         utils.atom_cache_key(
                             entity_page.entity_name, entity_page.offset
+                        )
+                    )
+                    LOGGER.info(
+                        "{0} rows went into {1}".format(
+                            sum(result.rowcount for result in results),
+                            entity_page.entity_name
                         )
                     )
                     continue
@@ -144,5 +152,6 @@ def main(names=None):
             for entity_chunk in entity_chunks
         )
         if all(done):
+            LOGGER.info('All done!')
             exit(1)  # move on
         time.sleep(1)  # don’t spam
