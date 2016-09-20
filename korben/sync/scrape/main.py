@@ -59,7 +59,7 @@ def main(names=None):
             pickle.dump(spent, spent_fh)
     if names is None:
         names = etl.spec.MAPPINGS.keys()
-    for entity_name in set(names) - spent:
+    for entity_name in set(names.split(',')) - spent:
         try:
             caches = os.listdir(os.path.join('cache', 'atom', entity_name))
             start = max(map(int, caches)) + 50
