@@ -1,3 +1,4 @@
+# TODO: Use click to formalise, add generic opts etc
 import sys
 from . import sync, odata_psql, etl
 
