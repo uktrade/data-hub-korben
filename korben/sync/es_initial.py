@@ -45,21 +45,27 @@ def joined_select(table):
     for col in filter(lambda col: bool(col.foreign_keys), table.columns):
         fkey = next(iter(col.foreign_keys))  # assume fkeys
                                              # are non-composite
+        # outer join is used here because data from cdms is incomplete
+        # TODO: make scrape code more thorough, or maybe fix etl
         joined = joined.outerjoin(
             fkey.column.table,
-            fkey.column.table.c.id==col  # assume join clause is this simple
-        )
-        # assume remote has `name` column
-        # label it djangoeyways
-        try:
-            fkey_data_cols.append(
-                fkey.column.table.c.name.label(col.name[:-3])
-            )
-        except AttributeError:
-            # just hack the case where there's no name
-            fkey_data_cols.append(
-                fkey.column.table.c.first_name.label(col.name[:-3])
-            )
+            onclause=fkey.column.table.c.id == col  # assume join clause is
+        )                                           # this simple
+        # label column to lose `_id` suffix
+        local_name = col.name[:-3]
+        # potential remote column names
+        potential_remotes = ('name', 'first_name')
+        remote_column = None
+        for remote_name in potential_remotes:
+            try:
+                remote_column = getattr(fkey.column.table.c, remote_name)
+            except AttributeError:
+                pass
+        if remote_column is None:
+            import ipdb;ipdb.set_trace()
+            pass
+        else:
+            fkey_data_cols.append(remote_column.label(local_name))
     cols = list(filter(lambda col: not bool(col.foreign_keys), table.columns))
     return sqla.select(cols + fkey_data_cols, from_obj=joined)
 
@@ -67,13 +73,11 @@ def joined_select(table):
 def main():
     django_metadata = services.db.poll_for_metadata(config.database_url)
     setup_index()
-    # for name in etl.spec.DJANGO_LOOKUP:
-    for name in ['company_interaction']:
+    for name in etl.spec.DJANGO_LOOKUP:
         if name == 'company_companieshousecompany':
             continue
         table = django_metadata.tables[name]
         select = joined_select(table)
-        print(select)
         rows = django_metadata.bind.execute(select).fetchall()
         actions = map(functools.partial(row_es_add, table, 'id'), rows)
         es_helpers.bulk(
