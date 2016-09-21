@@ -71,12 +71,11 @@ def main(names=None, api_instance=None):
         names = set(names.split(','))
     for entity_name in names - spent:
         try:
-            caches = tuple(map(
-                int, os.listdir(os.path.join('cache', 'json', entity_name))
-            ))
-            for index, page_number in enumerate(caches[1:]):
-                if caches[index - 1] != page_number - 50:
-                    start = caches[index - 1]
+            caches = sorted(map(int,
+                os.listdir(os.path.join('cache', 'json', entity_name))))
+            for index, offset in list(enumerate(caches))[1:]:
+                if caches[index - 1] != offset - 50:
+                    start = caches[index - 1] + 50
                     LOGGER.info(
                         "In a previous run {0} broke at {1}".format(
                             entity_name, start
@@ -99,13 +98,13 @@ def main(names=None, api_instance=None):
         now = datetime.datetime.now()
         report_conditions = (
             now.second,
-            now.second % 5 == 0,
+            now.second % 2 == 0,
             last_report != now.second,
         )
         if not all(report_conditions):
             continue  # this isn’t a report loop
 
-        LOGGER.info("Ping! {0}".format(now))
+        LOGGER.info("Ping! {0}".format(now.strftime("%Y-%m-%d %H:%M:%S")))
 
         last_report = now.second
 
