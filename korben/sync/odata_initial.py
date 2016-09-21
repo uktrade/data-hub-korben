@@ -62,7 +62,10 @@ def entity_csv(cache_dir, col_names, entity_name, start=0):
             rowcount += n_rows
         elif csv_path:
             csv_paths.append(csv_path)
-            rowcount += 49.9
+            with open(csv_path) as csv_fh:
+                for i, _ in enumerate(csv_fh):
+                    pass
+                rowcount += i + 1
     LOGGER.info("{0} rows for {1}".format(rowcount, entity_name))
     if len(pages) and not rowcount:
         raise Exception(csv_path)
