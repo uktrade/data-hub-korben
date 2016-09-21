@@ -49,8 +49,10 @@ class EntityChunk(object):
 
     def poll(self):
         'Are all the tasks complete?'
+        if self.state == types.EntityChunkState.complete:
+            return
         done = (
-            entity_page.state == types.EntityPageState.complete
+            entity_page.state == types.EntityPageState.inserted
             for entity_page in self.entity_pages
         )
         if all(done):
@@ -75,7 +77,9 @@ class EntityPage(object):
         self.offset = offset
 
     def __str__(self):
-        return "<EntityPage {0} ({1})>".format(self.entity_name, self.offset)
+        return "<EntityPage {0} ({1}) {2}>".format(
+            self.entity_name, self.offset, self.state
+        )
 
     def reset(self):
         'Used in the case of failure where the request should be made again'
@@ -96,6 +100,8 @@ class EntityPage(object):
         'Poll self.task, translate exception to state'
         if self.state == types.EntityPageState.initial:
             return  # not started
+        if self.state == types.EntityPageState.inserted:
+            return  # inserted
         if not self.task.ready():
             return  # pending
         try:

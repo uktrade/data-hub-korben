@@ -40,7 +40,7 @@ try:
 except FileNotFoundError:
     ENTITY_NAMES = constants.ENTITY_NAMES
 
-PROCESSES = 32
+PROCESSES = 64
 
 
 def main(names=None):
@@ -61,8 +61,20 @@ def main(names=None):
         names = etl.spec.MAPPINGS.keys()
     for entity_name in set(names.split(',')) - spent:
         try:
-            caches = os.listdir(os.path.join('cache', 'atom', entity_name))
-            start = max(map(int, caches)) + 50
+            caches = tuple(map(
+                int, os.listdir(os.path.join('cache', 'atom', entity_name))
+            ))
+            for index, page_number in enumerate(caches[1:]):
+                if caches[index - 1] != page_number - 50:
+                    start = caches[index - 1]
+                    LOGGER.info(
+                        "In a previous run {0} broke at {1}".format(
+                            entity_name, start
+                        )
+                    )
+                    break
+            else:
+                start = max(caches) + 50
         except (FileNotFoundError, ValueError):
             start = 0
         end = start + (scrape_constants.CHUNKSIZE * scrape_constants.PAGESIZE)
@@ -115,11 +127,13 @@ def main(names=None):
                         )
                     )
                     LOGGER.info(
-                        "{0} rows went into {1}".format(
-                            sum(result.rowcount for result in results),
+                        "Records {0}-{1} went into {2}".format(
+                            entity_page.offset,
+                            entity_page.offset + sum(result.rowcount for result in results),
                             entity_page.entity_name
                         )
                     )
+                    entity_page.state = types.EntityPageState.inserted
                     continue
                 if entity_page.state == types.EntityPageState.failed:
                     # handle various failure cases

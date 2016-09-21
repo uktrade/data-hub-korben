@@ -30,11 +30,13 @@ def raise_on_cdms_resp_errors(entity_name, offset, resp):
                 )
         except AttributeError:
             # no message in xml
+            LOGGER.error(resp.content.decode(resp.encoding))
             raise types.EntityPageDynamicsBombed(
                 "{0} {1}".format(entity_name, offset)
             )
         except etree.XMLSyntaxError:
             # no xml in xml
+            LOGGER.error(resp.content.decode(resp.encoding))
             raise types.EntityPageDynamicsBombed(
                 "{0} {1}".format(entity_name, offset)
             )

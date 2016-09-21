@@ -27,6 +27,9 @@ EntityPageState = enum.Enum(
 #             /   \                                                     # NOQA
 #            /     \                                                    # NOQA
        'failed', 'complete',
+#                    |                                                  # NOQA
+#                    |                                                  # NOQA
+                 'inserted',
     )
 )
 
