@@ -43,7 +43,7 @@ def entity_csv(cache_dir, col_names, entity_name, start=0):
     csv_dir = os.path.join(cache_dir, 'csv', entity_name)
     pages = list(
         filter(
-            lambda P: int(P) > start,
+            lambda P: int(P) >= start,
             sorted(
                 os.listdir(os.path.join(cache_dir, 'json', entity_name)),
                 key=int,
