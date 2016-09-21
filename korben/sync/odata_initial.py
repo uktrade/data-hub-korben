@@ -23,11 +23,6 @@ def resp_csv(cache_dir, csv_dir, col_names, entity_name, page):
         return None, None
     csv_path = os.path.join(csv_dir, page)
     if os.path.isfile(csv_path):
-        '''
-        print("CSV exists for {0}/{1}, using existing data".format(
-            entity_name, page
-        ))
-        '''
         return None, csv_path
     csv_fh = open(csv_path, 'w')
     writer = csv.DictWriter(csv_fh, col_names, dialect='excel')
@@ -94,8 +89,8 @@ def populate_entity(cache_dir, metadata, entity_name):
             csv_psql(cursor, csv_path, table)
         except Exception as exc:
             metadata.bind.connection.rollback()
-            print("csv_psq call failed for {0} failed".format(csv_path))
-            print(exc)
+            LOGGER.info("csv_psq call failed for {0} failed".format(csv_path))
+            LOGGER.error(exc)
 
 
 def main(cache_dir='cache', entity_name=None, metadata=None):
