@@ -79,7 +79,7 @@ def csv_psql(cursor, csv_path, table):
             '''COPY "{0}" FROM STDIN DELIMITER ',' CSV'''.format(table.name),
             csv_fh
         )
-        # cursor.copy_from(csv_fh, '"{0}"'.format(table.name), sep=',', null=None)
+        cursor.connection.commit()
 
 
 def populate_entity(cache_dir, metadata, entity_name):
@@ -93,6 +93,7 @@ def populate_entity(cache_dir, metadata, entity_name):
             cursor = metadata.bind.connection.cursor()
             csv_psql(cursor, csv_path, table)
         except Exception as exc:
+            metadata.bind.connection.rollback()
             print("csv_psq call failed for {0} failed".format(csv_path))
             print(exc)
 

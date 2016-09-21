@@ -40,7 +40,7 @@ try:
 except FileNotFoundError:
     ENTITY_NAMES = constants.ENTITY_NAMES
 
-PROCESSES = 64
+PROCESSES = 32
 
 
 def main(names=None, api_instance=None):
