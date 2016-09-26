@@ -4,7 +4,7 @@ import sqlalchemy as sqla
 
 from korben import config
 
-LOGGER = logging.getLogger('korben.db')
+LOGGER = logging.getLogger('korben.services.db')
 
 __CACHE__ = {}
 

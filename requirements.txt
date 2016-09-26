@@ -1,7 +1,10 @@
+-e git+https://github.com/zzzeek/sqlalchemy.git#egg=sqlalchemy
+
 cryptography
 django
 elasticsearch
 flask
+lxml
 psycopg2
 pyquery
 pyyaml
@@ -9,6 +12,4 @@ requests
 requests_aws4auth
 requests_ntlm
 responses
--e git+https://github.com/zzzeek/sqlalchemy.git#egg=sqlalchemy
 sqlparse
--e git://github.com/uktrade/pyslet.git@master#egg=pyslet

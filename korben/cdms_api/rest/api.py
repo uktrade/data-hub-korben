@@ -14,10 +14,13 @@ class CDMSRestApi(object):
             auth (Optional): An authentication instance. Defaults to a default
                 instance of ActiveDirectoryAuth.
         """
-        self.CRM_REST_BASE_URL = '/'.join([
-            config.cdms_base_url.rstrip('/'),
-            'XRMServices/2011/OrganizationData.svc'
-        ])
+        if '.svc' not in config.cdms_base_url:
+            self.CRM_REST_BASE_URL = '/'.join([
+                config.cdms_base_url.rstrip('/'),
+                'XRMServices/2011/OrganizationData.svc'
+            ])
+        else:
+            self.CRM_REST_BASE_URL = config.cdms_base_url
 
         if auth is not None:
             self.auth = auth

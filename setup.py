@@ -35,7 +35,7 @@ SETUP_KWARGS = {
         ],
     },
     'dependency_links': [
-        'git+https://github.com/UKTradeInvestment/pyslet.git@master#egg=pyslet',
+        'git+https://github.com/uktrade/pyslet.git@master#egg=pyslet',
     ]
 }
 

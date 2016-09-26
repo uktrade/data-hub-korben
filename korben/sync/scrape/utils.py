@@ -82,7 +82,7 @@ def is_pending(entity_page):
     return entity_page.state == types.EntityPageState.pending
 
 
-api = CDMSRestApi()  # puke
+api = None
 
 
 def cdms_list(entity_name, offset):
@@ -92,6 +92,9 @@ def cdms_list(entity_name, offset):
     caches the resulting response if it’s successful and raises an informative
     exception if it’s not.
     '''
+    global api
+    if api is None:
+        api = CDMSRestApi()
     cached, cache_path = is_cached(entity_name, offset)
     if cached:  # nothing to do, just load resp from cache
         with open(cache_path, 'rb') as cache_fh:

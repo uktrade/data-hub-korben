@@ -1,1 +1,1 @@
-from . import db, es
+from . import db

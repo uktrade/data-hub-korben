@@ -13,3 +13,7 @@ class NoopAuth(object):
         if data is None:
             data = {}
         return getattr(self.session, verb)(url, data=json.dumps(data))
+
+    def setup_session(self, *args, **kwargs):
+        'Make code that expects to set up the session happy with a noop'
+        pass
