@@ -85,22 +85,19 @@ def is_pending(entity_page):
 api = None
 
 
-def cdms_list(entity_name, offset):
+def cdms_list(client, entity_name, offset):
     '''
     Call the `cdms_api.list` method, passing through the entity_name and
     offset. This function records the duration of the network request. It also
     caches the resulting response if it’s successful and raises an informative
     exception if it’s not.
     '''
-    global api
-    if api is None:
-        api = CDMSRestApi()
     cached, cache_path = is_cached(entity_name, offset)
     if cached:  # nothing to do, just load resp from cache
         with open(cache_path, 'rb') as cache_fh:
             return cache_fh.read()
     start_time = datetime.datetime.now()
-    resp = api.list(entity_name, skip=offset)  # the actual request
+    resp = client.list(entity_name, skip=offset)  # the actual request
     time_delta = (datetime.datetime.now() - start_time).seconds
 
     # the below will raise if the response is no good

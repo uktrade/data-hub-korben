@@ -43,8 +43,16 @@ except FileNotFoundError:
 PROCESSES = 64
 
 
-def main(names=None):
+def main(names=None, api_instance=None):
     from korben.etl.main import from_odata_xml  # TODO: fix circular dep with sunc.utils
+
+    global api
+    if api_instance is None:
+        api = CDMSRestApi()
+        api.auth.setup_session(True)
+    else:
+        api = api_instance
+
     pool = multiprocessing.Pool(processes=PROCESSES)
     entity_chunks = []
     spent_path = sync_utils.file_leaf('cache', 'spent')
@@ -58,8 +66,10 @@ def main(names=None):
         with open(spent_path, 'wb') as spent_fh:
             pickle.dump(spent, spent_fh)
     if names is None:
-        names = etl.spec.MAPPINGS.keys()
-    for entity_name in set(names.split(',')) - spent:
+        names = set(etl.spec.MAPPINGS.keys())
+    else:
+        names = set(names.split(','))
+    for entity_name in names - spent:
         try:
             caches = tuple(map(
                 int, os.listdir(os.path.join('cache', 'atom', entity_name))
@@ -78,10 +88,9 @@ def main(names=None):
         except (FileNotFoundError, ValueError):
             start = 0
         end = start + (scrape_constants.CHUNKSIZE * scrape_constants.PAGESIZE)
-        entity_chunks.append(classes.EntityChunk(entity_name, start, end))
-    global api
-    api = CDMSRestApi()
-    api.auth.setup_session(True)
+        entity_chunks.append(
+            classes.EntityChunk(api, entity_name, start, end)
+        )
     last_report = 0
 
     while True:  # take a deep breath

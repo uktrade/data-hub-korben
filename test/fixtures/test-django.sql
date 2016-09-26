@@ -3,7 +3,7 @@ CREATE TABLE "categories" (
     "name" TEXT,
     PRIMARY KEY ("id")
 );
-CREATE TABLE "Suppliers" (
+CREATE TABLE "suppliers" (
     "id" INTEGER NOT NULL,
     "name" TEXT,
     "address_street" TEXT,
@@ -14,7 +14,7 @@ CREATE TABLE "Suppliers" (
     "concurrency" INTEGER NOT NULL,
     PRIMARY KEY ("id")
 );
-CREATE TABLE "Products" (
+CREATE TABLE "products" (
     "id" INTEGER NOT NULL,
     "name" TEXT,
     "description" TEXT,
