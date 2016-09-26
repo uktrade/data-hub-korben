@@ -53,6 +53,11 @@ def main(names=None, api_instance=None):
     else:
         api = api_instance
 
+    from korben.etl.main import from_odata_xml  # TODO: fix circular dep with sunc.utils
+    if names is None:
+        names = etl.spec.MAPPINGS.keys()
+    else:
+        names = set(names.split(','))
     pool = multiprocessing.Pool(processes=PROCESSES)
     entity_chunks = []
     spent_path = sync_utils.file_leaf('cache', 'spent')
@@ -65,10 +70,6 @@ def main(names=None, api_instance=None):
         spent = set()
         with open(spent_path, 'wb') as spent_fh:
             pickle.dump(spent, spent_fh)
-    if names is None:
-        names = set(etl.spec.MAPPINGS.keys())
-    else:
-        names = set(names.split(','))
     for entity_name in names - spent:
         try:
             caches = sorted(map(int,
@@ -104,7 +105,7 @@ def main(names=None, api_instance=None):
         if not all(report_conditions):
             continue  # this isn’t a report loop
 
-        LOGGER.info("Ping! {0}".format(now.strftime("%Y-%m-%d %H:%M:%S")))
+        LOGGER.info("{0}".format(now.strftime("%Y-%m-%d %H:%M:%S")))
 
         last_report = now.second
 
