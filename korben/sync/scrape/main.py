@@ -176,5 +176,5 @@ def main(names=None, api_instance=None):
         )
         if all(done):
             LOGGER.info('All done!')
-            exit(1)  # move on
+            return  # TODO: add exit(1) somewhere else to signal to bash
         time.sleep(1)  # don’t spam

@@ -1,3 +1,6 @@
+import pytest
+
+import functools
 import os
 import time
 import urllib
@@ -18,9 +21,10 @@ def get_connection(url):
             time.sleep(1)
 
 
-def try_execute(cursor, sql):
+def execute_ignore_existing(cursor, sql):
     try:
         cursor.execute(sql)
+        cursor.connection.commit()
     except psycopg2.ProgrammingError as exc:
         if 'already exists' not in exc.pgerror:
             raise
@@ -38,8 +42,7 @@ for url, filenames in SCHEMA_FIXTURES.items():
     cursor = get_connection(url).cursor()
     for name in filenames:
         with open(os.path.join(FIXTURES_PATH, name), 'r') as sql_fh:
-            try_execute(cursor, sql_fh.read())
-    cursor.connection.commit()
+            execute_ignore_existing(cursor, sql_fh.read())
     cursor.connection.close()
 
 
@@ -64,3 +67,15 @@ DJANGO_SETTINGS = {
 }
 django_settings.configure(**DJANGO_SETTINGS)
 django.setup()
+
+
+@pytest.yield_fixture
+def db_odata():
+    cursor = get_connection(os.environ['DATABASE_ODATA_URL']).cursor()
+
+    def fetcher(sql):
+        cursor.execute(sql)
+        return cursor.fetchall()
+    yield fetcher
+    cursor.connection.commit()
+    cursor.connection.close()
