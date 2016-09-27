@@ -13,3 +13,6 @@ requests_aws4auth
 requests_ntlm
 responses
 sqlparse
+
+pytest-cov
+pytest-sugar
