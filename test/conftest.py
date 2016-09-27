@@ -1,12 +1,12 @@
 import pytest
 
 import copy
-import functools
 import os
 import time
 import urllib
 
 import django
+from django import db as django_db
 from django import apps as django_apps
 from django.conf import settings as django_settings_module
 from django.core.management import call_command as django_call_command
@@ -15,6 +15,7 @@ import psycopg2
 import etl.target_models
 from korben.etl import spec as etl_spec
 from korben.sync import utils as sync_utils
+from korben.services import db as korben_db
 
 
 SQL_PUBLIC_TABLE_NAMES = '''
@@ -115,6 +116,7 @@ def truncate_public_tables(url):
     for (table_name,) in public_table_names:
         cursor.execute('SELECT count(*) FROM "{0}"'.format(table_name))
         table_counts.append(cursor.fetchone())
+    cursor.connection.close()
     assert sum([count for (count,) in table_counts]) == 0
 
 
@@ -172,9 +174,11 @@ def tier0(odata_sync_utils):
     etl_spec.DJANGO_LOOKUP = {
         mapping['to']: name for name, mapping in ORIGINAL_MAPPINGS.items()
     }
-    # empty the database
+    # close cached sqla connections (which block db access) and truncate tables
     for url in schema_fixtures.keys():
+        korben_db.__CACHE__["{0}-{1}".format('connection', url)].close()
         truncate_public_tables(url)
+    django_db.connection.close()
 
 
 @pytest.yield_fixture

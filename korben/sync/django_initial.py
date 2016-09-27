@@ -39,33 +39,3 @@ def main(client=None):
         # the function below temporarily writes out fkey constraint fails which
         # are picked up below
         from_cdms_psql(table, tuple(guids), idempotent=True)
-
-    # temporary crap, goes through reported fkey failures and has a go at
-    # picking up the pieces
-    import csv
-    import lxml
-    from korben.cdms_api.rest.api import CDMSRestApi
-    from korben.sync import utils as sync_utils
-
-    try:
-        with open('cache/fails', 'r') as fails_fh:
-            guid_django = tuple(set((x, y) for x, y in csv.reader(fails_fh)))
-    except FileNotFoundError as exc:
-        # there are no integrity fails waiting to be mopped up
-        guid_django = tuple()
-
-    if client is None:
-        client = CDMSRestApi()
-        client.auth.setup_session(True)
-
-    for guid, django_name in guid_django:
-        odata_table = odata_metadata.tables[etl.spec.DJANGO_LOOKUP[django_name[1:]]]
-        entry = lxml.etree.fromstring(
-            client.get(odata_table.name, guid, guid=False).content
-        )
-        row = sync_utils.entry_row([col.name for col in odata_table.c], None, entry)
-        try:
-            etl.load.to_sqla_table(odata_table, [row])
-        except Exception as exc:
-            print(exc)
-    # end temporary crap
