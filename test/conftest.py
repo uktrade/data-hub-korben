@@ -1,5 +1,6 @@
 import pytest
 
+import copy
 import functools
 import os
 import time
@@ -12,6 +13,7 @@ from django.core.management import call_command as django_call_command
 import psycopg2
 
 import etl.target_models
+from korben.etl import spec as etl_spec
 
 
 SQL_PUBLIC_TABLE_NAMES = '''
@@ -23,6 +25,52 @@ SQL_TABLE_COUNTS = '''
 SELECT relname, n_live_tup FROM pg_stat_user_tables
     ORDER BY n_live_tup DESC;
 '''
+
+
+TEST_MAPPINGS = {
+    'Categories': {
+        'to': 'categories',
+        'local': (
+            ('ID', 'id'),
+            ('Name', 'name'),
+        )
+    },
+    'Suppliers': {
+        'to': 'suppliers',
+        'local': (
+            ('Address_Street', 'address_street'),
+            ('Address_City', 'address_city'),
+            ('Address_State', 'address_state'),
+            ('Address_ZipCode', 'address_zipcode'),
+            ('Address_Country', 'address_country'),
+            ('Concurrency', 'concurrency'),
+        ),
+    },
+    'Products': {
+        'to': 'products',
+        'local': (
+            ('ID', 'id'),
+            ('ReleaseDate', 'release_date'),
+            ('Rating', 'rating'),
+            ('Price', 'price'),
+            ('Name', 'name'),
+            ('Description', 'description'),
+            ('ReleaseDate', 'release_date'),
+            ('DiscontinuedDate', 'discontinued_date'),
+            ('Rating', 'rating'),
+            ('Price', 'price'),
+            (
+                'Products_Category_Categories_ID',
+                'products_category_categories_id',
+            ),
+            (
+                'Products_Supplier_Suppliers_ID',
+                'products_supplier_suppliers_id',
+            ),
+        ),
+    },
+}
+
 
 def get_connection(url):
     while True:
@@ -96,7 +144,20 @@ def tier0():
     }
     django_settings_module.configure(**django_settings)
     django.setup()
-    yield
+
+    # overwrite etl spec things
+    ORIGINAL_MAPPINGS = copy.deepcopy(etl_spec.MAPPINGS)
+    etl_spec.MAPPINGS = TEST_MAPPINGS
+    etl_spec.DJANGO_LOOKUP = {
+        mapping['to']: name for name, mapping in TEST_MAPPINGS.items()
+    }
+    yield  # kick out to run the test here
+    # return etl spec
+    etl_spec.MAPPINGS = ORIGINAL_MAPPINGS
+    etl_spec.DJANGO_LOOKUP = {
+        mapping['to']: name for name, mapping in ORIGINAL_MAPPINGS.items()
+    }
+    # empty the database
     for url in schema_fixtures.keys():
         truncate_public_tables(url)
 
