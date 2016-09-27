@@ -19,6 +19,7 @@ SETUP_KWARGS = {
     'install_requires': [
         'cryptography',
         'django',
+        'flask',
         'psycopg2',
         'pyquery',  # >:(
         'pyslet',
