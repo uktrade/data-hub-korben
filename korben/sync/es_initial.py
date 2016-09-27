@@ -30,7 +30,7 @@ def setup_index():
     )
     if not indices_client.exists(etl.spec.ES_INDEX):
         indices_client.create(index=etl.spec.ES_INDEX)
-        for doc_type, body in etl.spec.ES_TYPES.items():
+        for doc_type, body in etl.spec.get_es_types().items():
             indices_client.put_mapping(
                 doc_type=doc_type,
                 body=body,
