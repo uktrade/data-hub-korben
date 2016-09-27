@@ -14,6 +14,7 @@ import psycopg2
 
 import etl.target_models
 from korben.etl import spec as etl_spec
+from korben.sync import utils as sync_utils
 
 
 SQL_PUBLIC_TABLE_NAMES = '''
@@ -25,6 +26,19 @@ SQL_TABLE_COUNTS = '''
 SELECT relname, n_live_tup FROM pg_stat_user_tables
     ORDER BY n_live_tup DESC;
 '''
+
+TEST_PROP_KV_MAP = {
+    'ODataDemo.Address': sync_utils.handle_multiprop,
+    'Edm.DateTime': sync_utils.handle_datetime,
+}
+
+@pytest.yield_fixture
+def odata_sync_utils():
+    ORIGINAL_PROP_KV_MAP = copy.deepcopy(sync_utils.PROP_KV_MAP)
+    sync_utils.PROP_KV_MAP = TEST_PROP_KV_MAP
+    yield
+    sync_utils.PROP_KV_MAP = ORIGINAL_PROP_KV_MAP
+
 
 
 TEST_MAPPINGS = {
@@ -104,7 +118,7 @@ def truncate_public_tables(url):
 
 
 @pytest.yield_fixture
-def tier0():
+def tier0(odata_sync_utils):
     'Mega-fixture for setting up tier0 databases, and cleaning them afterwards'
     print('For your information: Setup of tier0 db schemas commences')
     fixtures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures')

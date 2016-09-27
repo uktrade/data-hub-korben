@@ -65,12 +65,12 @@ def entry_row(col_names, link_fkey_map, entry):
                 etree.QName(prop).localname:
                 prop.text.strip() if prop.text else prop.text
             })
-        to_pop = []
     '''
     for link in entry.find(LINK_TAG):
         import ipdb;ipdb.set_trace()
         pass
     '''
+    to_pop = []
     if col_names:
         # optionally filter by a column set
         for key in row:
