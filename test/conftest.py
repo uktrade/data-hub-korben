@@ -52,6 +52,7 @@ TEST_MAPPINGS = {
     'Suppliers': {
         'to': 'suppliers',
         'local': (
+            ('ID', 'id'),
             ('Address_Street', 'address_street'),
             ('Address_City', 'address_city'),
             ('Address_State', 'address_state'),
