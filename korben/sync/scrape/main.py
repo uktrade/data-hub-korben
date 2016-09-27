@@ -138,7 +138,9 @@ def main(names=None, api_instance=None):
                     LOGGER.info(
                         "Records {0}-{1} went into {2}".format(
                             entity_page.offset,
-                            entity_page.offset + sum(result.rowcount for result in results),
+                            entity_page.offset + sum(
+                                result.rowcount for result in results
+                            ),
                             entity_page.entity_name
                         )
                     )
@@ -175,6 +177,9 @@ def main(names=None, api_instance=None):
             for entity_chunk in entity_chunks
         )
         if all(done):
-            LOGGER.info('All done!')
+            LOGGER.info('Waiting for Pool.close ...')
+            pool.close()
+            LOGGER.info('Waiting for Pool.join ...')
+            pool.join()
             return  # TODO: add exit(1) somewhere else to signal to bash
         time.sleep(1)  # don’t spam

@@ -11,7 +11,7 @@ from korben import etl
 LOGGER = logging.getLogger('korben.sync.django_initial')
 
 
-def main():
+def main(client=None):
     odata_metadata = services.db.poll_for_metadata(config.database_odata_url)
     django_metadata = services.db.poll_for_metadata(config.database_url)
     from korben.etl.main import from_cdms_psql  # TODO: sort out circluar dep with sync.utils
@@ -46,11 +46,16 @@ def main():
     from korben.cdms_api.rest.api import CDMSRestApi
     from korben.sync import utils as sync_utils
 
-    with open('cache/fails', 'r') as fails_fh:
-        guid_django = tuple(set((x, y) for x, y in csv.reader(fails_fh)))
+    try:
+        with open('cache/fails', 'r') as fails_fh:
+            guid_django = tuple(set((x, y) for x, y in csv.reader(fails_fh)))
+    except FileNotFoundError as exc:
+        # there were no integrity fails
+        guid_django = tuple()
 
-    client = CDMSRestApi()
-    client.auth.setup_session(True)
+    if client is None:
+        client = CDMSRestApi()
+        client.auth.setup_session(True)
     for guid, django_name in guid_django:
         odata_table = odata_metadata.tables[etl.spec.DJANGO_LOOKUP[django_name[1:]]]
         entry = lxml.etree.fromstring(client.get(odata_table.name, guid).content)
