@@ -20,9 +20,11 @@ DATABASE_CONNECTION = None
 LOGGER = logging.getLogger('korben.sync.poll')
 
 
-def reverse_scrape(table, col_names, primary_key, offset):
+def reverse_scrape(table, against, col_names, primary_key, offset):
     from ..etl.main import from_cdms_psql  # TODO: fix sync.utils circular dep
-    resp = CDMS_API.list(table.name, order_by='ModifiedOn desc', skip=offset)
+    resp = CDMS_API.list(
+        table.name, order_by="{0} desc".format(against), skip=offset
+    )
     rows = []
     for entry in etree.fromstring(resp.content).iter(constants.ENTRY_TAG):
         rows.append(utils.entry_row(col_names, None, entry))
@@ -32,7 +34,7 @@ def reverse_scrape(table, col_names, primary_key, offset):
     for row in rows:
         from_cdms_psql(table, [row[primary_key]])  # to django
         select_statement = (
-            sqla.select([table.c.ModifiedOn], table)
+            sqla.select([getattr(table.c, against)], table)
                 .where(table.columns[primary_key] == row[primary_key])
         )
         local_modified = connection.execute(select_statement).scalar()
@@ -41,11 +43,13 @@ def reverse_scrape(table, col_names, primary_key, offset):
             LOGGER.debug("row in {0} exists".format(table.name))
             try:
                 remote_modified = datetime.datetime.strptime(
-                    row['ModifiedOn'], "%Y-%m-%d %H:%M:%S"
+                    row[against], "%Y-%m-%d %H:%M:%S"
                 )
             except TypeError:
                 LOGGER.error("Bad data in {0}".format(table.name))
                 continue
+            except ValueError:  # TODO: type introspection
+                remote_modified = row[against]
             if local_modified < remote_modified:
                 LOGGER.debug("row in {0} outdated".format(table.name))
                 update_statement = (
@@ -73,9 +77,12 @@ def reverse_scrape(table, col_names, primary_key, offset):
     return reverse_scrape(table, col_names, primary_key, offset + 50)
 
 
-def poll_():
+def poll(client=None, against='ModifiedOn'):
     global CDMS_API  # NOQA
-    CDMS_API = CDMSRestApi()
+    if client is None:
+        CDMS_API = CDMSRestApi()
+    else:
+        CDMS_API = client
 
     odata_metadata = services.db.poll_for_metadata(config.database_odata_url)
     django_metadata = services.db.poll_for_metadata(config.database_url)
@@ -97,10 +104,10 @@ def poll_():
             col.name for col in table.primary_key.columns.values()
         )
         LOGGER.info("Starting reverse scrape for {0}".format(table.name))
-        reverse_scrape(table, col_names, primary_key, 0)
+        reverse_scrape(table, against, col_names, primary_key, 0)
 
 
 def main():
     'Poll forever'
     while True:
-        poll_()
+        poll()
