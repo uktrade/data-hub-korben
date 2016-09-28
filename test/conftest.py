@@ -9,7 +9,6 @@ import django
 from django import db as django_db
 from django import apps as django_apps
 from django.conf import settings as django_settings_module
-from django.core.management import call_command as django_call_command
 import psycopg2
 
 import etl.target_models
@@ -105,6 +104,7 @@ def execute_ignore_existing(cursor, sql):
             raise
         cursor.connection.rollback()
 
+
 def truncate_public_tables(url):
     cursor = get_connection(url).cursor()
     cursor.execute(SQL_PUBLIC_TABLE_NAMES)
@@ -118,6 +118,7 @@ def truncate_public_tables(url):
         table_counts.append(cursor.fetchone())
     cursor.connection.close()
     assert sum([count for (count,) in table_counts]) == 0
+
 
 class TargetModelsApp(django_apps.AppConfig):
     label = 'etl.target_models'
@@ -176,11 +177,17 @@ def tier0(odata_sync_utils, configure_django):
     etl_spec.DJANGO_LOOKUP = {
         mapping['to']: name for name, mapping in ORIGINAL_MAPPINGS.items()
     }
-    # close cached sqla connections (which block db access) and truncate tables
+    # close cached sqla connections (which block db access)
+    for key in korben_db.__CACHE__:
+        if key.startswith('connection'):
+            korben_db.__CACHE__[key].close()
+    # truncate tables
     for url in schema_fixtures.keys():
-        korben_db.__CACHE__["{0}-{1}".format('connection', url)].close()
         truncate_public_tables(url)
-    django_db.connection.close()
+    # empty cache
+    keys = tuple(korben_db.__CACHE__.keys())
+    for key in keys:
+        del(korben_db.__CACHE__[key])
 
 
 @pytest.yield_fixture
