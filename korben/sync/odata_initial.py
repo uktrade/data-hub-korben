@@ -1,20 +1,21 @@
-'Parse database rows in the form of CSV files from XML, throw into database'
+'''
+Parse database rows in the form of CSV files from response bodies, throw into
+database
+'''
 import csv
 import logging
 import os
 
-from lxml import etree
 
 from korben import config
 from korben import services
-from . import constants
 from . import utils
 
 LOGGER = logging.getLogger('korben.sync.populate')
 
 
 def resp_csv(cache_dir, csv_dir, col_names, entity_name, page):
-    entries = utils.parse_atom_entries(cache_dir, entity_name, page)
+    entries = utils.parse_json_entries(cache_dir, entity_name, page)
     if entries is None:
         LOGGER.error("Unpickle of {0} failed on page {1}".format(
             entity_name, page
@@ -44,7 +45,7 @@ def entity_csv(cache_dir, col_names, entity_name, start=0):
         filter(
             lambda P: int(P) > start,
             sorted(
-                os.listdir(os.path.join(cache_dir, 'atom', entity_name)),
+                os.listdir(os.path.join(cache_dir, 'json', entity_name)),
                 key=int,
             )
         )
@@ -99,5 +100,5 @@ def main(cache_dir='cache', entity_name=None, metadata=None):
     if entity_name:
         populate_entity(cache_dir, metadata, entity_name)
         return
-    for entity_name in os.listdir(os.path.join(cache_dir, 'atom')):
+    for entity_name in os.listdir(os.path.join(cache_dir, 'json')):
         populate_entity(cache_dir, metadata, entity_name)

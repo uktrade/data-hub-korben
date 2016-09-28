@@ -3,14 +3,13 @@ Do some rough “polling” for entities that have a "ModifiedOn" column, this c
 operates under the assumption that there is a fully populated local database.
 '''
 import datetime
+import json
 import logging
 
-from lxml import etree
 import sqlalchemy as sqla
 
 from ..cdms_api.rest.api import CDMSRestApi
 from .. import etl
-from . import constants
 from . import utils
 from korben import config, services
 
@@ -26,7 +25,8 @@ def reverse_scrape(table, against, col_names, primary_key, offset):
         table.name, order_by="{0} desc".format(against), skip=offset
     )
     rows = []
-    for entry in etree.fromstring(resp.content).iter(constants.ENTRY_TAG):
+    resp_json = json.loads(resp.content.decode(resp.encoding or 'utf-8'))
+    for entry in resp_json['d']:
         rows.append(utils.entry_row(col_names, None, entry))
     new_rows = 0
     updated_rows = 0

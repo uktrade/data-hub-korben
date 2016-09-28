@@ -156,5 +156,8 @@ class ActiveDirectoryAuth:
 
         if data:
             data = json.dumps(data)
-        resp = getattr(self.session, verb)(url, data=data)
+        headers = {
+            'Accept': 'application/json', 'Content-Type': 'application/json'
+        }
+        resp = getattr(self.session, verb)(url, data=data, headers=headers)
         return resp

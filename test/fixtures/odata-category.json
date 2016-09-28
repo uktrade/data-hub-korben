@@ -1,0 +1,15 @@
+{
+    "d": {
+        "__metadata": {
+            "uri": "http://services.odata.org/(S(kyschh32bcpz3abot0hgty0n))/V2/OData/OData.svc/Categories(2)",
+            "type": "ODataDemo.Category"
+        },
+        "ID": 2,
+        "Name": "Electronics",
+        "Products": {
+            "__deferred": {
+                "uri": "http://services.odata.org/(S(kyschh32bcpz3abot0hgty0n))/V2/OData/OData.svc/Categories(2)/Products"
+            }
+        }
+    }
+}

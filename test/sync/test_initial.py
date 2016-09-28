@@ -12,13 +12,14 @@ isn’t required here). It basically does this:
 '''
 
 from korben import etl
-from korben.sync import scrape, django_initial, poll
+from korben.sync import scrape, django_initial
+
 
 def test_initial_etl(tier0, odata_test_service, odata_fetchall):
 
     # due to django's high level of awesomeness, we must import models here
     # (ie. after tier0 fixture has initiated full django awesomeness levels)
-    from etl.target_models import models as target_models
+    from target_models import models as target_models
 
     # call scrape code on test service
     scrape.main(None, odata_test_service)  # uses multiprocessing, but will
@@ -42,7 +43,7 @@ def test_initial_etl(tier0, odata_test_service, odata_fetchall):
 
 
 def test_tier0_postinitial(tier0, odata_test_service, tier0_postinitial, odata_fetchall):
-    from etl.target_models import models as target_models
+    from target_models import models as target_models
     expected = (
         (2, 'Suppliers'),
         (9, 'Products'),
@@ -55,12 +56,3 @@ def test_tier0_postinitial(tier0, odata_test_service, tier0_postinitial, odata_f
         assert count == result[0][0]
     for count, model_name in expected:
         assert count == getattr(target_models, model_name).objects.count()
-
-
-def test_poll(tier0, odata_test_service, tier0_postinitial, odata_fetchall):
-    import ipdb;ipdb.set_trace()
-    category = {'ID': 123, 'Name': 'Dihedral'}
-    resp = odata_test_service.create('Categories', category)
-    assert resp.status_code == 201
-    poll.poll(odata_test_service, against='Name')
-    assert odata_fetchall('SELECT "Name" FROM "Categories" WHERE "ID"=123')[0].Name == category['Name']

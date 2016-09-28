@@ -1,0 +1,25 @@
+{
+    "d": {
+        "__metadata": {
+            "uri": "http://services.odata.org/(S(kyschh32bcpz3abot0hgty0n))/V2/OData/OData.svc/Products(7)",
+            "type": "ODataDemo.Product"
+        },
+        "ID": 7,
+        "Name": "DVD Player",
+        "Description": "1080P Upconversion DVD Player",
+        "ReleaseDate": "/Date(1163548800000)/",
+        "DiscontinuedDate": null,
+        "Rating": 3,
+        "Price": "35.88",
+        "Category": {
+            "__deferred": {
+                "uri": "http://services.odata.org/(S(kyschh32bcpz3abot0hgty0n))/V2/OData/OData.svc/Products(7)/Category"
+            }
+        },
+        "Supplier": {
+            "__deferred": {
+                "uri": "http://services.odata.org/(S(kyschh32bcpz3abot0hgty0n))/V2/OData/OData.svc/Products(7)/Supplier"
+            }
+        }
+    }
+}

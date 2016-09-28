@@ -44,7 +44,7 @@ PROCESSES = 64
 
 
 def main(names=None, api_instance=None):
-    from korben.etl.main import from_odata_xml  # TODO: fix circular dep with sunc.utils
+    from korben.etl.main import from_odata_json  # TODO: fix circular dep with sync.utils
 
     global api
     if api_instance is None:
@@ -72,7 +72,7 @@ def main(names=None, api_instance=None):
     for entity_name in names - spent:
         try:
             caches = tuple(map(
-                int, os.listdir(os.path.join('cache', 'atom', entity_name))
+                int, os.listdir(os.path.join('cache', 'json', entity_name))
             ))
             for index, page_number in enumerate(caches[1:]):
                 if caches[index - 1] != page_number - 50:
@@ -129,9 +129,9 @@ def main(names=None, api_instance=None):
                 entity_page.poll()  # updates the state of the EntityPage
                 if entity_page.state == types.EntityPageState.complete:
                     # make cheeky call to etl.load
-                    results = from_odata_xml(
+                    results = from_odata_json(
                         metadata.tables[entity_page.entity_name],
-                        utils.atom_cache_key(
+                        utils.json_cache_key(
                             entity_page.entity_name, entity_page.offset
                         )
                     )
@@ -165,7 +165,7 @@ def main(names=None, api_instance=None):
                             )
                         )
                     if isinstance(entity_page.exception, types.EntityPageDeAuth):
-                        api.setup_session(True)
+                        api.auth.setup_session(True)
             entity_chunk.poll()  # update state of EntityChunk
 
         done = (  # ask if all the EntityChunks are done

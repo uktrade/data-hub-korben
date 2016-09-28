@@ -6,31 +6,36 @@ import time
 import urllib
 
 import django
-from django import db as django_db
-from django import apps as django_apps
-from django.conf import settings as django_settings_module
 import psycopg2
+import requests
 
-import etl.target_models
+from django import apps as django_apps
+from django import db as django_db
+from django.conf import settings as django_settings_module
+from lxml import etree
+
+from korben import config
+from korben.cdms_api.rest.api import CDMSRestApi
+from korben.cdms_api.rest.auth.noop import NoopAuth
 from korben.etl import spec as etl_spec
-from korben.sync import utils as sync_utils
 from korben.services import db as korben_db
+from korben.sync import utils as sync_utils
 
 
+ATOM_PREFIX = '{http://www.w3.org/XML/1998/namespace}'
+ODATA_URL = 'http://services.odata.org/V2/(S(readwrite))/OData/OData.svc/'
 SQL_PUBLIC_TABLE_NAMES = '''
 SELECT table_name FROM information_schema.tables
     WHERE table_schema='public';
 '''
-
 SQL_TABLE_COUNTS = '''
 SELECT relname, n_live_tup FROM pg_stat_user_tables
     ORDER BY n_live_tup DESC;
 '''
-
 TEST_PROP_KV_MAP = {
     'ODataDemo.Address': sync_utils.handle_multiprop,
-    'Edm.DateTime': sync_utils.handle_datetime,
 }
+
 
 @pytest.yield_fixture
 def odata_sync_utils():
@@ -39,6 +44,14 @@ def odata_sync_utils():
     yield
     sync_utils.PROP_KV_MAP = ORIGINAL_PROP_KV_MAP
 
+
+@pytest.fixture
+def odata_test_service(request):
+    resp = requests.get(ODATA_URL)
+    root = etree.fromstring(resp.content)
+    config.cdms_base_url = root.attrib[ATOM_PREFIX + 'base']
+    client = CDMSRestApi(NoopAuth())
+    return client
 
 
 TEST_MAPPINGS = {
@@ -121,11 +134,12 @@ def truncate_public_tables(url):
 
 
 class TargetModelsApp(django_apps.AppConfig):
-    label = 'etl.target_models'
+    label = 'target_models'
 
 
 @pytest.fixture(scope='session')  # only want this getting called once
 def configure_django():
+    import target_models
     django_db_url = urllib.parse.urlparse(os.environ['DATABASE_URL'])
     django_settings = {
         'DATABASES': {
@@ -137,12 +151,17 @@ def configure_django():
             }
         },
         'INSTALLED_APPS': [
-            TargetModelsApp('etl.target_models', etl.target_models),
+            TargetModelsApp('target_models', target_models),
         ],
     }
     django_settings_module.configure(**django_settings)
     django.setup()
 
+
+@pytest.fixture(scope='session')
+def django_models():
+    from target_models import models
+    return models
 
 
 @pytest.yield_fixture

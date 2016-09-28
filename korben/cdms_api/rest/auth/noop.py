@@ -12,7 +12,12 @@ class NoopAuth(object):
         'Pass calls to attached session object'
         if data is None:
             data = {}
-        return getattr(self.session, verb)(url, data=json.dumps(data))
+        headers = {
+            'Accept': 'application/json', 'Content-Type': 'application/json'
+        }
+        return getattr(self.session, verb)(
+            url, data=json.dumps(data), headers=headers
+        )
 
     def setup_session(self, *args, **kwargs):
         'Make code that expects to set up the session happy with a noop'

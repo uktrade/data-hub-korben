@@ -1,34 +1,39 @@
+import json
 import os
 
-from lxml import etree
 from korben.sync import utils
 
+
 CASES = (
-    ('product-entry.xml', {
-        'ID': '7',
-        'ReleaseDate': '2006-11-15 00:00:00',
-        'Rating': '3',
-        'DiscontinuedDate': None,
-        'Price': '35.88',
-    }),
-    ('supplier-entry.xml', {
-        'Name': 'Exotic Liquids',
-        'ID': '0',
-        'Concurrency': '0',
-        'Address_State': 'WA',
-        'Address_Street': 'NE 228th',
+    ('odata-supplier.json', {
+        'Address_City': 'Redmond',
         'Address_Country': 'USA',
-        'Address_ZipCode': '98074',
-        'Address_City': 'Sammamish',
+        'Address_State': 'WA',
+        'Address_Street': 'NE 40th',
+        'Address_ZipCode': '98052',
+        'Concurrency': 0,
+        'ID': 1,
+        'Name': 'Tokyo Traders',
     }),
+    ('odata-product.json', {
+        'Description': '1080P Upconversion DVD Player',
+        'DiscontinuedDate': None,
+        'ID': 7,
+        'Name': 'DVD Player',
+        'Price': '35.88',
+        'Rating': 3,
+        'ReleaseDate': '2006-11-15 00:00:00',
+    }),
+    ('odata-category.json', {'ID': 2, 'Name': 'Electronics'}),
 )
+
 
 def test_entry_row(odata_sync_utils):
     fixtures_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)), '..', 'fixtures'
     )
     for name, expected in CASES:
-        with open(os.path.join(fixtures_path, name), 'rb') as entry_fh:
-            entry = etree.fromstring(entry_fh.read())
-        result = utils.entry_row(None, None, entry)
+        with open(os.path.join(fixtures_path, name), 'r') as entry_fh:
+            entry = json.loads(entry_fh.read())
+        result = utils.entry_row(None, None, entry['d'])
         assert result == expected

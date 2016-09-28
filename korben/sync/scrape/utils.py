@@ -1,13 +1,9 @@
 import datetime
+import json
 import logging
 import os
 
-from lxml import etree
-
-from korben.cdms_api.rest.api import CDMSRestApi
-
 from .. import utils as sync_utils
-from .. import constants
 from . import types
 
 LOGGER = logging.getLogger('korben.sync.scrape.utils')
@@ -17,42 +13,48 @@ def raise_on_cdms_resp_errors(entity_name, offset, resp):
     '''
     carry out a healthy whack of inspection
     it’s hairy, but that’s how we like it
+
+    this function just raises an exception signalling the outcome of the
+    request (see `types` module)
     '''
+    resp_str = resp.content.decode(resp.encoding or 'utf8')
     if not resp.ok:
         try:
-            root = etree.fromstring(resp.content)
-            if 'paging' in root.find(constants.MESSAGE_TAG).text:
+            resp_json = json.loads(resp_str)
+            if 'paging' in resp_json['error']['message']['value']:
                 # assuming this means we tried to reach beyond the last page
                 raise types.EntityPageNoData(
                     "500 page out {0} {1}".format(
                         entity_name, offset
                     )
                 )
-        except AttributeError:
-            # no message in xml
-            LOGGER.error(resp.content.decode(resp.encoding))
+        except KeyError:
+            # no error message in json
+            LOGGER.error(resp_str)
             raise types.EntityPageDynamicsBombed(
                 "{0} {1}".format(entity_name, offset)
             )
-        except etree.XMLSyntaxError:
-            # no xml in xml
-            LOGGER.error(resp.content.decode(resp.encoding))
+        except json.JSONDecodeError:
+            # no json in json
+            LOGGER.error(resp_str)
             raise types.EntityPageDynamicsBombed(
                 "{0} {1}".format(entity_name, offset)
             )
-        raise RuntimeError("{0} {1} unhandled".format(entity_name, offset))
+        except Exception as exc:
+            LOGGER.error(exc)
+            raise RuntimeError("{0} {1} unhandled".format(entity_name, offset))
     try:
-        root = etree.fromstring(resp.content)  # check XML is parseable
-        if not root.findall('{http://www.w3.org/2005/Atom}entry'):  # TODO: use constant
-            # paged out in a useless way
+        resp_json = json.loads(resp_str)
+        if not resp_json['d']:
+            # paged out with empty response (ie. 'd' is an empty list)
             raise types.EntityPageNoData("{0} {1}".format(entity_name, offset))
-    except etree.XMLSyntaxError:
+    except json.JSONDecodeError:
         raise types.EntityPageDeAuth("{0} {1}".format(entity_name, offset))
 
 
-def atom_cache_key(entity_name, offset):
-    'Return the path where atom reqponses are cached'
-    return sync_utils.file_leaf('cache', 'atom', entity_name, offset)
+def json_cache_key(entity_name, offset):
+    'Return the path where JSON responses are cached'
+    return sync_utils.file_leaf('cache', 'json', entity_name, offset)
 
 
 def duration_record(entity_name, offset):
@@ -66,13 +68,13 @@ def is_cached(entity_name, offset):
     where the bool is whether or not the request is cached and the str is the
     path it either is or should be cached at.
     '''
-    path = atom_cache_key(entity_name, offset)
+    path = json_cache_key(entity_name, offset)
     if not os.path.isfile(path):
         return False, path
     try:
-        with open(path, 'rb') as cache_fh:
-            etree.fromstring(cache_fh.read())
-    except etree.XMLSyntaxError as exc:
+        with open(path, 'r') as cache_fh:
+            json.loads(cache_fh.read())
+    except json.JSONDecodeError as exc:
         return False, path
     return True, path
 
@@ -100,7 +102,7 @@ def cdms_list(client, entity_name, offset):
     resp = client.list(entity_name, skip=offset)  # the actual request
     time_delta = (datetime.datetime.now() - start_time).seconds
 
-    # the below will raise if the response is no good
+    # the below will raise something useful, or pass by quietly
     raise_on_cdms_resp_errors(entity_name, offset, resp)
 
     # record our expensive network request

@@ -1,14 +1,13 @@
 import logging
-from lxml import etree
 
 from requests import exceptions as reqs_excs
 
-from .. import utils as sync_utils
 from . import types
 from . import constants
 from . import utils
 
 LOGGER = logging.getLogger('korben.sync.scrape.classes')
+
 
 class EntityChunk(object):
     '''

@@ -1,0 +1,27 @@
+{
+    "d": {
+        "__metadata": {
+            "uri": "http://services.odata.org/(S(kyschh32bcpz3abot0hgty0n))/V2/OData/OData.svc/Suppliers(1)",
+            "etag": "W/\"0\"",
+            "type": "ODataDemo.Supplier"
+        },
+        "ID": 1,
+        "Name": "Tokyo Traders",
+        "Address": {
+            "__metadata": {
+                "type": "ODataDemo.Address"
+            },
+            "Street": "NE 40th",
+            "City": "Redmond",
+            "State": "WA",
+            "ZipCode": "98052",
+            "Country": "USA"
+        },
+        "Concurrency": 0,
+        "Products": {
+            "__deferred": {
+                "uri": "http://services.odata.org/(S(kyschh32bcpz3abot0hgty0n))/V2/OData/OData.svc/Suppliers(1)/Products"
+            }
+        }
+    }
+}

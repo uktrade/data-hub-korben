@@ -1,17 +1,12 @@
-from logging.handlers import RotatingFileHandler
+import datetime
+import json
 import logging
-import multiprocessing
 import os
-import sys
-import threading
-import traceback
-
-from lxml import etree
-
-from . import constants
+import re
 
 
 LOGGER = logging.getLogger('korben.sync.utils')
+RE_ODATA_DATE = re.compile('\/Date\((?P<timestamp_milliseconds_str>\d+)\)')
 
 
 def file_leaf(*args):
@@ -25,53 +20,59 @@ def file_leaf(*args):
     return path
 
 
-def handle_multiprop(prop):
-    name = etree.QName(prop).localname
+def handle_multiprop(prop_name, prop_value):
     retval = {}
-    for frag in prop:
-        col_name = "{0}_{1}".format(name, etree.QName(frag.tag).localname)
-        if frag.text is None:
-            value = None
-        else:
-            value = frag.text.strip()
-        retval[col_name] = value
+    for frag_name, frag_value in prop_value.items():
+        if frag_name.startswith('__'):
+            continue
+        retval["{0}_{1}".format(prop_name, frag_name)] = frag_value
     return retval
-
-
-def handle_datetime(prop):
-    try:
-        psql_date = ' '.join(prop.text.strip('Z').split('T'))  # ???
-    except:
-        psql_date = None
-    return {etree.QName(prop).localname: psql_date}
 
 
 PROP_KV_MAP = {
     'Microsoft.Crm.Sdk.Data.Services.EntityReference': handle_multiprop,
     'Microsoft.Crm.Sdk.Data.Services.OptionSetValue': handle_multiprop,
-    'Edm.DateTime': handle_datetime,
 }
+
+
+def could_be_a_date_value(value):
+    try:
+        date_match = re.match(RE_ODATA_DATE, value)
+    except TypeError:
+        return  # it’s probably an int
+    if not date_match:
+        return
+    timestamp_milliseconds_int = int(
+        date_match.group('timestamp_milliseconds_str')
+    )
+    timestamp = timestamp_milliseconds_int / 1000
+    date_object = datetime.datetime.fromtimestamp(timestamp)
+    return date_object.isoformat().replace('T', ' ')
 
 
 def entry_row(col_names, link_fkey_map, entry):
     'Extract a row dict from an OData entry'
     row = {}
-    for prop in entry.find(constants.CONTENT_TAG)[0]:
-        prop_type = prop.attrib.get(constants.TYPE_KEY)
+    for name, value in entry.items():
+        if name.startswith('__'):
+            continue
+        try:
+            prop_type = value['__metadata']['type']
+        except TypeError:
+            date = could_be_a_date_value(value)
+            # the above is pretty gross
+            # TODO: refer to metadata for type info
+            if date:
+                row.update({name: date})
+            else:
+                row.update({name: value})
+            continue
+        except KeyError:
+            continue  # ignore __deferred things
         if prop_type in PROP_KV_MAP:
-            row.update(PROP_KV_MAP[prop_type](prop))
-        else:
-            row.update({
-                etree.QName(prop).localname:
-                prop.text.strip() if prop.text else prop.text
-            })
-    '''
-    for link in entry.find(LINK_TAG):
-        import ipdb;ipdb.set_trace()
-        pass
-    '''
-    to_pop = []
+            row.update(PROP_KV_MAP[prop_type](name, value))
     if col_names:
+        to_pop = []
         # optionally filter by a column set
         for key in row:
             if key not in col_names:
@@ -102,15 +103,15 @@ def link_fkey_map(table, entry):
     return link_map
 
 
-def parse_atom_entries(cache_dir, entity_name, name, path=None):
-    'Parse <entry> elements from an XML document in Atom format'
+def parse_json_entries(cache_dir, entity_name, name, path=None):
+    'Parse entry objects from a JSON document'
     if path is None:
         path = os.path.join(cache_dir, 'atom', entity_name, name)
-    with open(path, 'rb') as cache_fh:
+    with open(path, 'r') as cache_fh:
         try:
-            root = etree.fromstring(cache_fh.read())
-            return root.findall(constants.ENTRY_TAG)
-        except etree.XMLSyntaxError:
-            LOGGER.error('Bad XML!')
+            json_resp = json.loads(cache_fh.read())
+            return json_resp['d']
+        except json.JSONDecodeError:
+            LOGGER.error('Bad JSON!')
             # scrape failed
             return
