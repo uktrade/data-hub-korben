@@ -119,9 +119,33 @@ def truncate_public_tables(url):
     cursor.connection.close()
     assert sum([count for (count,) in table_counts]) == 0
 
+class TargetModelsApp(django_apps.AppConfig):
+    label = 'etl.target_models'
+
+
+@pytest.fixture(scope='session')  # only want this getting called once
+def configure_django():
+    django_db_url = urllib.parse.urlparse(os.environ['DATABASE_URL'])
+    django_settings = {
+        'DATABASES': {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'HOST': django_db_url.hostname,
+                'NAME': django_db_url.path.lstrip('/'),
+                'USER': django_db_url.username,
+            }
+        },
+        'INSTALLED_APPS': [
+            TargetModelsApp('etl.target_models', etl.target_models),
+        ],
+    }
+    django_settings_module.configure(**django_settings)
+    django.setup()
+
+
 
 @pytest.yield_fixture
-def tier0(odata_sync_utils):
+def tier0(odata_sync_utils, configure_django):
     'Mega-fixture for setting up tier0 databases, and cleaning them afterwards'
     print('For your information: Setup of tier0 db schemas commences')
     fixtures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures')
@@ -140,28 +164,6 @@ def tier0(odata_sync_utils):
         cursor.connection.close()
 
 
-    class TargetModelsApp(django_apps.AppConfig):
-        label = 'etl.target_models'
-
-
-    django_db_url = urllib.parse.urlparse(os.environ['DATABASE_URL'])
-
-    django_settings = {
-        'DATABASES': {
-            'default': {
-                'ENGINE': 'django.db.backends.postgresql',
-                'HOST': django_db_url.hostname,
-                'NAME': django_db_url.path.lstrip('/'),
-                'USER': django_db_url.username,
-            }
-        },
-        'INSTALLED_APPS': [
-            TargetModelsApp('etl.target_models', etl.target_models),
-        ],
-    }
-    django_settings_module.configure(**django_settings)
-    django.setup()
-
     # overwrite etl spec things
     ORIGINAL_MAPPINGS = copy.deepcopy(etl_spec.MAPPINGS)
     etl_spec.MAPPINGS = TEST_MAPPINGS
@@ -179,6 +181,22 @@ def tier0(odata_sync_utils):
         korben_db.__CACHE__["{0}-{1}".format('connection', url)].close()
         truncate_public_tables(url)
     django_db.connection.close()
+
+
+@pytest.yield_fixture
+def tier0_postinitial(tier0):
+    fixtures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures')
+    fixture_spec = (
+        (os.environ['DATABASE_ODATA_URL'], 'odata-initial.sql'),
+        (os.environ['DATABASE_URL'], 'odata-initial-django.sql'),
+    )
+
+    for url, fixture_name in fixture_spec:
+        cursor = get_connection(url).cursor()
+        with open(os.path.join(fixtures_path, fixture_name), 'r') as sql_fh:
+            cursor.execute(sql_fh.read())
+            cursor.connection.commit()
+        cursor.connection.close()
 
 
 @pytest.yield_fixture
