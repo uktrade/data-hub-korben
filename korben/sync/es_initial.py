@@ -1,4 +1,5 @@
 import functools
+import logging
 
 import elasticsearch
 from elasticsearch import helpers as es_helpers
@@ -9,6 +10,8 @@ from korben import config
 from korben import etl
 
 from . import constants
+
+LOGGER = logging.getLogger('korben.sync.es_initital')
 
 
 def row_es_add(table, es_id_col, row):
@@ -80,17 +83,19 @@ def main():
     django_metadata = services.db.poll_for_metadata(config.database_url)
     setup_index()
     for name in constants.INDEXED_ES_TYPES:
+        LOGGER.info("Indexing from django database for {0}".format(name))
         table = django_metadata.tables[name]
         select = joined_select(table)
         rows = django_metadata.bind.execute(select).fetchall()
-        actions = map(functools.partial(row_es_add, table, 'id'), rows)
-        es_helpers.bulk(
+        actions = list(map(functools.partial(row_es_add, table, 'id'), rows))
+        success_count, error_count = elasticsearch.helpers.bulk(
             client=services.es.client,
             actions=actions,
             stats_only=True,
             chunk_size=1000,
             request_timeout=300,
         )
+        assert error_count is 0
 
     # do ch company logic
     name = 'company_companieshousecompany'
@@ -103,13 +108,13 @@ def main():
     table = django_metadata.tables[name]
     rows = django_metadata.bind.execute(table.select()).fetchall()
     filtered_rows = filter(
-        lambda row: row.company_number in linked_companies, rows
+        lambda row: row.company_number not in linked_companies, rows
     )
-    actions = map(
-        functools.partial(row_es_add, company_table, 'company_number'),
+    actions = list(map(
+        functools.partial(row_es_add, table, 'company_number'),
         filtered_rows
-    )
-    elasticsearch.helpers.bulk(
+    ))
+    success_count, error_count = elasticsearch.helpers.bulk(
         client=services.es.client,
         actions=actions,
         stats_only=True,
@@ -118,3 +123,4 @@ def main():
         raise_on_error=True,
         raise_on_exception=True,
     )
+    assert error_count is 0
