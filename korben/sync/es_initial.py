@@ -8,6 +8,8 @@ from korben import services
 from korben import config
 from korben import etl
 
+from . import constants
+
 
 def row_es_add(table, es_id_col, row):
     'Create an ES `index` action from a database row'
@@ -59,11 +61,15 @@ def joined_select(table):
         for remote_name in potential_remotes:
             try:
                 remote_column = getattr(fkey.column.table.c, remote_name)
+                break
             except AttributeError:
                 pass
         if remote_column is None:
-            import ipdb;ipdb.set_trace()
-            pass
+            raise RuntimeError(
+                "Table {0} doesn’t have an identifying name column".format(
+                    table.name
+                )
+            )
         else:
             fkey_data_cols.append(remote_column.label(local_name))
     cols = list(filter(lambda col: not bool(col.foreign_keys), table.columns))
@@ -73,9 +79,7 @@ def joined_select(table):
 def main():
     django_metadata = services.db.poll_for_metadata(config.database_url)
     setup_index()
-    for name in etl.spec.DJANGO_LOOKUP:
-        if name == 'company_companieshousecompany':
-            continue
+    for name in constants.INDEXED_ES_TYPES:
         table = django_metadata.tables[name]
         select = joined_select(table)
         rows = django_metadata.bind.execute(select).fetchall()
@@ -93,7 +97,7 @@ def main():
     company_table = django_metadata.tables['company_company']
     result = django_metadata.bind.execute(
         sqla.select([company_table.columns['company_number']])
-            .where(company_table.columns['company_number'] != None)
+            .where(company_table.columns['company_number'] != None)  # NOQA
     ).fetchall()
     linked_companies = frozenset([x.company_number for x in result])
     table = django_metadata.tables[name]
