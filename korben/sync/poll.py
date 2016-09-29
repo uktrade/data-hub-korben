@@ -4,6 +4,7 @@ operates under the assumption that there is a fully populated local database.
 '''
 import datetime
 import json
+import operator
 import logging
 
 import sqlalchemy as sqla
@@ -19,7 +20,7 @@ DATABASE_CONNECTION = None
 LOGGER = logging.getLogger('korben.sync.poll')
 
 
-def reverse_scrape(table, against, col_names, primary_key, offset):
+def reverse_scrape(table, against, comparitor, col_names, primary_key, offset):
     from ..etl.main import from_cdms_psql  # TODO: fix sync.utils circular dep
     resp = CDMS_API.list(
         table.name, order_by="{0} desc".format(against), skip=offset
@@ -33,39 +34,44 @@ def reverse_scrape(table, against, col_names, primary_key, offset):
     connection = services.db.poll_for_connection(config.database_odata_url)
     for row in rows:
         from_cdms_psql(table, [row[primary_key]])  # to django
+        cols_pkey_against = [
+            getattr(table.c, primary_key),
+            getattr(table.c, against)
+        ]
         select_statement = (
-            sqla.select([getattr(table.c, against)], table)
+            sqla.select(cols_pkey_against, table)
                 .where(table.columns[primary_key] == row[primary_key])
         )
-        local_modified = connection.execute(select_statement).scalar()
-        LOGGER.debug("local_modified {0}".format(local_modified))
-        if local_modified:
-            LOGGER.debug("row in {0} exists".format(table.name))
-            try:
-                remote_modified = datetime.datetime.strptime(
-                    row[against], "%Y-%m-%d %H:%M:%S"
-                )
-            except TypeError:
-                LOGGER.error("Bad data in {0}".format(table.name))
-                continue
-            except ValueError:  # TODO: type introspection
-                remote_modified = row[against]
-            if local_modified < remote_modified:
-                LOGGER.debug("row in {0} outdated".format(table.name))
-                update_statement = (
-                    table.update()
-                         .where(table.columns[primary_key] == row[primary_key])
-                         .values(**row)
-                )
-                result = connection.execute(update_statement)
-                from_cdms_psql(table, [row[primary_key]])
-                updated_rows += 1
-        else:
+        try:
+            pkey, local_against =\
+                connection.execute(select_statement).fetchone()
+        except TypeError:
             LOGGER.debug("row in {0} doesn't exist".format(table.name))
             result = connection.execute(table.insert().values(**row))
             assert result.rowcount == 1
             from_cdms_psql(table, [row[primary_key]])
             new_rows += 1
+            continue
+        LOGGER.debug("local_modified {0}".format(local_against))
+        LOGGER.debug("row in {0} exists".format(table.name))
+        try:
+            remote_against =\
+                datetime.datetime.strptime(row[against], "%Y-%m-%d %H:%M:%S")
+        except TypeError:
+            LOGGER.error("Bad data in {0}".format(table.name))
+            continue
+        except ValueError:  # TODO: type introspection
+            remote_against = row[against]
+        if comparitor(local_against, remote_against):
+            LOGGER.debug("row in {0} outdated".format(table.name))
+            update_statement = (
+                table.update()
+                     .where(table.columns[primary_key] == row[primary_key])
+                     .values(**row)
+            )
+            result = connection.execute(update_statement)
+            from_cdms_psql(table, [row[primary_key]])
+            updated_rows += 1
     LOGGER.info("{3} {2} INSERT {0} UPDATE {1}".format(
         new_rows, updated_rows, table.name, datetime.datetime.now()
     ))
@@ -77,7 +83,7 @@ def reverse_scrape(table, against, col_names, primary_key, offset):
     return reverse_scrape(table, col_names, primary_key, offset + 50)
 
 
-def poll(client=None, against='ModifiedOn'):
+def poll(client=None, against='ModifiedOn', comparitor=operator.lt):
     global CDMS_API  # NOQA
     if client is None:
         CDMS_API = CDMSRestApi()
@@ -104,7 +110,7 @@ def poll(client=None, against='ModifiedOn'):
             col.name for col in table.primary_key.columns.values()
         )
         LOGGER.info("Starting reverse scrape for {0}".format(table.name))
-        reverse_scrape(table, against, col_names, primary_key, 0)
+        reverse_scrape(table, against, comparitor, col_names, primary_key, 0)
 
 
 def main():

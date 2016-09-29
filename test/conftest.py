@@ -167,7 +167,7 @@ def django_models():
 @pytest.yield_fixture
 def tier0(odata_sync_utils, configure_django):
     'Mega-fixture for setting up tier0 databases, and cleaning them afterwards'
-    print('For your information: Setup of tier0 db schemas commences')
+    print('For your information: Setup of tier0 db schemata commences')
     fixtures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures')
     schema_fixtures = {
         os.environ['DATABASE_ODATA_URL']: (
