@@ -14,5 +14,7 @@ requests_ntlm
 responses
 sqlparse
 
+pytest
+pytest-runner
 pytest-cov
 pytest-sugar
