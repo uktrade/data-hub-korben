@@ -19,7 +19,6 @@ from korben.cdms_api.rest.api import CDMSRestApi
 from korben.cdms_api.rest.auth.noop import NoopAuth
 from korben.etl import spec as etl_spec
 from korben.services import db as korben_db
-from korben.sync import utils as sync_utils
 
 
 ATOM_PREFIX = '{http://www.w3.org/XML/1998/namespace}'
@@ -32,17 +31,6 @@ SQL_TABLE_COUNTS = '''
 SELECT relname, n_live_tup FROM pg_stat_user_tables
     ORDER BY n_live_tup DESC;
 '''
-TEST_PROP_KV_MAP = {
-    'ODataDemo.Address': sync_utils.handle_multiprop,
-}
-
-
-@pytest.yield_fixture
-def odata_sync_utils():
-    ORIGINAL_PROP_KV_MAP = copy.deepcopy(sync_utils.PROP_KV_MAP)
-    sync_utils.PROP_KV_MAP = TEST_PROP_KV_MAP
-    yield
-    sync_utils.PROP_KV_MAP = ORIGINAL_PROP_KV_MAP
 
 
 @pytest.fixture

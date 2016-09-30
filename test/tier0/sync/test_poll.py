@@ -1,7 +1,16 @@
 from korben.sync import poll
 
 
-def test_poll(tier0, odata_test_service, tier0_postinitial, odata_fetchall):
+def test_poll_create(tier0, odata_test_service, tier0_postinitial, odata_fetchall):
+    'Change remote service and check a call to `poll` is reflective'
+    category = {'ID': 123, 'Name': 'Dihedral'}
+    resp = odata_test_service.create('Categories', category)
+    assert resp.status_code == 201
+    poll.poll(odata_test_service, against='Name')
+    assert odata_fetchall('SELECT "Name" FROM "Categories" WHERE "ID"=123')[0][0] == category['Name']
+
+
+def test_poll_create(tier0, odata_test_service, tier0_postinitial, odata_fetchall):
     'Change remote service and check a call to `poll` is reflective'
     category = {'ID': 123, 'Name': 'Dihedral'}
     resp = odata_test_service.create('Categories', category)
