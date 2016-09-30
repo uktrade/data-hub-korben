@@ -438,3 +438,5 @@ ENTITY_NAMES = [
 ENTITY_INT_MAP = {
     name: index for index, name in enumerate(ENTITY_NAMES)
 }
+
+INDEXED_ES_TYPES = ('company_company', 'company_contact')

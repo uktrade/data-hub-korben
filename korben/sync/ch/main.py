@@ -47,6 +47,7 @@ def csv_chcompany(row):
     ch_company = {}
     for key in CH_FIELDS:
         ch_company[key] = row[key]
+    ch_company['archived'] = False
     ch_company['incorporation_date'] = ch_date(row, 'incorporation_date')
     return ch_company
 

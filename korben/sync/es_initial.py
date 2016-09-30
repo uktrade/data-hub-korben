@@ -1,4 +1,5 @@
 import functools
+import logging
 
 import elasticsearch
 from elasticsearch import helpers as es_helpers
@@ -7,6 +8,10 @@ import sqlalchemy as sqla
 from korben import services
 from korben import config
 from korben import etl
+
+from . import constants
+
+LOGGER = logging.getLogger('korben.sync.es_initital')
 
 
 def row_es_add(table, es_id_col, row):
@@ -59,11 +64,15 @@ def joined_select(table):
         for remote_name in potential_remotes:
             try:
                 remote_column = getattr(fkey.column.table.c, remote_name)
+                break
             except AttributeError:
                 pass
         if remote_column is None:
-            import ipdb;ipdb.set_trace()
-            pass
+            raise RuntimeError(
+                "Table {0} doesn’t have an identifying name column".format(
+                    table.name
+                )
+            )
         else:
             fkey_data_cols.append(remote_column.label(local_name))
     cols = list(filter(lambda col: not bool(col.foreign_keys), table.columns))
@@ -73,39 +82,39 @@ def joined_select(table):
 def main():
     django_metadata = services.db.poll_for_metadata(config.database_url)
     setup_index()
-    for name in etl.spec.DJANGO_LOOKUP:
-        if name == 'company_companieshousecompany':
-            continue
+    for name in constants.INDEXED_ES_TYPES:
+        LOGGER.info("Indexing from django database for {0}".format(name))
         table = django_metadata.tables[name]
         select = joined_select(table)
         rows = django_metadata.bind.execute(select).fetchall()
-        actions = map(functools.partial(row_es_add, table, 'id'), rows)
-        es_helpers.bulk(
+        actions = list(map(functools.partial(row_es_add, table, 'id'), rows))
+        success_count, error_count = elasticsearch.helpers.bulk(
             client=services.es.client,
             actions=actions,
             stats_only=True,
             chunk_size=1000,
             request_timeout=300,
         )
+        assert error_count is 0
 
     # do ch company logic
     name = 'company_companieshousecompany'
     company_table = django_metadata.tables['company_company']
     result = django_metadata.bind.execute(
         sqla.select([company_table.columns['company_number']])
-            .where(company_table.columns['company_number'] != None)
+            .where(company_table.columns['company_number'] != None)  # NOQA
     ).fetchall()
     linked_companies = frozenset([x.company_number for x in result])
     table = django_metadata.tables[name]
     rows = django_metadata.bind.execute(table.select()).fetchall()
     filtered_rows = filter(
-        lambda row: row.company_number in linked_companies, rows
+        lambda row: row.company_number not in linked_companies, rows
     )
-    actions = map(
-        functools.partial(row_es_add, company_table, 'company_number'),
+    actions = list(map(
+        functools.partial(row_es_add, table, 'company_number'),
         filtered_rows
-    )
-    elasticsearch.helpers.bulk(
+    ))
+    success_count, error_count = elasticsearch.helpers.bulk(
         client=services.es.client,
         actions=actions,
         stats_only=True,
@@ -114,3 +123,4 @@ def main():
         raise_on_error=True,
         raise_on_exception=True,
     )
+    assert error_count is 0
