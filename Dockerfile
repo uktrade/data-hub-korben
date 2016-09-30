@@ -5,6 +5,6 @@ RUN pip install -r /src/requirements.txt
 RUN pip install ipdb
 ADD . /src
 WORKDIR /src
-CMD pip install -e .
+RUN pip install -e .
 
 EXPOSE 8080
