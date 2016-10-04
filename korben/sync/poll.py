@@ -29,7 +29,7 @@ def reverse_scrape(
     )
     rows = []
     resp_json = json.loads(resp.content.decode(resp.encoding or 'utf-8'))
-    for entry in resp_json['d']:
+    for entry in resp_json['d']['results']:
         rows.append(utils.entry_row(col_names, None, entry))
     new_rows = 0
     updated_rows = 0
@@ -62,7 +62,7 @@ def reverse_scrape(
         except TypeError:
             LOGGER.error('Bad data in %s', table.name)
             continue
-        except ValueError:  # TODO: type introspection
+        except ValueError:  # TODO: type introspection (needs lookup object)
             remote_against = row[against]
         if comparitor(local_against, remote_against):
             LOGGER.debug('Row in %s outdated', table.name)
@@ -88,7 +88,7 @@ def reverse_scrape(
     )
 
 
-def poll(client=None, against='ModifiedOn', comparitor=operator.lt):
+def poll(client=None, against='ModifiedOn', comparitor=operator.lt, entities=None):
     if client is None:
         client = CDMSRestApi()
 
@@ -102,7 +102,7 @@ def poll(client=None, against='ModifiedOn', comparitor=operator.lt):
             if table_name in etl.spec.DJANGO_LOOKUP:
                 live_entities.append(etl.spec.DJANGO_LOOKUP[table_name])
 
-    for table_name in live_entities:
+    for table_name in entities or live_entities:
         table = odata_metadata.tables[table_name]
         col_names = [x.name for x in table.columns]
         # assume a single column

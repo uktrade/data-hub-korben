@@ -1,3 +1,4 @@
+import datetime
 import logging
 import time
 import sqlalchemy as sqla
@@ -17,17 +18,18 @@ def poll_for_metadata(url):
             connection = poll_for_connection(url)
         interval = 1
         while True:
+            start = datetime.datetime.now()
             metadata = sqla.MetaData(bind=connection)
             metadata.reflect()
+            elapsed = datetime.datetime.now() - start
             if len(metadata.tables) == 0:
                 # initial set up case, before database have tables created.
                 # just keep polling
-                LOGGER.info(
-                    "Waiting {0}s for tables in db {1}".format(interval, url)
-                )
+                LOGGER.info('Waiting %ss for tables in db %s', interval, url)
                 time.sleep(interval)
                 interval += 2
             else:
+                LOGGER.info('Reflected on tables in %s over %s', url, elapsed)
                 break  # there are some tables there
         __CACHE__["{0}-{1}".format('metadata', url)] = metadata
     return metadata

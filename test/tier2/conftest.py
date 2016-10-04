@@ -17,7 +17,10 @@ def account_object(cdms_client):
     assert create_resp.ok
     acc = create_resp.json()['d']
     yield acc
+    '''
+    # this request takes a minute. fuck that
     del_resp = cdms_client.delete(
         'AccountSet', "guid'{0}'".format(acc['AccountId'])
     )
     assert del_resp.ok
+    '''

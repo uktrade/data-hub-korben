@@ -5,6 +5,7 @@ import datetime
 from korben.sync.utils import could_be_a_date_value
 
 
+@pytest.mark.skipif(True, reason='Boring')
 def test_delete_children(cdms_client):
     '''
     Demonstrate that some automatically created child objects are automatically

@@ -1,6 +1,10 @@
+import logging
+import datetime
 from korben import config
 
 from .auth.active_directory import ActiveDirectoryAuth
+
+LOGGER = logging.getLogger('korben.cdms_api.rest.api')
 
 
 class CDMSRestApi(object):
@@ -31,9 +35,13 @@ class CDMSRestApi(object):
         """
         Route a request through the authentication layer
         """
+        now = datetime.datetime.now()
         if data is None:
             data = {}
-        return self.auth.make_request(verb, url, data=data)
+        resp = self.auth.make_request(verb, url, data=data)
+        LOGGER.info('%s request took %s', verb, resp.elapsed)
+        return resp
+
 
     def list(self, service, top=50, skip=0, select=None, filters=None, order_by=None):
         params = {}
