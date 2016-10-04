@@ -3,10 +3,10 @@
 cryptography
 django
 elasticsearch
-flask
 lxml
 psycopg2
 pyquery
+pyramid
 pyyaml
 requests
 requests_aws4auth

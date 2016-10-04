@@ -1,10 +1,11 @@
 # TODO: Use click to formalise, add generic opts etc
+import types
 import sys
-from . import sync, etl
+from . import sync, etl, bau
 
 MODULES = {
     'sync': sync,
-    'etl': etl,
+    'bau': bau,
 }
 
 
@@ -55,4 +56,5 @@ def main():
             )
             return exit(1)
 
+    assert isinstance(func, types.FunctionType)
     return func(*sys.argv[3:])
