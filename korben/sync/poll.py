@@ -19,6 +19,11 @@ DATABASE_CONNECTION = None
 LOGGER = logging.getLogger('korben.sync.poll')
 
 
+def get_entry_list(resp):
+    resp_json = json.loads(resp.content.decode(resp.encoding or 'utf-8'))
+    return resp_json['d']['results']
+
+
 def reverse_scrape(
         client, table, against, comparitor, col_names, primary_key, offset
     ):
@@ -27,8 +32,7 @@ def reverse_scrape(
         table.name, order_by="{0} desc".format(against), skip=offset
     )
     rows = []
-    resp_json = json.loads(resp.content.decode(resp.encoding or 'utf-8'))
-    for entry in resp_json['d']['results']:
+    for entry in get_entry_list(resp):
         rows.append(utils.entry_row(col_names, entry))
     new_rows = 0
     updated_rows = 0
