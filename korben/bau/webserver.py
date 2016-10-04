@@ -37,13 +37,15 @@ def update(request):
     odata_tablename = get_odata_tablename(request)
 
 
-def start():
+def get_app():
     config = Configurator()
     config.add_view(json_exc_view, context=http_exc.HTTPError, renderer='json')
     config.add_route('create', '/create/{django_tablename}')
     config.add_route('update', '/update/{django_tablename}')
     config.add_view(create, route_name='create')
     config.add_view(update, route_name='update')
-    app = config.make_wsgi_app()
-    server = make_server('0.0.0.0', 8080, app)
+    return config.make_wsgi_app()
+
+def start():
+    server = make_server('0.0.0.0', 8080, get_app())
     server.serve_forever()
