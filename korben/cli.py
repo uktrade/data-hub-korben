@@ -1,10 +1,9 @@
 # TODO: Use click to formalise, add generic opts etc
 import sys
-from . import sync, odata_psql, etl
+from . import sync, etl
 
 MODULES = {
     'sync': sync,
-    'odata-psql': odata_psql,
     'etl': etl,
 }
 
