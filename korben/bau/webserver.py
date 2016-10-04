@@ -39,7 +39,7 @@ def update(request):
 
 def get_app():
     config = Configurator()
-    config.add_view(json_exc_view, context=http_exc.HTTPError, renderer='json')
+    config.add_view(json_exc_view, context=http_exc.HTTPError)
     config.add_route('create', '/create/{django_tablename}')
     config.add_route('update', '/update/{django_tablename}')
     config.add_view(create, route_name='create')

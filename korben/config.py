@@ -7,6 +7,7 @@ __logger = __logging.getLogger('korben.config')
 class ConfigError(Exception):
     pass
 
+__to_bytes = lambda x: bytes(x, 'utf8')
 __noop = lambda x: x
 __config_spec = {
     #                                            default
@@ -14,7 +15,7 @@ __config_spec = {
     #   name                 required     env     /      function
     #    |                          \      |     /       /
     'cdms_cookie_path':            (True, True, None, __noop),
-    'cdms_cookie_key':             (True, True, None, lambda x: bytes(x, 'utf8')),
+    'cdms_cookie_key':             (True, True, None, __to_bytes),
     'cdms_base_url':               (True, True, None, __noop),
     'cdms_username':               (True, True, None, __noop),
     'cdms_password':               (True, True, None, __noop),
@@ -22,8 +23,8 @@ __config_spec = {
     'odata_entity_container_key':  (True, True, None, __noop),
     'database_odata_url':          (True, True, None, __noop),
     'database_url':                (True, True, None, __noop),
-    'es_host':                    (False, True, 'es', __noop),
-    'es_port':                    (False, True, 9200, __noop),
+    'es_host':                     (True, True, 'es', __noop),
+    'es_port':                     (True, True, 9200, __noop),
 }
 
 
