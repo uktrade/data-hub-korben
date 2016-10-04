@@ -42,19 +42,6 @@ def test_delete_children(cdms_client):
     assert address2_resp_404.status_code == 404
 
 
-@pytest.yield_fixture
-def account_object(cdms_client):
-    'Create an AccountSet object and delete it aferwards'
-    create_resp = cdms_client.create('AccountSet', data={'Name': 'Timelort'})
-    assert create_resp.ok
-    acc = create_resp.json()['d']
-    yield acc
-    del_resp = cdms_client.delete(
-        'AccountSet', "guid'{0}'".format(acc['AccountId'])
-    )
-    assert del_resp.ok
-
-
 def test_time_fields(account_object):
     '''
     Demonstrate that time-related fields are populated automatically by
