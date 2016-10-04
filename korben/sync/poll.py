@@ -24,10 +24,13 @@ def get_entry_list(resp):
     return resp_json['d']['results']
 
 
-def reverse_scrape(
-        client, table, against, comparitor, col_names, primary_key, offset
-    ):
-    from ..etl.main import from_cdms_psql  # TODO: fix sync.utils circular dep
+def reverse_scrape(client,
+                   table,
+                   against,
+                   comparitor,
+                   col_names,
+                   primary_key,
+                   offset):
     resp = client.list(
         table.name, order_by="{0} desc".format(against), skip=offset
     )
@@ -38,7 +41,7 @@ def reverse_scrape(
     updated_rows = 0
     connection = services.db.poll_for_connection(config.database_odata_url)
     for row in rows:
-        from_cdms_psql(table, [row[primary_key]])  # to django
+        etl.main.from_odata(table, [row[primary_key]])  # to django
         cols_pkey_against = [
             getattr(table.c, primary_key),
             getattr(table.c, against)
@@ -54,7 +57,7 @@ def reverse_scrape(
             LOGGER.debug('Row in %s doesn’t exist', table.name)
             result = connection.execute(table.insert().values(**row))
             assert result.rowcount == 1
-            from_cdms_psql(table, [row[primary_key]])
+            etl.main.from_odata(table, [row[primary_key]])  # to django
             new_rows += 1
             continue
         LOGGER.debug('local_modified %s', local_against)
@@ -75,7 +78,7 @@ def reverse_scrape(
                      .values(**row)
             )
             result = connection.execute(update_statement)
-            from_cdms_psql(table, [row[primary_key]])
+            etl.main.from_odata(table, [row[primary_key]])  # to django
             updated_rows += 1
     now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
     LOGGER.info(
@@ -91,7 +94,10 @@ def reverse_scrape(
     )
 
 
-def poll(client=None, against='ModifiedOn', comparitor=operator.lt, entities=None):
+def poll(client=None,
+         against='ModifiedOn',
+         comparitor=operator.lt,
+         entities=None):
     if client is None:
         client = CDMSRestApi()
 
@@ -109,9 +115,7 @@ def poll(client=None, against='ModifiedOn', comparitor=operator.lt, entities=Non
         table = odata_metadata.tables[table_name]
         col_names = [x.name for x in table.columns]
         # assume a single column
-        primary_key = next(
-            col.name for col in table.primary_key.columns.values()
-        )
+        primary_key = etl.utils.primary_key(table)
         LOGGER.info('Starting reverse scrape for %s', table.name)
         reverse_scrape(
             client, table, against, comparitor, col_names, primary_key, 0

@@ -8,7 +8,7 @@ from pyramid import httpexceptions as http_exc
 
 from korben import config
 from korben.cdms_api.rest import api
-from korben.etl import spec, transform
+from korben.etl import spec, transform, utils
 from korben.services import db
 
 
@@ -31,23 +31,31 @@ def django_to_odata(request):
     odata_metadata = request.registry.settings['odata_metadata']
     odata_table = odata_metadata.tables[odata_tablename]
     try:
-        odata_dict = transform.django_to_odata(request.json_body)
+        odata_dict = transform.django_to_odata(
+            django_tablename, request.json_body
+        )
     except json.decoder.JSONDecodeError as exc:
         raise http_exc.HTTPBadRequest('Invalid JSON')
     return odata_table, odata_dict
 
 
-@view_config(request_method=['POST'])
+@view_config(route_name='create', request_method=['POST'], renderer='json')
 def create(request):
     odata_table, odata_dict = django_to_odata(request)
     cdms_client = request.registry.settings['cdms_client']
     resp = cdms_client.create(odata_table.name, odata_dict)
+    return transform.odata_to_django(odata_table.name, resp.json()['d'])
 
-@view_config(request_method=['POST'])
+
+@view_config(route_name='update', request_method=['POST'], renderer='json')
 def update(request):
     odata_table, odata_dict = django_to_odata(request)
+    identifier = odata_dict.pop(utils.primary_key(odata_table), None)
+    if identifier is None:
+        raise http_exc.HTTPBadRequest('No identifier provided; pass `id`')
     cdms_client = request.registry.settings['cdms_client']
-    resp = cdms_client.update(odata_table.name, odata_dict)
+    resp = cdms_client.update(odata_table.name, identifier, odata_dict)
+    return transform.odata_to_django(odata_table.name, resp.json()['d'])
 
 
 def get_app(overrides=None):
@@ -62,8 +70,7 @@ def get_app(overrides=None):
     app_cfg.add_view(json_exc_view, context=http_exc.HTTPError)
     app_cfg.add_route('create', '/create/{django_tablename}')
     app_cfg.add_route('update', '/update/{django_tablename}')
-    app_cfg.add_view(create, route_name='create')
-    app_cfg.add_view(update, route_name='update')
+    app_cfg.scan()
     return app_cfg.make_wsgi_app()
 
 def start():
