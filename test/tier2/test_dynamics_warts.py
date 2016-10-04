@@ -2,7 +2,7 @@ import pytest
 
 import re
 import datetime
-from korben.sync.utils import could_be_a_date_value
+from korben.utils import could_be_a_date_value
 
 
 @pytest.mark.skipif(True, reason='Boring')
