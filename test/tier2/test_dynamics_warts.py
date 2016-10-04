@@ -56,6 +56,23 @@ def test_time_fields(account_object):
         )
 
 
+def test_modifiedon_update(cdms_client, account_object):
+    'ModifiedOn field doesn’t change when update is called'
+    initial_modifiedon = account_object['ModifiedOn']
+    update_resp = cdms_client.update(
+        'AccountSet',
+        "guid'{0}'".format(account_object['AccountId']),
+        {'Name': 'Hush now'},
+    )
+    assert update_resp.ok
+    get_resp = cdms_client.get(
+        'AccountSet', "guid'{0}'".format(account_object['AccountId']),
+    )
+    assert get_resp.ok
+    updated_modifiedon = get_resp.json()['d']['ModifiedOn']
+    assert updated_modifiedon == initial_modifiedon
+
+
 def test_uuid_created(account_object):
     'Demonstrate that Dynamics creates something that looks like a UUID'
     match = re.match('.{8}-.{4}-.{4}-.{12}', account_object['AccountId'])
