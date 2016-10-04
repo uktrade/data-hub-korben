@@ -1,3 +1,5 @@
+import pytest
+
 import sqlalchemy as sqla
 
 from korben import config
@@ -5,6 +7,7 @@ from korben.services import db
 from korben.sync.poll import poll
 
 
+@pytest.mark.skipif(True, reason='Don’t control staging')
 def test_poll(cdms_client, account_object):
     'Test poll picks up changes to newer objects'
     new_name = 'Magic account'
