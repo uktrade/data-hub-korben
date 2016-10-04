@@ -1,6 +1,7 @@
 import pytest
 
 import copy
+import json
 import os
 import time
 import urllib
@@ -19,6 +20,7 @@ from korben.cdms_api.rest.api import CDMSRestApi
 from korben.cdms_api.rest.auth.noop import NoopAuth
 from korben.etl import spec as etl_spec
 from korben.services import db as korben_db
+from korben.sync import poll
 
 
 ATOM_PREFIX = '{http://www.w3.org/XML/1998/namespace}'
@@ -153,9 +155,17 @@ def django_models():
 
 
 @pytest.yield_fixture
-def tier0(odata_sync_utils, configure_django):
+def tier0(monkeypatch, odata_utils, configure_django):
     'Mega-fixture for setting up tier0 databases, and cleaning them afterwards'
     print('For your information: Setup of tier0 db schemata commences')
+
+    # patch for differing resp format
+    def get_entry_list(resp):
+        resp_json = json.loads(resp.content.decode(resp.encoding or 'utf-8'))
+        return resp_json['d']
+    monkeypatch.setattr(poll, 'get_entry_list', get_entry_list)
+
+
     fixtures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures')
     schema_fixtures = {
         os.environ['DATABASE_ODATA_URL']: (

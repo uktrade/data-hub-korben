@@ -30,12 +30,12 @@ CASES = (
 
 
 @pytest.mark.parametrize('name,expected', CASES)
-def test_entry_row(odata_sync_utils, name, expected):
+def test_entry_row(odata_utils, name, expected):
     fixtures_path = os.path.join(
         os.path.dirname(os.path.abspath(__file__)),
         '..', '..', 'tier0', 'fixtures'
     )
     with open(os.path.join(fixtures_path, name), 'r') as entry_fh:
         entry = json.loads(entry_fh.read())
-    result = odata_sync_utils.entry_row(None, None, entry['d'])
+    result = odata_utils.entry_row(None, entry['d'])
     assert result == expected
