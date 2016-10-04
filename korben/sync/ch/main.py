@@ -81,6 +81,7 @@ def main():
                         datetime.datetime.now() - start_chunk, csv_path, index
                     ))
                     start_chunk = datetime.datetime.now()
+            metadata.bind.execute(insert(ch_company_table).values(csv_rows))
         LOGGER.info("{0.seconds}.{0.microseconds} for {1}".format(
             datetime.datetime.now() - start_csv, csv_path
         ))
