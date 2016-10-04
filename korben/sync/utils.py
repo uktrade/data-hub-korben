@@ -106,7 +106,7 @@ def link_fkey_map(table, entry):
 def parse_json_entries(cache_dir, entity_name, name, path=None):
     'Parse entry objects from a JSON document'
     if path is None:
-        path = os.path.join(cache_dir, 'atom', entity_name, name)
+        path = os.path.join(cache_dir, 'json', entity_name, name)
     with open(path, 'r') as cache_fh:
         try:
             json_resp = json.loads(cache_fh.read())
