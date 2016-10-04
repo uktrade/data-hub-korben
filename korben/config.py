@@ -22,8 +22,8 @@ __config_spec = {
     'odata_entity_container_key':  (True, True, None, __noop),
     'database_odata_url':          (True, True, None, __noop),
     'database_url':                (True, True, None, __noop),
-    'es_host':                    (False, True, None, __noop),
-    'es_port':                    (False, True, None, __noop),
+    'es_host':                    (False, True, 'es', __noop),
+    'es_port':                    (False, True, 9200, __noop),
 }
 
 
