@@ -9,7 +9,7 @@ import os
 
 from korben import config
 from korben import services
-from . import utils
+from korben import utils
 
 LOGGER = logging.getLogger('korben.sync.populate')
 
@@ -17,9 +17,7 @@ LOGGER = logging.getLogger('korben.sync.populate')
 def resp_csv(cache_dir, csv_dir, col_names, entity_name, page):
     entries = utils.parse_json_entries(cache_dir, entity_name, page)
     if entries is None:
-        LOGGER.error("Unpickle of {0} failed on page {1}".format(
-            entity_name, page
-        ))
+        LOGGER.error('Unpickle of %s failed on page %s', entity_name, page)
         return None, None
     csv_path = os.path.join(csv_dir, page)
     if os.path.isfile(csv_path):
@@ -28,7 +26,7 @@ def resp_csv(cache_dir, csv_dir, col_names, entity_name, page):
     writer = csv.DictWriter(csv_fh, col_names, dialect='excel')
     rowcount = 0
     for entry in entries:
-        writer.writerow(utils.entry_row(col_names, None, entry))
+        writer.writerow(utils.entry_row(col_names, entry))
         rowcount += 1
     csv_fh.close()
     return rowcount, csv_path
@@ -45,7 +43,7 @@ def entity_csv(cache_dir, col_names, entity_name, start=0):
             )
         )
     )
-    LOGGER.info("{0} pages for {1}".format(len(pages), entity_name))
+    LOGGER.info('%s pages for %s', len(pages), entity_name)
     csv_paths = []
     rowcount = 0
     for page in pages:
@@ -61,7 +59,7 @@ def entity_csv(cache_dir, col_names, entity_name, start=0):
                 for i, _ in enumerate(csv_fh):
                     pass
                 rowcount += i + 1
-    LOGGER.info("{0} rows for {1}".format(rowcount, entity_name))
+    LOGGER.info('%s rows for %s', rowcount, entity_name)
     if len(pages) and not rowcount:
         raise Exception(csv_path)
     return csv_paths
@@ -89,7 +87,7 @@ def populate_entity(cache_dir, metadata, entity_name):
             csv_psql(cursor, csv_path, table)
         except Exception as exc:
             metadata.bind.connection.rollback()
-            LOGGER.info("csv_psq call failed for {0} failed".format(csv_path))
+            LOGGER.info('csv_psq call failed for %s', csv_path)
             LOGGER.error(exc)
 
 

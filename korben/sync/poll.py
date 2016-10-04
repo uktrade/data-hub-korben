@@ -11,8 +11,7 @@ import sqlalchemy as sqla
 
 from ..cdms_api.rest.api import CDMSRestApi
 from .. import etl
-from . import utils
-from korben import config, services
+from korben import config, services, utils
 
 CDMS_API = None
 DATABASE_CONNECTION = None
@@ -30,7 +29,7 @@ def reverse_scrape(
     rows = []
     resp_json = json.loads(resp.content.decode(resp.encoding or 'utf-8'))
     for entry in resp_json['d']['results']:
-        rows.append(utils.entry_row(col_names, None, entry))
+        rows.append(utils.entry_row(col_names, entry))
     new_rows = 0
     updated_rows = 0
     connection = services.db.poll_for_connection(config.database_odata_url)
