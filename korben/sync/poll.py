@@ -20,9 +20,11 @@ DATABASE_CONNECTION = None
 LOGGER = logging.getLogger('korben.sync.poll')
 
 
-def reverse_scrape(table, against, comparitor, col_names, primary_key, offset):
+def reverse_scrape(
+        client, table, against, comparitor, col_names, primary_key, offset
+    ):
     from ..etl.main import from_cdms_psql  # TODO: fix sync.utils circular dep
-    resp = CDMS_API.list(
+    resp = client.list(
         table.name, order_by="{0} desc".format(against), skip=offset
     )
     rows = []
@@ -46,24 +48,24 @@ def reverse_scrape(table, against, comparitor, col_names, primary_key, offset):
             pkey, local_against =\
                 connection.execute(select_statement).fetchone()
         except TypeError:
-            LOGGER.debug("row in {0} doesn't exist".format(table.name))
+            LOGGER.debug('Row in %s doesn’t exist', table.name)
             result = connection.execute(table.insert().values(**row))
             assert result.rowcount == 1
             from_cdms_psql(table, [row[primary_key]])
             new_rows += 1
             continue
-        LOGGER.debug("local_modified {0}".format(local_against))
-        LOGGER.debug("row in {0} exists".format(table.name))
+        LOGGER.debug('local_modified %s', local_against)
+        LOGGER.debug('Row in %s exists', table.name)
         try:
             remote_against =\
-                datetime.datetime.strptime(row[against], "%Y-%m-%d %H:%M:%S")
+                datetime.datetime.strptime(row[against], '%Y-%m-%d %H:%M:%S')
         except TypeError:
-            LOGGER.error("Bad data in {0}".format(table.name))
+            LOGGER.error('Bad data in %s', table.name)
             continue
         except ValueError:  # TODO: type introspection
             remote_against = row[against]
         if comparitor(local_against, remote_against):
-            LOGGER.debug("row in {0} outdated".format(table.name))
+            LOGGER.debug('Row in %s outdated', table.name)
             update_statement = (
                 table.update()
                      .where(table.columns[primary_key] == row[primary_key])
@@ -72,23 +74,23 @@ def reverse_scrape(table, against, comparitor, col_names, primary_key, offset):
             result = connection.execute(update_statement)
             from_cdms_psql(table, [row[primary_key]])
             updated_rows += 1
-    LOGGER.info("{3} {2} INSERT {0} UPDATE {1}".format(
-        new_rows, updated_rows, table.name, datetime.datetime.now()
-    ))
+    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+    LOGGER.info(
+        '%s %s INSERT %s UPDATE %s', now, table.name, new_rows, updated_rows
+    )
     if new_rows + updated_rows < 50:
         return offset + new_rows + updated_rows
-    LOGGER.info("Continuing reverse scrape for {0} (from offset {1})".format(
-        table.name, offset
-    ))
-    return reverse_scrape(table, col_names, primary_key, offset + 50)
+    LOGGER.info(
+        'Continuing reverse scrape for %s (from offset %s)', table.name, offset
+    )
+    return reverse_scrape(
+        client, table, against, comparitor, col_names, primary_key, offset + 50
+    )
 
 
 def poll(client=None, against='ModifiedOn', comparitor=operator.lt):
-    global CDMS_API  # NOQA
     if client is None:
-        CDMS_API = CDMSRestApi()
-    else:
-        CDMS_API = client
+        client = CDMSRestApi()
 
     odata_metadata = services.db.poll_for_metadata(config.database_odata_url)
     django_metadata = services.db.poll_for_metadata(config.database_url)
@@ -100,8 +102,6 @@ def poll(client=None, against='ModifiedOn', comparitor=operator.lt):
             if table_name in etl.spec.DJANGO_LOOKUP:
                 live_entities.append(etl.spec.DJANGO_LOOKUP[table_name])
 
-    CDMS_API.auth.setup_session()
-
     for table_name in live_entities:
         table = odata_metadata.tables[table_name]
         col_names = [x.name for x in table.columns]
@@ -109,8 +109,10 @@ def poll(client=None, against='ModifiedOn', comparitor=operator.lt):
         primary_key = next(
             col.name for col in table.primary_key.columns.values()
         )
-        LOGGER.info("Starting reverse scrape for {0}".format(table.name))
-        reverse_scrape(table, against, comparitor, col_names, primary_key, 0)
+        LOGGER.info('Starting reverse scrape for %s', table.name)
+        reverse_scrape(
+            client, table, against, comparitor, col_names, primary_key, 0
+        )
 
 
 def main():
