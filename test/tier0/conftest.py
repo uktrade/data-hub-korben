@@ -54,14 +54,22 @@ TEST_MAPPINGS = {
     },
     'Suppliers': {
         'to': 'suppliers',
+        'etag': True,
         'local': (
             ('ID', 'id'),
-            ('Address_Street', 'address_street'),
-            ('Address_City', 'address_city'),
-            ('Address_State', 'address_state'),
-            ('Address_ZipCode', 'address_zipcode'),
-            ('Address_Country', 'address_country'),
             ('Concurrency', 'concurrency'),
+        ),
+        'nonflat': (
+            (
+                'Address',
+                (
+                    ('Street', 'address_street'),
+                    ('City', 'address_city'),
+                    ('State', 'address_state'),
+                    ('ZipCode', 'address_zipcode'),
+                    ('Country', 'address_country'),
+                ),
+            ),
         ),
     },
     'Products': {

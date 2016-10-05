@@ -31,14 +31,13 @@ class CDMSRestApi(object):
         else:
             self.auth = ActiveDirectoryAuth()
 
-    def make_request(self, verb, url, data=None):
+    def make_request(self, verb, url, data=None, headers=None):
         """
         Route a request through the authentication layer
         """
-        now = datetime.datetime.now()
         if data is None:
             data = {}
-        resp = self.auth.make_request(verb, url, data=data)
+        resp = self.auth.make_request(verb, url, data=data, headers=headers)
         LOGGER.info('%s request took %s', verb, resp.elapsed)
         return resp
 
@@ -91,7 +90,7 @@ class CDMSRestApi(object):
         )
         return self.make_request('get', url)
 
-    def update(self, service, guid, data):
+    def update(self, service, etag, guid, data):
         """
         Update a single entity from the service identified with the guid using
         the provided data. Will only update the fields provided by using a POST
@@ -119,9 +118,14 @@ class CDMSRestApi(object):
             guid=guid
         )
 
+        headers = {'X-HTTP-Method': 'MERGE'}
+        if etag:
+            headers.update({'If-Match': '*'})
         # POST returns 204 so we need to make an extra GET query to return the
         # latest values
-        self.make_request('put', url, data=data)
+        resp = self.make_request('post', url, data=data, headers=headers)
+        if not resp.ok:
+            return resp
 
         return self.get(service, guid)
 

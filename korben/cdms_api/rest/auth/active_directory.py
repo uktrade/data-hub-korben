@@ -135,7 +135,7 @@ class ActiveDirectoryAuth:
             )
         return resp
 
-    def make_request(self, verb, url, data=None):
+    def make_request(self, verb, url, data=None, headers=None):
         """
         Makes the call to CDMS, if 401 is found, it reauthenticates
         and tries again making the same call
@@ -143,21 +143,25 @@ class ActiveDirectoryAuth:
         if data is None:
             data = {}
         try:
-            return self._make_request(verb, url, data=data)
+            return self._make_request(verb, url, data=data, headers=headers)
         except CDMSUnauthorizedException:
             logger.debug('Session expired, reauthenticating and trying again')
             self.setup_session(force=True)
-        return self._make_request(verb, url, data=data)
+        return self._make_request(verb, url, data=data, headers=headers)
 
-    def _make_request(self, verb, url, data=None):
+    def _make_request(self, verb, url, data=None, headers=None):
         if data is None:
             data = {}
         logger.debug('Calling CDMS url (%s) on %s' % (verb, url))
 
         if data:
             data = json.dumps(data)
-        headers = {
+        default_headers = {
             'Accept': 'application/json', 'Content-Type': 'application/json'
         }
-        resp = getattr(self.session, verb)(url, data=data, headers=headers)
+        if headers is not None:
+            default_headers.update(headers)
+        resp = getattr(self.session, verb)(
+            url, data=data, headers=default_headers
+        )
         return resp

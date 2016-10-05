@@ -22,6 +22,7 @@ def json_exc_view(exc, request):
 
 
 def django_to_odata(request):
+    'Transform request into spec for “onwards” request to OData service'
     django_tablename = request.matchdict['django_tablename']
     try:
         odata_tablename = spec.DJANGO_LOOKUP[django_tablename]
@@ -31,31 +32,48 @@ def django_to_odata(request):
     odata_metadata = request.registry.settings['odata_metadata']
     odata_table = odata_metadata.tables[odata_tablename]
     try:
-        odata_dict = transform.django_to_odata(
+        etag, odata_dict = transform.django_to_odata(
             django_tablename, request.json_body
         )
     except json.decoder.JSONDecodeError as exc:
         raise http_exc.HTTPBadRequest('Invalid JSON')
-    return odata_table, odata_dict
+    return odata_table, etag, odata_dict
+
+
+def odata_to_django(odata_table, response):
+    '''
+    Transform an OData response into a response to pass on to Django (possibly
+    just an “passed-on” error response)
+    '''
+    if not response.ok:
+        kwargs = {
+            'status_code': response.status_code,
+            'body': json.dumps(response.json()),
+            'content_type': 'application/json',
+        }
+        return Response(**kwargs)
+    return transform.odata_to_django(odata_table.name, response.json()['d'])
 
 
 @view_config(route_name='create', request_method=['POST'], renderer='json')
 def create(request):
-    odata_table, odata_dict = django_to_odata(request)
+    'Create an OData entity'
+    odata_table, _, odata_dict = django_to_odata(request)
     cdms_client = request.registry.settings['cdms_client']
-    resp = cdms_client.create(odata_table.name, odata_dict)
-    return transform.odata_to_django(odata_table.name, resp.json()['d'])
+    response = cdms_client.create(odata_table.name, odata_dict)
+    return odata_to_django(odata_table, response)
 
 
 @view_config(route_name='update', request_method=['POST'], renderer='json')
 def update(request):
-    odata_table, odata_dict = django_to_odata(request)
-    identifier = odata_dict.pop(utils.primary_key(odata_table), None)
-    if identifier is None:
-        raise http_exc.HTTPBadRequest('No identifier provided; pass `id`')
+    'Update an OData entity'
+    odata_table, etag, odata_dict = django_to_odata(request)
+    ident = odata_dict.pop(utils.primary_key(odata_table), None)
+    if ident is None:
+        raise http_exc.HTTPBadRequest('No identifier provided; pass `id` key')
     cdms_client = request.registry.settings['cdms_client']
-    resp = cdms_client.update(odata_table.name, identifier, odata_dict)
-    return transform.odata_to_django(odata_table.name, resp.json()['d'])
+    response = cdms_client.update(odata_table.name, etag, ident, odata_dict)
+    return odata_to_django(odata_table, response)
 
 
 def get_app(overrides=None):
