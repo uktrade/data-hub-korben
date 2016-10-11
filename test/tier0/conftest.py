@@ -19,7 +19,7 @@ from korben import config
 from korben.cdms_api.rest import api
 from korben.cdms_api.rest.auth.noop import NoopAuth
 from korben.etl import spec as etl_spec
-from korben.services import db as korben_db
+from korben import services
 from korben.sync import poll
 
 
@@ -202,22 +202,10 @@ def tier0(monkeypatch, odata_utils, configure_django):
     etl_spec.DJANGO_LOOKUP = {
         mapping['to']: name for name, mapping in ORIGINAL_MAPPINGS.items()
     }
-    korben_db.disconnect_all()
-    '''
-    # close cached sqla connections (which block db access)
-    for key in korben_db.__CACHE__:
-        if key.startswith('connection'):
-            korben_db.__CACHE__[key].close()
-    '''
+    services.db.reset_connections()
     # truncate tables
     for url in schema_fixtures.keys():
         truncate_public_tables(url)
-    '''
-    # empty cache
-    keys = tuple(korben_db.__CACHE__.keys())
-    for key in keys:
-        del(korben_db.__CACHE__[key])
-    '''
 
 
 @pytest.yield_fixture
