@@ -49,6 +49,8 @@ def get_reflected_metadata(connection):
 
 def poll_for_connection(url):
     'Repeatedly attempt to connect to a database at the given URL'
+    global __CONNECTIONS__
+    connection = __CONNECTIONS__.get(url)
     if connection:
         return connection
     engine = sqla.create_engine(
