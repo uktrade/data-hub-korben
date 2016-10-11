@@ -25,6 +25,8 @@ def disconnect_all():
         __ODATA_METADATA__.bind.close()
     __DJANGO_METADATA__ = None
     __ODATA_METADATA__ = None
+    global __CONNECTIONS__
+    __CONNECTIONS__ = {}
 
 
 def create_tables(connection):
