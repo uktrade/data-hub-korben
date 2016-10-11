@@ -35,7 +35,7 @@ def django_to_odata(request):
         etag, odata_dict = transform.django_to_odata(
             django_tablename, request.json_body
         )
-    except json.decoder.JSONDecodeError as exc:
+    except json.JSONDecodeError as exc:
         raise http_exc.HTTPBadRequest('Invalid JSON')
     return odata_table, etag, odata_dict
 
@@ -43,7 +43,7 @@ def django_to_odata(request):
 def odata_to_django(odata_table, response):
     '''
     Transform an OData response into a response to pass on to Django (possibly
-    just an “passed-on” error response)
+    just an “passed-through” error response)
     '''
     if not response.ok:
         kwargs = {
