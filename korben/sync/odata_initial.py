@@ -7,7 +7,6 @@ import logging
 import os
 
 
-from korben import config
 from korben import services
 from korben import utils
 
@@ -93,7 +92,7 @@ def populate_entity(cache_dir, metadata, entity_name):
 
 def main(cache_dir='cache', entity_name=None, metadata=None):
     if not metadata:
-        metadata = services.db.poll_for_metadata(config.database_odata_url)
+        metadata = services.db.get_odata_metadata()
     if entity_name:
         populate_entity(cache_dir, metadata, entity_name)
         return

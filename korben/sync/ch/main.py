@@ -7,7 +7,7 @@ import tempfile
 import sqlalchemy as sqla
 from sqlalchemy.dialects.postgresql import insert
 
-from korben import config, services
+from korben import services
 from . import download, constants
 
 
@@ -54,7 +54,7 @@ def csv_chcompany(row):
 
 def main():
     csv_paths = download.extract(download.zips(download.filenames()))
-    metadata = services.db.poll_for_metadata(config.database_url)
+    metadata = services.db.get_django_metadata()
     ch_company_table = metadata.tables['company_companieshousecompany']
     metadata.bind.execute(ch_company_table.delete())
     start_all = datetime.datetime.now()

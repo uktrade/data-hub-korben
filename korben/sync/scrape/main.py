@@ -8,7 +8,6 @@ import random
 
 from lxml import etree
 
-from korben import config
 from korben import etl
 from korben import services
 from korben.cdms_api.rest.api import CDMSRestApi
@@ -61,7 +60,7 @@ def main(names=None, api_instance=None):
     pool = multiprocessing.Pool(processes=PROCESSES)
     entity_chunks = []
     spent_path = sync_utils.file_leaf('cache', 'spent')
-    metadata = services.db.poll_for_metadata(config.database_odata_url)
+    metadata = services.db.get_odata_metadata()
     try:
         with open(spent_path, 'rb') as spent_fh:
             spent = pickle.load(spent_fh)

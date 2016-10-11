@@ -6,7 +6,6 @@ from elasticsearch import helpers as es_helpers
 import sqlalchemy as sqla
 
 from korben import services
-from korben import config
 from korben import etl
 
 from . import constants
@@ -80,7 +79,7 @@ def joined_select(table):
 
 
 def main():
-    django_metadata = services.db.poll_for_metadata(config.database_url)
+    django_metadata = services.db.get_django_metadata()
     setup_index()
     for name in constants.INDEXED_ES_TYPES:
         LOGGER.info("Indexing from django database for {0}".format(name))

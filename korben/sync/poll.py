@@ -101,8 +101,8 @@ def poll(client=None,
     if client is None:
         client = CDMSRestApi()
 
-    odata_metadata = services.db.poll_for_metadata(config.database_odata_url)
-    django_metadata = services.db.poll_for_metadata(config.database_url)
+    odata_metadata = services.db.get_odata_metadata()
+    django_metadata = services.db.get_django_metadata()
 
     live_entities = []
     django_fkey_deps = etl.utils.fkey_deps(django_metadata)

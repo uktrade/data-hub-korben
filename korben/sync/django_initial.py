@@ -3,7 +3,6 @@ import operator
 
 import sqlalchemy as sqla
 
-from korben import config
 from korben import services
 from korben import etl
 
@@ -12,8 +11,8 @@ LOGGER = logging.getLogger('korben.sync.django_initial')
 
 
 def main(client=None):
-    odata_metadata = services.db.poll_for_metadata(config.database_odata_url)
-    django_metadata = services.db.poll_for_metadata(config.database_url)
+    odata_metadata = services.db.get_odata_metadata()
+    django_metadata = services.db.get_django_metadata()
     odata_django = []
     django_fkey_deps = etl.utils.fkey_deps(django_metadata)
     for depth in sorted(django_fkey_deps.keys()):

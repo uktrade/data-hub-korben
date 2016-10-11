@@ -6,13 +6,13 @@ from pyramid.config import Configurator
 from pyramid.response import Response
 from pyramid import httpexceptions as http_exc
 
-from korben import config
 from korben.cdms_api.rest import api
 from korben.etl import spec, transform, utils
 from korben.services import db
 
 
 def json_exc_view(exc, request):
+    'JSONify a Python exception, return it as a Response object'
     kwargs = {
         'status_code': exc.status_code,
         'body': json.dumps({'message': exc.message}),
@@ -78,8 +78,8 @@ def update(request):
 
 def get_app(overrides=None):
     settings = {
-        'odata_metadata': db.poll_for_metadata(config.database_odata_url),
-        'django_metadata': db.poll_for_metadata(config.database_url),
+        'odata_metadata': db.get_odata_metadata(),
+        'django_metadata': db.get_django_metadata(),
         'cdms_client': api.CDMSRestApi()
     }
     if overrides is not None:
@@ -90,6 +90,7 @@ def get_app(overrides=None):
     app_cfg.add_route('update', '/update/{django_tablename}')
     app_cfg.scan()
     return app_cfg.make_wsgi_app()
+
 
 def start():
     server = make_server('0.0.0.0', 8080, get_app())

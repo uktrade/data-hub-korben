@@ -2,7 +2,6 @@ import pytest
 
 import sqlalchemy as sqla
 
-from korben import config
 from korben.services import db
 from korben.sync.poll import poll
 
@@ -14,7 +13,7 @@ def test_poll(cdms_client, account_object):
     # one poll call to get the newest 50
     poll(cdms_client, entities=['AccountSet'])
     # set up our query
-    django_metadata = db.poll_for_metadata(config.database_url)
+    django_metadata = db.get_django_metadata()
     table = django_metadata.tables['company_company']
     select_statement = (
         sqla.select([table.c.name], table)
