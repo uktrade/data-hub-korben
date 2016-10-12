@@ -7,7 +7,7 @@ import sqlalchemy as sqla
 
 from korben import services
 from korben import etl
-
+from korben.services import es
 from . import constants
 
 LOGGER = logging.getLogger('korben.sync.es_initital')
@@ -46,15 +46,19 @@ def joined_select(table):
     fkey_data_cols = []
     joined = table
     # knock together the joins in a general, if rather assumptive manner
+    joined_tables = set()
     for col in filter(lambda col: bool(col.foreign_keys), table.columns):
         fkey = next(iter(col.foreign_keys))  # assume fkeys
                                              # are non-composite
-        # outer join is used here because data from cdms is incomplete
-        # TODO: make scrape code more thorough, or maybe fix etl
-        joined = joined.outerjoin(
-            fkey.column.table,
-            onclause=fkey.column.table.c.id == col  # assume join clause is
-        )                                           # this simple
+        # don’t try to join twice
+        if fkey.column.table.name not in joined_tables:
+            # outer join is used here because data from cdms is incomplete
+            # TODO: make scrape code more thorough, or maybe fix etl
+            joined = joined.outerjoin(
+                fkey.column.table,
+                onclause=fkey.column.table.c.id == col  # assume join clause is
+            )                                           # this simple
+            joined_tables.add(fkey.column.table.name)
         # label column to lose `_id` suffix
         local_name = col.name[:-3]
         # potential remote column names

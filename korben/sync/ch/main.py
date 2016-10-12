@@ -15,16 +15,18 @@ LOGGER = logging.getLogger('korben.sync.ch.main')
 logging.basicConfig(level=logging.DEBUG)
 
 CH_FIELDS = (
-    'company_number',
+    # shared
     'name',
-    'address_care_of',
-    'po_box',
-    'address_1',
-    'address_2',
-    'address_town',
-    'address_county',
-    'address_country',
-    'address_postcode',
+    'company_number',
+    'registered_address_1',
+    'registered_address_2',
+    'registered_address_town',
+    'registered_address_county',
+    # doesn’t apply, since these are all uk companies?
+    # 'registered_address_country',
+    'registered_address_postcode',
+
+    # ch only
     'company_category',
     'company_status',
     'sic_code_1',
@@ -34,6 +36,7 @@ CH_FIELDS = (
     'uri',
 )
 
+UNITED_KINGDOM_COUNTRY_ID = '80756b9a-5d95-e211-a939-e4115bead28a'
 
 def ch_date(row, column):
     try:
@@ -49,8 +52,26 @@ def csv_chcompany(row):
         ch_company[key] = row[key]
     ch_company['archived'] = False
     ch_company['incorporation_date'] = ch_date(row, 'incorporation_date')
+
+    # bad hacks
+    ch_company['registered_address_country_id'] = UNITED_KINGDOM_COUNTRY_ID
+    ch_company['registered_address_3'] = ''
+    ch_company['registered_address_4'] = ''
+
     return ch_company
 
+def insert_or_report(execute_fn, table, rows):
+    try:
+        execute_fn(insert(table).values(rows))
+    except Exception as exc:
+        print(rows)
+        print(exc)
+        return
+    LOGGER.info(
+        '%s Inserted %s rows',
+        datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S'),
+        len(rows)
+    )
 
 def main():
     csv_paths = download.extract(download.zips(download.filenames()))
@@ -72,16 +93,16 @@ def main():
                 if index == 0:
                     continue  # skip 0th row, since we’re using our own names
                 csv_rows.append(csv_chcompany(row))
-                if index % 10000 == 0:  # periodically puke rows into the db
-                    metadata.bind.execute(
-                        insert(ch_company_table).values(csv_rows)
+                if index % 1000 == 0:  # periodically puke rows into the db
+                    insert_or_report(
+                        metadata.bind.execute, ch_company_table, csv_rows
                     )
                     csv_rows = []
                     LOGGER.debug(chunk_log_fmt.format(
                         datetime.datetime.now() - start_chunk, csv_path, index
                     ))
                     start_chunk = datetime.datetime.now()
-            metadata.bind.execute(insert(ch_company_table).values(csv_rows))
+            insert_or_report(metadata.bind.execute, ch_company_table, csv_rows)
         LOGGER.info("{0.seconds}.{0.microseconds} for {1}".format(
             datetime.datetime.now() - start_csv, csv_path
         ))
