@@ -11,6 +11,7 @@ from korben.services import es
 from . import constants
 
 LOGGER = logging.getLogger('korben.sync.es_initital')
+CHUNKSIZE = 1000
 
 
 def row_es_add(table, es_id_col, row):
@@ -82,23 +83,33 @@ def joined_select(table):
     return sqla.select(cols + fkey_data_cols, from_obj=joined)
 
 
+def select_chunks(execute, basetable, select):
+    count_q = sqla.select([sqla.func.count()]).select_from(basetable)
+    count = execute(count_q).scalar()
+    for offset in range(0, count, CHUNKSIZE):
+        LOGGER.info('Evaluating chunk %s', offset)
+        yield execute(select.offset(offset).limit(CHUNKSIZE)).fetchall()
+
+
 def main():
     django_metadata = services.db.get_django_metadata()
     setup_index()
     for name in constants.INDEXED_ES_TYPES:
         LOGGER.info("Indexing from django database for {0}".format(name))
         table = django_metadata.tables[name]
-        select = joined_select(table)
-        rows = django_metadata.bind.execute(select).fetchall()
-        actions = list(map(functools.partial(row_es_add, table, 'id'), rows))
-        success_count, error_count = elasticsearch.helpers.bulk(
-            client=services.es.client,
-            actions=actions,
-            stats_only=True,
-            chunk_size=1000,
-            request_timeout=300,
+        chunks = select_chunks(
+            django_metadata.bind.execute, table, joined_select(table)
         )
-        assert error_count is 0
+        for rows in chunks:
+            actions = list(map(functools.partial(row_es_add, table, 'id'), rows))
+            success_count, error_count = elasticsearch.helpers.bulk(
+                client=services.es.client,
+                actions=actions,
+                stats_only=True,
+                chunk_size=1000,
+                request_timeout=300,
+            )
+            assert error_count is 0
 
     # do ch company logic
     name = 'company_companieshousecompany'
@@ -109,21 +120,24 @@ def main():
     ).fetchall()
     linked_companies = frozenset([x.company_number for x in result])
     table = django_metadata.tables[name]
-    rows = django_metadata.bind.execute(table.select()).fetchall()
-    filtered_rows = filter(
-        lambda row: row.company_number not in linked_companies, rows
+    chunks = select_chunks(
+        django_metadata.bind.execute, table, joined_select(table)
     )
-    actions = list(map(
-        functools.partial(row_es_add, table, 'company_number'),
-        filtered_rows
-    ))
-    success_count, error_count = elasticsearch.helpers.bulk(
-        client=services.es.client,
-        actions=actions,
-        stats_only=True,
-        chunk_size=10,
-        request_timeout=300,
-        raise_on_error=True,
-        raise_on_exception=True,
-    )
-    assert error_count is 0
+    for rows in chunks:
+        filtered_rows = filter(
+            lambda row: row.company_number not in linked_companies, rows
+        )
+        actions = list(map(
+            functools.partial(row_es_add, table, 'company_number'),
+            filtered_rows
+        ))
+        success_count, error_count = elasticsearch.helpers.bulk(
+            client=services.es.client,
+            actions=actions,
+            stats_only=True,
+            chunk_size=10,
+            request_timeout=300,
+            raise_on_error=True,
+            raise_on_exception=True,
+        )
+        assert error_count is 0
