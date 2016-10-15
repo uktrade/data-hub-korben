@@ -6,8 +6,6 @@ import pickle
 import time
 import random
 
-from lxml import etree
-
 from korben import etl
 from korben import services
 from korben.cdms_api.rest.api import CDMSRestApi
@@ -19,7 +17,6 @@ from . import constants as scrape_constants
 from . import types
 from . import classes
 
-api = None
 
 class LoggingFilter(logging.Filter):
     def filter(self, record):
@@ -40,39 +37,35 @@ except FileNotFoundError:
     ENTITY_NAMES = constants.ENTITY_NAMES
 
 PROCESSES = 32
+SPENT_PATH = sync_utils.file_leaf('cache', 'spent')
 
 
-def main(names=None, api_instance=None):
-    from korben.etl.main import from_odata_json  # TODO: fix circular dep with sync.utils
-
-    global api
-    if api_instance is None:
-        api = CDMSRestApi()
-        api.auth.setup_session(True)
-    else:
-        api = api_instance
-
-    from korben.etl.main import from_odata_xml  # TODO: fix circular dep with sunc.utils
+def main(names=None, client=None):
+    if not client:  # assume this is not a testing case
+        # force login to setup cookie to be used by subsequent client instances
+        CDMSRestApi().auth.setup_session(True)
     if names is None:
         names = etl.spec.MAPPINGS.keys()
     else:
         names = set(names.split(','))
     pool = multiprocessing.Pool(processes=PROCESSES)
     entity_chunks = []
-    spent_path = sync_utils.file_leaf('cache', 'spent')
     metadata = services.db.get_odata_metadata()
     try:
-        with open(spent_path, 'rb') as spent_fh:
+        with open(SPENT_PATH, 'rb') as spent_fh:
             spent = pickle.load(spent_fh)
         print("Skipping {0} entity types \o/".format(len(spent)))
     except FileNotFoundError:
         spent = set()
-        with open(spent_path, 'wb') as spent_fh:
+        with open(SPENT_PATH, 'wb') as spent_fh:
             pickle.dump(spent, spent_fh)
+    # validate cache is in good shape (ie. no missing requests)
     for entity_name in names - spent:
         try:
-            caches = sorted(map(int,
-                os.listdir(os.path.join('cache', 'json', entity_name))))
+            cache_names = os.listdir(
+                os.path.join('cache', 'json', entity_name)
+            )
+            caches = sorted(map(int, cache_names))
             for index, offset in list(enumerate(caches))[1:]:
                 if caches[index - 1] != offset - 50:
                     start = caches[index - 1] + 50
@@ -88,7 +81,7 @@ def main(names=None, api_instance=None):
             start = 0
         end = start + (scrape_constants.CHUNKSIZE * scrape_constants.PAGESIZE)
         entity_chunks.append(
-            classes.EntityChunk(api, entity_name, start, end)
+            classes.EntityChunk(client, entity_name, start, end)
         )
     last_report = 0
 
@@ -107,6 +100,7 @@ def main(names=None, api_instance=None):
         LOGGER.info("{0}".format(now.strftime("%Y-%m-%d %H:%M:%S")))
 
         last_report = now.second
+        reauthd_this_tick = False
 
         for entity_chunk in random.sample(entity_chunks, len(entity_chunks)):
 
@@ -128,7 +122,7 @@ def main(names=None, api_instance=None):
                 entity_page.poll()  # updates the state of the EntityPage
                 if entity_page.state == types.EntityPageState.complete:
                     # make cheeky call to etl.load
-                    results = from_odata_json(
+                    results = etl.main.from_odata_json(
                         metadata.tables[entity_page.entity_name],
                         utils.json_cache_key(
                             entity_page.entity_name, entity_page.offset
@@ -144,27 +138,24 @@ def main(names=None, api_instance=None):
                         )
                     )
                     entity_page.state = types.EntityPageState.inserted
-                    continue
-                if entity_page.state == types.EntityPageState.failed:
-                    # handle various failure cases
-                    if isinstance(
-                            entity_page.exception, types.EntityPageNoData
-                    ):
-                        # there is no more data, stop requesting this entity
-                        entity_chunk.state = types.EntityChunkState.spent
-                        spent_path = os.path.join('cache', 'spent')
-                        with open(spent_path, 'rb') as spent_fh:
-                            spent = pickle.load(spent_fh)
-                            spent.add(entity_chunk.entity_name)
-                        with open(spent_path, 'wb') as spent_fh:
-                            pickle.dump(spent, spent_fh)
-                        LOGGER.info(
-                            "{0} ({1}) spent".format(
-                                entity_page.entity_name, entity_page.offset
-                            )
+                if entity_page.state == types.EntityPageState.spent:
+                    # there is no more data, stop requesting this entity
+                    entity_chunk.state = types.EntityChunkState.spent
+                    with open(SPENT_PATH, 'rb') as spent_fh:
+                        spent = pickle.load(spent_fh)
+                        spent.add(entity_chunk.entity_name)
+                    with open(SPENT_PATH, 'wb') as spent_fh:
+                        pickle.dump(spent, spent_fh)
+                    LOGGER.error(
+                        "{0} ({1}) spent".format(
+                            entity_page.entity_name, entity_page.offset
                         )
-                    if isinstance(entity_page.exception, types.EntityPageDeAuth):
-                        api.auth.setup_session(True)
+                    )
+                if entity_page.state == types.EntityPageState.deauthd:
+                    if not reauthd_this_tick:
+                        CDMSRestApi().auth.setup_session(True)
+                        reauthd_this_tick = True
+                    entity_page.reset()
             entity_chunk.poll()  # update state of EntityChunk
 
         done = (  # ask if all the EntityChunks are done
@@ -180,5 +171,7 @@ def main(names=None, api_instance=None):
             pool.close()
             LOGGER.info('Waiting for Pool.join ...')
             pool.join()
-            return  # TODO: add exit(1) somewhere else to signal to bash
+            if not client:  # assume this is not a testing case
+                exit(1)
+            return
         time.sleep(1)  # don’t spam

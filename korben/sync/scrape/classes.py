@@ -6,7 +6,7 @@ from . import types
 from . import constants
 from . import utils
 
-LOGGER = logging.getLogger('korben.sync.scrape.classes')
+ENTITYPAGE_MODULE_PATH = 'korben.sync.scrape.classes.EntityPage'
 
 
 class EntityChunk(object):
@@ -14,7 +14,7 @@ class EntityChunk(object):
     Object to manage the processing of CHUNKSIZE many EntityPage objects, these
     represent a bunch of requests that should be made to fetch data from
     Dynamics. This object basically holds the range and convenience methods for
-    reporting on the state of requests.
+    reporting on the state of requests in the the chunk.
     '''
 
     state = types.EntityChunkState.incomplete
@@ -73,6 +73,7 @@ class EntityPage(object):
         self.client = client
         self.entity_name = entity_name
         self.offset = offset
+        self.logger = logging.getLogger(ENTITYPAGE_MODULE_PATH)
 
     def __str__(self):
         return "<EntityPage {0} ({1}) {2}>".format(
@@ -105,14 +106,17 @@ class EntityPage(object):
         try:
             self.task.get()
             self.state = types.EntityPageState.complete
-        except (types.EntityPageNoData, types.EntityPageDeAuth) as exc:
+        except types.EntityPageNoData as exc:
             self.exception = exc
-            self.state = types.EntityPageState.failed
+            self.state = types.EntityPageState.spent
+        except types.EntityPageDeAuth as exc:
+            self.exception = exc
+            self.state = types.EntityPageState.deauthd
         except (
             types.EntityPageDynamicsBombed,
             reqs_excs.ConnectionError,
-            RuntimeError
+            Exception
         ) as exc:
-            LOGGER.debug(exc)
-            LOGGER.error("{0} errored, resetting".format(self))
+            self.logger.debug(exc)
+            self.logger.info("{0} errored, resetting".format(self))
             self.reset()

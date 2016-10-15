@@ -79,7 +79,10 @@ def parse_json_entries(cache_dir, entity_name, name, path=None):
     with open(path, 'r') as cache_fh:
         try:
             json_resp = json.loads(cache_fh.read())
-            return json_resp['d']
+            try:
+                return json_resp['d']['results']
+            except ValueError:
+                return json_resp['d']
         except json.JSONDecodeError:
             LOGGER.error('Bad JSON!')
             # scrape failed

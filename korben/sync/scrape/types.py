@@ -24,9 +24,9 @@ EntityPageState = enum.Enum(
 #               |                                                       # NOQA
 #               |                                                       # NOQA
             'pending',
-#             /   \                                                     # NOQA
-#            /     \                                                    # NOQA
-       'failed', 'complete',
+#             /   \  \_________                                          # NOQA
+#            /     \           \                                         # NOQA
+      'deauthd', 'complete', 'spent',
 #                    |                                                  # NOQA
 #                    |                                                  # NOQA
                  'inserted',
@@ -42,4 +42,3 @@ EntityChunkState = enum.Enum(
         'spent', 'complete',
     )
 )
-
