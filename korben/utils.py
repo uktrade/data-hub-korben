@@ -5,7 +5,9 @@ import json
 import re
 
 LOGGER = logging.getLogger('korben.utils')
-RE_ODATA_DATE = re.compile(r'\/Date\((?P<timestamp_milliseconds_str>\d+)\)')
+RE_ODATA_DATE = re.compile(
+    r'\/Date\([-+]?(?P<timestamp_milliseconds_str>\d+)\)'
+)
 
 
 def handle_multiprop(prop_name, prop_value):
