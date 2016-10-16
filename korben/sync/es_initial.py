@@ -4,6 +4,7 @@ import logging
 import elasticsearch
 from elasticsearch import helpers as es_helpers
 import sqlalchemy as sqla
+import sqlalchemy.sql.functions.coalesce as sqla_coalesce
 
 from korben import services
 from korben import etl
@@ -43,6 +44,17 @@ def setup_index():
             )
 
 
+def get_remote_name(cols):
+    'Get either the `name` column or `first_name` ++ `last_name`'
+    if hasattr(cols, 'name'):
+        return cols.name
+    if all(map(functools.partial(hasattr, cols), ('first_name', 'last_name'))):
+        return (
+            sqla_coalesce(getattr(cols, 'first_name'), '')
+            +
+            sqla_coalesce(getattr(cols, 'last_name'), '')
+        )
+
 def joined_select(table):
     fkey_data_cols = []
     joined = table
@@ -62,20 +74,12 @@ def joined_select(table):
             joined_tables.add(fkey.column.table.name)
         # label column to lose `_id` suffix
         local_name = col.name[:-3]
-        # potential remote column names
-        potential_remotes = ('name', 'first_name')
-        remote_column = None
-        for remote_name in potential_remotes:
-            try:
-                remote_column = getattr(fkey.column.table.c, remote_name)
-                break
-            except AttributeError:
-                pass
-        if remote_column is None:
+        remote_name_select = get_remote_name_select(fkey.column.table.c)
+        fmt_str =\
+            'Table {0} doesn’t have a recognised name column for fkey {1}.{2}'
+        if remote_name_select is None:
             raise RuntimeError(
-                "Table {0} doesn’t have an identifying name column".format(
-                    table.name
-                )
+                fmt_str.format(fkey.column.table.name, table.name, col.name)
             )
         else:
             fkey_data_cols.append(remote_column.label(local_name))
