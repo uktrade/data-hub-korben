@@ -35,7 +35,7 @@ SELECT relname, n_live_tup FROM pg_stat_user_tables
 '''
 
 
-@pytest.fixture
+@pytest.fixture(scope='session')
 def odata_test_service():
     resp = requests.get(ODATA_URL)
     root = etree.fromstring(resp.content)
@@ -165,7 +165,6 @@ def django_models():
 @pytest.yield_fixture
 def tier0(monkeypatch, odata_utils, configure_django):
     'Mega-fixture for setting up tier0 databases, and cleaning them afterwards'
-    print('For your information: Setup of tier0 db schemata commences')
 
     # patch for differing resp format
     def get_entry_list(resp):
@@ -210,7 +209,9 @@ def tier0(monkeypatch, odata_utils, configure_django):
 
 @pytest.yield_fixture
 def tier0_postinitial(tier0):
-    fixtures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures')
+    fixtures_path = os.path.join(
+        os.path.dirname(os.path.abspath(__file__)), 'fixtures',
+    )
     fixture_spec = (
         (os.environ['DATABASE_ODATA_URL'], 'odata-initial.sql'),
         (os.environ['DATABASE_URL'], 'odata-initial-django.sql'),
@@ -224,12 +225,15 @@ def tier0_postinitial(tier0):
         cursor.connection.close()
 
 
-@pytest.yield_fixture
+@pytest.fixture(scope='session')
 def odata_fetchall():
-    cursor = get_connection(os.environ['DATABASE_ODATA_URL']).cursor()
 
     def fetcher(sql):
+        connection = get_connection(os.environ['DATABASE_ODATA_URL'])
+        cursor = connection.cursor()
         cursor.execute(sql)
-        return cursor.fetchall()
-    yield fetcher
-    cursor.connection.close()
+        result = cursor.fetchall()
+        connection.close()
+        return result
+
+    return fetcher

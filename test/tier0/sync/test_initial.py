@@ -16,7 +16,6 @@ from korben import etl
 from korben.sync import scrape, django_initial
 
 
-@pytest.mark.skipif(True, reason='Boring')
 def test_sync_scrape_initial(tier0, odata_test_service, odata_fetchall):
 
     # due to django's high level of awesomeness, we must import models here

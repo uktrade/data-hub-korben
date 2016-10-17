@@ -13,15 +13,17 @@ from ..cdms_api.rest.api import CDMSRestApi
 from .. import etl
 from korben import config, services, utils
 
-CDMS_API = None
-DATABASE_CONNECTION = None
-
 LOGGER = logging.getLogger('korben.sync.poll')
 
 
 def get_entry_list(resp):
+    'Extract list of entries from response JSON'
     resp_json = json.loads(resp.content.decode(resp.encoding or 'utf-8'))
-    return resp_json['d']['results']
+    # this try except clause is for compatibility with plain OData services
+    try:
+        return resp_json['d']['results']
+    except ValueError:
+        return resp_json['d']
 
 
 def reverse_scrape(client,
@@ -31,6 +33,10 @@ def reverse_scrape(client,
                    col_names,
                    primary_key,
                    offset):
+
+    if client is None:
+        client = CDMSRestApi()
+
     resp = client.list(
         table.name, order_by="{0} desc".format(against), skip=offset
     )
@@ -41,7 +47,6 @@ def reverse_scrape(client,
     updated_rows = 0
     connection = services.db.poll_for_connection(config.database_odata_url)
     for row in rows:
-        etl.main.from_odata(table, [row[primary_key]])  # to django
         cols_pkey_against = [
             getattr(table.c, primary_key),
             getattr(table.c, against)
@@ -62,6 +67,9 @@ def reverse_scrape(client,
             continue
         LOGGER.debug('local_modified %s', local_against)
         LOGGER.debug('Row in %s exists', table.name)
+        # This is quite hacky, since datetime case-handling is hardcoded but
+        # optional -- to cover utils.entry_row returning a string and OData
+        # test services not having a ModifiedOn type field
         try:
             remote_against =\
                 datetime.datetime.strptime(row[against], '%Y-%m-%d %H:%M:%S')
@@ -70,7 +78,7 @@ def reverse_scrape(client,
             continue
         except ValueError:  # TODO: type introspection (needs lookup object)
             remote_against = row[against]
-        if comparitor(local_against, remote_against):
+        if comparitor(local_against, remote_against) is True:
             LOGGER.debug('Row in %s outdated', table.name)
             update_statement = (
                 table.update()
@@ -98,9 +106,6 @@ def poll(client=None,
          against='ModifiedOn',
          comparitor=operator.lt,
          entities=None):
-    if client is None:
-        client = CDMSRestApi()
-
     odata_metadata = services.db.get_odata_metadata()
     django_metadata = services.db.get_django_metadata()
 
