@@ -3,7 +3,7 @@ import pytest
 import sqlalchemy as sqla
 
 from korben.services import db
-from korben.sync.poll import poll
+from korben.bau.poll import poll
 
 
 @pytest.mark.skipif(True, reason='Don’t control staging')

@@ -20,7 +20,7 @@ from korben.cdms_api.rest import api
 from korben.cdms_api.rest.auth.noop import NoopAuth
 from korben.etl import spec as etl_spec
 from korben import services
-from korben.sync import poll
+from korben.bau import poll
 
 
 ATOM_PREFIX = '{http://www.w3.org/XML/1998/namespace}'

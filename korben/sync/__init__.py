@@ -1,5 +1,5 @@
 'Namespace for sync module'
-from . import poll, traverse, scrape  # NOQA
+from . import traverse, scrape  # NOQA
 from . import odata_initial, django_initial, ch, es_initial
 
 COMMANDS = {
@@ -8,7 +8,6 @@ COMMANDS = {
     'django': django_initial.main,
     'ch': ch.main,
     'es': es_initial.main,
-    'poll': poll.main,
 }
 
-__all__ = ('COMMANDS', 'poll', 'traverse')
+__all__ = ('COMMANDS', 'traverse')

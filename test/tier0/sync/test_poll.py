@@ -1,5 +1,5 @@
 import pytest
-from korben.sync import poll
+from korben.bau import poll
 
 
 @pytest.yield_fixture
