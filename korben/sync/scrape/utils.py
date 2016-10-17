@@ -3,6 +3,7 @@ import json
 import logging
 import os
 
+from korben.cdms_api.rest.api import CDMSRestApi
 from .. import utils as sync_utils
 from . import types
 
@@ -15,7 +16,7 @@ def raise_on_cdms_resp_errors(entity_name, offset, resp):
     it’s hairy, but that’s how we like it
 
     this function just raises an exception signalling the outcome of the
-    request (see `types` module)
+    request (see `types` module) or doesn’t raise if all is well
     '''
     resp_str = resp.content.decode(resp.encoding or 'utf8')
     if not resp.ok:
@@ -28,15 +29,15 @@ def raise_on_cdms_resp_errors(entity_name, offset, resp):
                         entity_name, offset
                     )
                 )
+        except types.EntityPageNoData:  # pass through
+            raise
         except KeyError:
             # no error message in json
-            LOGGER.error(resp_str)
             raise types.EntityPageDynamicsBombed(
                 "{0} {1}".format(entity_name, offset)
             )
         except json.JSONDecodeError:
             # no json in json
-            LOGGER.error(resp_str)
             raise types.EntityPageDynamicsBombed(
                 "{0} {1}".format(entity_name, offset)
             )
@@ -45,9 +46,11 @@ def raise_on_cdms_resp_errors(entity_name, offset, resp):
             raise RuntimeError("{0} {1} unhandled".format(entity_name, offset))
     try:
         resp_json = json.loads(resp_str)
-        if not resp_json['d']:
-            # paged out with empty response (ie. 'd' is an empty list)
-            raise types.EntityPageNoData("{0} {1}".format(entity_name, offset))
+        if not resp_json['d']['results']:
+            # paged out with empty response (ie. 'd.results' is an empty list)
+            raise types.EntityPageNoData(
+                "{0} {1}".format(entity_name, offset)
+            )
     except json.JSONDecodeError:
         raise types.EntityPageDeAuth("{0} {1}".format(entity_name, offset))
 
@@ -99,6 +102,8 @@ def cdms_list(client, entity_name, offset):
         with open(cache_path, 'rb') as cache_fh:
             return cache_fh.read()
     start_time = datetime.datetime.now()
+    if client is None:
+        client = CDMSRestApi()
     resp = client.list(entity_name, skip=offset)  # the actual request
     time_delta = (datetime.datetime.now() - start_time).seconds
 
