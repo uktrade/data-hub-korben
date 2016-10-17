@@ -4,7 +4,7 @@ import logging
 import elasticsearch
 from elasticsearch import helpers as es_helpers
 import sqlalchemy as sqla
-import sqlalchemy.sql.functions.coalesce as sqla_coalesce
+from sqlalchemy.sql import functions as sqla_func
 
 from korben import services
 from korben import etl
@@ -50,9 +50,9 @@ def get_remote_name(cols):
         return cols.name
     if all(map(functools.partial(hasattr, cols), ('first_name', 'last_name'))):
         return (
-            sqla_coalesce(getattr(cols, 'first_name'), '')
+            sqla_func.coalesce(getattr(cols, 'first_name'), '')
             +
-            sqla_coalesce(getattr(cols, 'last_name'), '')
+            sqla_func.coalesce(getattr(cols, 'last_name'), '')
         )
 
 def joined_select(table):
