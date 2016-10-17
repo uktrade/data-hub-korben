@@ -3,6 +3,7 @@ Do some rough “polling” for entities that have a "ModifiedOn" column, this c
 operates under the assumption that there is a fully populated local database.
 '''
 import datetime
+import functools
 import json
 import operator
 import logging
@@ -12,6 +13,7 @@ import sqlalchemy as sqla
 from ..cdms_api.rest.api import CDMSRestApi
 from .. import etl
 from korben import config, services, utils
+from korben.etl.spec import COLNAME_LONGSHORT, COLNAME_SHORTLONG
 
 LOGGER = logging.getLogger('korben.sync.poll')
 
@@ -41,8 +43,19 @@ def reverse_scrape(client,
         table.name, order_by="{0} desc".format(against), skip=offset
     )
     rows = []
+
+    # ewwww mapping short to long and long to short column names
+    short_cols = functools.partial(
+        etl.transform.colnames_longshort, table.name
+    )
+    long_cols = [
+        COLNAME_SHORTLONG.get((table.name, short_col), short_col)
+        for short_col in col_names
+    ]
     for entry in get_entry_list(resp):
-        rows.append(utils.entry_row(col_names, entry))
+        rows.append(short_cols(utils.entry_row(long_cols, entry)))
+    # end ewwwww
+
     new_rows = 0
     updated_rows = 0
     connection = services.db.poll_for_connection(config.database_odata_url)
@@ -56,7 +69,7 @@ def reverse_scrape(client,
                 .where(table.columns[primary_key] == row[primary_key])
         )
         try:
-            pkey, local_against =\
+            _, local_against =\
                 connection.execute(select_statement).fetchone()
         except TypeError:
             LOGGER.debug('Row in %s doesn’t exist', table.name)
@@ -102,6 +115,16 @@ def reverse_scrape(client,
     )
 
 
+def get_django_tables(django_metadata):
+    live_entities = []
+    django_fkey_deps = etl.utils.fkey_deps(django_metadata)
+    for depth in sorted(django_fkey_deps.keys()):
+        for table_name in django_fkey_deps[depth]:
+            if table_name in etl.spec.DJANGO_LOOKUP:
+                live_entities.append(etl.spec.DJANGO_LOOKUP[table_name])
+    return live_entities
+
+
 def poll(client=None,
          against='ModifiedOn',
          comparitor=operator.lt,
@@ -109,14 +132,7 @@ def poll(client=None,
     odata_metadata = services.db.get_odata_metadata()
     django_metadata = services.db.get_django_metadata()
 
-    live_entities = []
-    django_fkey_deps = etl.utils.fkey_deps(django_metadata)
-    for depth in sorted(django_fkey_deps.keys()):
-        for table_name in django_fkey_deps[depth]:
-            if table_name in etl.spec.DJANGO_LOOKUP:
-                live_entities.append(etl.spec.DJANGO_LOOKUP[table_name])
-
-    for table_name in entities or live_entities:
+    for table_name in entities or get_django_tables(django_metadata):
         table = odata_metadata.tables[table_name]
         col_names = [x.name for x in table.columns]
         # assume a single column

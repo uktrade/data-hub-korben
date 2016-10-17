@@ -4,15 +4,15 @@ import logging
 import elasticsearch
 from elasticsearch import helpers as es_helpers
 import sqlalchemy as sqla
-from sqlalchemy.sql import functions as sqla_func
 
 from korben import services
 from korben import etl
 from korben.services import es
 from . import constants
+from . import utils
+
 
 LOGGER = logging.getLogger('korben.sync.es_initital')
-CHUNKSIZE = 1000
 
 
 def row_es_add(table, es_id_col, row):
@@ -87,21 +87,13 @@ def joined_select(table):
     return sqla.select(cols + fkey_data_cols, from_obj=joined)
 
 
-def select_chunks(execute, basetable, select):
-    count_q = sqla.select([sqla.func.count()]).select_from(basetable)
-    count = execute(count_q).scalar()
-    for offset in range(0, count, CHUNKSIZE):
-        LOGGER.info('Evaluating chunk %s', offset)
-        yield execute(select.offset(offset).limit(CHUNKSIZE)).fetchall()
-
-
 def main():
     django_metadata = services.db.get_django_metadata()
     setup_index()
     for name in constants.INDEXED_ES_TYPES:
         LOGGER.info("Indexing from django database for {0}".format(name))
         table = django_metadata.tables[name]
-        chunks = select_chunks(
+        chunks = utils.select_chunks(
             django_metadata.bind.execute, table, joined_select(table)
         )
         for rows in chunks:
@@ -124,7 +116,7 @@ def main():
     ).fetchall()
     linked_companies = frozenset([x.company_number for x in result])
     table = django_metadata.tables[name]
-    chunks = select_chunks(
+    chunks = utils.select_chunks(
         django_metadata.bind.execute, table, joined_select(table)
     )
     for rows in chunks:

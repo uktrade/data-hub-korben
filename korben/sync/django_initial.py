@@ -5,6 +5,7 @@ import sqlalchemy as sqla
 
 from korben import services
 from korben import etl
+from . import utils
 
 # temporary crap
 LOGGER = logging.getLogger('korben.sync.django_initial')
@@ -22,14 +23,14 @@ def main(client=None):
                     (etl.spec.DJANGO_LOOKUP[table_name], table_name)
                 )
     for odata_name, django_name in odata_django:
-        LOGGER.info("Dumping {0} -> {1}".format(odata_name, django_name))
-        table = odata_metadata.tables[odata_name]
-        primary_key = etl.utils.primary_key(table)
-        rows = odata_metadata.bind.execute(
-            sqla.select([table.columns[primary_key]])
-        ).fetchall()
-        guids = map(operator.itemgetter(primary_key), rows)
-
-        # the function below temporarily writes out fkey constraint fails which
-        # are picked up below
-        etl.main.from_odata(table, tuple(guids), idempotent=True)
+        LOGGER.info('Dumping %s -> %s', odata_name, django_name)
+        odata_table = odata_metadata.tables[odata_name]
+        primary_key = etl.utils.primary_key(odata_table)
+        chunks = utils.select_chunks(
+            odata_metadata.bind.execute,
+            odata_table,
+            sqla.select([odata_table.columns[primary_key]])
+        )
+        for rows in chunks:
+            guids = map(operator.itemgetter(primary_key), rows)
+            etl.main.from_odata(odata_table, tuple(guids), idempotent=True)
