@@ -3,12 +3,16 @@ Parse database rows in the form of CSV files from response bodies, throw into
 database
 '''
 import csv
+import functools
 import logging
 import os
 
 
 from korben import services
 from korben import utils
+from korben.etl import transform
+from korben.etl.spec import COLNAME_LONGSHORT, COLNAME_SHORTLONG
+
 
 LOGGER = logging.getLogger('korben.sync.populate')
 
@@ -24,8 +28,13 @@ def resp_csv(cache_dir, csv_dir, col_names, entity_name, page):
     csv_fh = open(csv_path, 'w')
     writer = csv.DictWriter(csv_fh, col_names, dialect='excel')
     rowcount = 0
+    short_cols = functools.partial(transform.colnames_longshort, entity_name)
+    long_cols = [
+        COLNAME_SHORTLONG.get((entity_name, short_col), short_col)
+        for short_col in col_names
+    ]
     for entry in entries:
-        writer.writerow(utils.entry_row(col_names, entry))
+        writer.writerow(short_cols(utils.entry_row(long_cols, entry)))
         rowcount += 1
     csv_fh.close()
     return rowcount, csv_path
