@@ -1,5 +1,4 @@
 import logging
-import datetime
 from korben import config
 
 from .auth.active_directory import ActiveDirectoryAuth
@@ -38,9 +37,8 @@ class CDMSRestApi(object):
         if data is None:
             data = {}
         resp = self.auth.make_request(verb, url, data=data, headers=headers)
-        LOGGER.info('%s request took %s', verb, resp.elapsed)
+        # LOGGER.info('%s request took %s', verb, resp.elapsed)
         return resp
-
 
     def list(self, service, top=50, skip=0, select=None, filters=None, order_by=None):
         params = {}

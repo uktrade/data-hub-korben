@@ -90,7 +90,7 @@ def main(names=None, client=None):
         now = datetime.datetime.now()
         report_conditions = (
             now.second,
-            now.second % 2 == 0,
+            now.second % scrape_constants.INTERVAL == 0,
             last_report != now.second,
         )
         if not all(report_conditions):
@@ -106,7 +106,7 @@ def main(names=None, client=None):
             if entity_chunk.state in (
                 types.EntityChunkState.complete, types.EntityChunkState.spent
             ):
-                LOGGER.info("{0} reports complete".format(entity_chunk))
+                # LOGGER.info("{0} reports complete".format(entity_chunk))
                 continue  # NOQA
 
             # how many tasks pending in total
