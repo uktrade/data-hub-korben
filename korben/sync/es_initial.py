@@ -44,7 +44,7 @@ def setup_index():
             )
 
 
-def get_remote_name(cols):
+def get_remote_name_select(cols):
     'Get either the `name` column or `first_name` ++ `last_name`'
     if hasattr(cols, 'name'):
         return cols.name
@@ -82,7 +82,7 @@ def joined_select(table):
                 fmt_str.format(fkey.column.table.name, table.name, col.name)
             )
         else:
-            fkey_data_cols.append(remote_column.label(local_name))
+            fkey_data_cols.append(remote_name_select.label(local_name))
     cols = list(filter(lambda col: not bool(col.foreign_keys), table.columns))
     return sqla.select(cols + fkey_data_cols, from_obj=joined)
 
