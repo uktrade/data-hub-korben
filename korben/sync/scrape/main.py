@@ -36,7 +36,6 @@ try:
 except FileNotFoundError:
     ENTITY_NAMES = constants.ENTITY_NAMES
 
-PROCESSES = 32
 SPENT_PATH = sync_utils.file_leaf('cache', 'spent')
 
 
@@ -48,7 +47,7 @@ def main(names=None, client=None):
         names = etl.spec.MAPPINGS.keys()
     else:
         names = set(names.split(','))
-    pool = multiprocessing.Pool(processes=PROCESSES)
+    pool = multiprocessing.Pool(processes=scrape_constants.PROCESSES)
     entity_chunks = []
     metadata = services.db.get_odata_metadata()
     try:
@@ -114,7 +113,7 @@ def main(names=None, client=None):
             pending = sum(
                 entity_chunk.pending() for entity_chunk in entity_chunks
             )
-            if pending <= PROCESSES:  # throttling
+            if pending <= scrape_constants.PROCESSES:  # throttling
                 if entity_chunk.state == types.EntityChunkState.incomplete:
                     entity_chunk.start(pool)
 
