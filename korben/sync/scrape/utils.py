@@ -20,6 +20,8 @@ def raise_on_cdms_resp_errors(entity_name, offset, resp):
     '''
     resp_str = resp.content.decode(resp.encoding or 'utf8')
     if not resp.ok:
+        if resp.status_code == 401:  # ACCESS DENIED!
+            raise types.EntityPageDeAuth("{0} {1}".format(entity_name, offset))
         try:
             resp_json = json.loads(resp_str)
             if 'paging' in resp_json['error']['message']['value']:
@@ -33,16 +35,18 @@ def raise_on_cdms_resp_errors(entity_name, offset, resp):
             raise
         except KeyError:
             # no error message in json
+            LOGGER.error(resp_str)
             raise types.EntityPageDynamicsBombed(
                 "{0} {1}".format(entity_name, offset)
             )
         except json.JSONDecodeError:
             # no json in json
+            LOGGER.error(resp_str)
             raise types.EntityPageDynamicsBombed(
                 "{0} {1}".format(entity_name, offset)
             )
         except Exception as exc:
-            LOGGER.error(exc)
+            LOGGER.error(resp_str)
             raise RuntimeError("{0} {1} unhandled".format(entity_name, offset))
     try:
         resp_json = json.loads(resp_str)

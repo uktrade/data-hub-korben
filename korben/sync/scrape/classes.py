@@ -117,6 +117,6 @@ class EntityPage(object):
             reqs_excs.ConnectionError,
             Exception
         ) as exc:
-            self.logger.debug(exc)
+            self.logger.info(exc)
             self.logger.info("{0} errored, resetting".format(self))
             self.reset()

@@ -27,15 +27,6 @@ logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('korben.sync.scrape.main')
 logging.getLogger().addFilter(LoggingFilter())
 
-try:
-    with open('popular-entities', 'r') as entity_names_fh:
-        ENTITY_NAMES = [name.strip() for name in entity_names_fh.readlines()]
-    print('Using popular-entities file:')
-    for entity_name in ENTITY_NAMES:
-        print("  {0}".format(entity_name))
-except FileNotFoundError:
-    ENTITY_NAMES = constants.ENTITY_NAMES
-
 SPENT_PATH = sync_utils.file_leaf('cache', 'spent')
 
 
@@ -58,9 +49,13 @@ def main(names=None, client=None):
         spent = set()
         with open(SPENT_PATH, 'wb') as spent_fh:
             pickle.dump(spent, spent_fh)
-    # validate cache is in good shape (ie. no missing requests)
-    for entity_name in names - spent:
+    to_scrape = names - spent
+    LOGGER.info('Scraping the following entities:')
+    for name in names:
+        LOGGER.info('    %s %s', name, '✔' if name in to_scrape else '✘')
+    for entity_name in to_scrape:
         try:
+            # validate cache is in good shape (ie. no missing requests)
             cache_names = os.listdir(
                 os.path.join('cache', 'json', entity_name)
             )
