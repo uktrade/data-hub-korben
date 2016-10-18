@@ -4,6 +4,7 @@ import logging
 import elasticsearch
 from elasticsearch import helpers as es_helpers
 import sqlalchemy as sqla
+from sqlalchemy.sql import functions as sqla_func
 
 from korben import services
 from korben import etl
