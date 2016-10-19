@@ -43,7 +43,7 @@ def get_django(client, django_tablename, guid):
         odata_dict = resp.json()['d']
     except json.JSONDecodeError as exc:
         # assume de-auth
-        client.setup_session(True)
+        client.auth.setup_session(True)
         return get_django(client, django_tablename, guid)
     odata_table = db.get_odata_metadata().tables[odata_tablename]
     odata_row = utils.entry_row(
