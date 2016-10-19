@@ -34,8 +34,11 @@ def fetch_missing(metadata, missing):
         table = metadata.tables[django_name]
         get_fn = functools.partial(utils.get_django, client, table.name)
         results, missing = etl.load.to_sqla_table_idempotent(
-            table, map(get_fn, guids)
+            table, filter(None, map(get_fn, guids))
         )
+        if missing:
+            for name, guids in missing.items():
+                LOGGER.info('%s is still missing %s entries', name, len(guids))
         pass
 
 
@@ -43,6 +46,10 @@ def main(client=None):
     odata_metadata = services.db.get_odata_metadata()
     django_metadata = services.db.get_django_metadata()
     for odata_name, django_name in django_tables_dep_order(django_metadata):
+        if django_name == 'company_interaction':
+            pass
+        else:
+            continue
         LOGGER.info('Dumping %s -> %s', odata_name, django_name)
         odata_table = odata_metadata.tables[odata_name]
         primary_key = etl.utils.primary_key(odata_table)
