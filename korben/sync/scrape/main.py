@@ -113,7 +113,7 @@ def main(names=None, client=None):
                 entity_page.poll()  # updates the state of the EntityPage
                 if entity_page.state == types.EntityPageState.complete:
                     # make cheeky call to etl.load
-                    results = etl.main.from_odata_json(
+                    results, _ = etl.main.from_odata_json(
                         metadata.tables[entity_page.entity_name],
                         utils.json_cache_key(
                             entity_page.entity_name, entity_page.offset
