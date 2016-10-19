@@ -1,11 +1,13 @@
 import json
+import os
 import uuid
 
-from wsgiref.simple_server import make_server
-from pyramid.view import view_config
+from pyramid import httpexceptions as http_exc
 from pyramid.config import Configurator
 from pyramid.response import Response
-from pyramid import httpexceptions as http_exc
+from pyramid.view import view_config
+from wsgiref.simple_server import make_server
+import psycopg2
 
 DJANGO_TABLENAMES = {
     'company_company',
@@ -13,6 +15,7 @@ DJANGO_TABLENAMES = {
     'company_contact',
     'company_interaction',
 }
+
 
 def json_exc_view(exc, _):
     'JSONify a Python exception, return it as a Response object'
@@ -27,7 +30,7 @@ def json_exc_view(exc, _):
 def validate_tablename(request):
     django_tablename = request.matchdict['django_tablename']
     if django_tablename in DJANGO_TABLENAMES:
-        return
+        return django_tablename
     message = "{0} is not mapped".format(django_tablename)
     raise http_exc.HTTPNotFound(message)
 
@@ -46,6 +49,18 @@ def update(request):
     return request.json_body
 
 
+@view_config(route_name='get', request_method=['GET'], renderer='json')
+def get(request):
+    tablename = validate_tablename(request)
+    ident = request.matchdict['ident']
+    connection = psycopg2.connect(os.environ['DATABASE_URL'])
+    cursor = connection.cursor()
+    select = "SELECT * FROM {0} WHERE id='{1}';".format(tablename, ident)
+    row = cursor.execute(select).fetchone()
+    connection.close()
+    return dict(row)
+
+
 def get_app(settings=None):
     if settings is None:
         settings = {}
@@ -53,6 +68,7 @@ def get_app(settings=None):
     app_cfg.add_view(json_exc_view, context=http_exc.HTTPError)
     app_cfg.add_route('create', '/create/{django_tablename}')
     app_cfg.add_route('update', '/update/{django_tablename}')
+    app_cfg.add_route('get', '/get/{django_tablename}/{ident}')
     app_cfg.scan()
     return app_cfg.make_wsgi_app()
 
