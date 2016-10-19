@@ -1,3 +1,4 @@
+import json
 import logging
 import os
 
@@ -38,11 +39,16 @@ def get_django(client, django_tablename, guid):
     if resp.status_code == 404:
         LOGGER.info('%s %s doesn’t exist', odata_tablename, guid)
         return
-    odata_dict = resp.json()['d']
+    try:
+        odata_dict = resp.json()['d']
+    except json.JSONDecodeError as exc:
+        # assume de-auth
+        client.setup_session(True)
+        return get_django(client, django_tablename, guid)
     odata_table = db.get_odata_metadata().tables[odata_tablename]
     odata_row = utils.entry_row(
         [col.name for col in odata_table.columns], odata_dict
     )
-    _, missing = load.to_sqla_table_idempotent(odata_table, [odata_row])
-    assert not any(missing)
+    results, missing = load.to_sqla_table_idempotent(odata_table, [odata_row])
+    assert not any(missing) and all([x.rowcount is 1 for x in results])
     return transform.odata_to_django(odata_tablename, odata_dict)
