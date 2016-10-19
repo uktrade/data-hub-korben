@@ -10,7 +10,6 @@ from korben import etl
 from korben import services
 from korben.cdms_api.rest.api import CDMSRestApi
 
-from .. import constants
 from .. import utils as sync_utils
 from . import utils
 from . import constants as scrape_constants
@@ -64,9 +63,7 @@ def main(names=None, client=None):
                 if caches[index - 1] != offset - 50:
                     start = caches[index - 1] + 50
                     LOGGER.info(
-                        "In a previous run {0} broke at {1}".format(
-                            entity_name, start
-                        )
+                        'In a previous run %s broke at %s', entity_name, start
                     )
                     break
             else:
