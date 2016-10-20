@@ -1,6 +1,7 @@
 import pytest
 
 from korben import config
+from korben.etl import transform
 from korben.cdms_api.rest.api import CDMSRestApi
 
 @pytest.fixture(scope='session')
@@ -24,3 +25,12 @@ def account_object(cdms_client):
     )
     assert del_resp.ok
     '''
+
+@pytest.fixture(scope='session')
+def django_advisor(cdms_client):
+    # Little Mickey Hope
+    resp = cdms_client.get(
+        'SystemUserSet', "guid'07e3415a-9b98-e211-a939-e4115bead28a'"
+    )
+    assert resp.ok
+    return transform.odata_to_django('SystemUserSet', resp.json()['d'])
