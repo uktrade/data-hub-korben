@@ -67,7 +67,7 @@ def django_interaction():
         # Trade - Enquiry
         'service_id': '330bba2b-3499-e211-a939-e4115bead28a',
         # British Embassy Lima Peru
-        'service_provider_id': '5c6e1abc-9698-e211-a939-e4115bead28a',
+        'dit_team_id': '5b6e1abc-9698-e211-a939-e4115bead28a',
     }
 
 
