@@ -17,7 +17,18 @@ DJANGO_TABLENAMES = {
 }
 
 
+@view_config(context=Exception)
 def json_exc_view(exc, _):
+    kwargs = {
+        'status_code': 500,
+        'body': json.dumps({'message': str(exc)}),
+        'content_type': 'application/json',
+    }
+    return Response(**kwargs)
+
+
+@view_config(context=http_exc.HTTPError)
+def json_http_exc_view(exc, _):
     'JSONify a Python exception, return it as a Response object'
     kwargs = {
         'status_code': exc.status_code,
@@ -54,10 +65,12 @@ def get(request):
     tablename = validate_tablename(request)
     ident = request.matchdict['ident']
     connection = psycopg2.connect(os.environ['DATABASE_URL'])
-    cursor = connection.cursor()
     select = "SELECT * FROM {0} WHERE id='{1}';".format(tablename, ident)
-    row = cursor.execute(select).fetchone()
-    connection.close()
+    try:
+        cursor = connection.cursor()
+        row = cursor.execute(select).fetchone()
+    finally:
+        connection.close()
     return dict(row)
 
 
@@ -65,7 +78,6 @@ def get_app(settings=None):
     if settings is None:
         settings = {}
     app_cfg = Configurator(settings=settings)
-    app_cfg.add_view(json_exc_view, context=http_exc.HTTPError)
     app_cfg.add_route('create', '/create/{django_tablename}')
     app_cfg.add_route('update', '/update/{django_tablename}')
     app_cfg.add_route('get', '/get/{django_tablename}/{ident}')
