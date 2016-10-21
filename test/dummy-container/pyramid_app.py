@@ -1,13 +1,14 @@
+import collections
 import json
 import os
 import uuid
 
+import yaml
 from pyramid import httpexceptions as http_exc
 from pyramid.config import Configurator
 from pyramid.response import Response
 from pyramid.view import view_config
 from wsgiref.simple_server import make_server
-import psycopg2
 
 DJANGO_TABLENAMES = {
     'company_company',
@@ -16,8 +17,26 @@ DJANGO_TABLENAMES = {
     'company_interaction',
 }
 
+DJANGO_FIXTURES = collections.defaultdict(dict)
+with open('django_fixtures.yaml', 'r') as yaml_fh:
+    for django_fixture in yaml.load(yaml_fh):
+        tablename = django_fixture['model'].replace('.', '_')
+        ident = django_fixture.get('pk') or django_fixture['id']
+        django_fixture['fields'].update({'id': ident})
+        DJANGO_FIXTURES[tablename][ident] = django_fixture['fields']
 
+@view_config(context=Exception)
 def json_exc_view(exc, _):
+    kwargs = {
+        'status_code': 500,
+        'body': json.dumps({'message': str(exc)}),
+        'content_type': 'application/json',
+    }
+    return Response(**kwargs)
+
+
+@view_config(context=http_exc.HTTPError)
+def json_http_exc_view(exc, _):
     'JSONify a Python exception, return it as a Response object'
     kwargs = {
         'status_code': exc.status_code,
@@ -53,19 +72,20 @@ def update(request):
 def get(request):
     tablename = validate_tablename(request)
     ident = request.matchdict['ident']
-    connection = psycopg2.connect(os.environ['DATABASE_URL'])
-    cursor = connection.cursor()
-    select = "SELECT * FROM {0} WHERE id='{1}';".format(tablename, ident)
-    row = cursor.execute(select).fetchone()
-    connection.close()
-    return dict(row)
+    result = DJANGO_FIXTURES.get(tablename, {}).get(ident)
+    if not result:
+        return (tablename, ident)
+        message = "Fixture for {0} with id {1} not found".format(
+            tablename, ident
+        )
+        raise http_exc.HTTPNotFound(message)
+    return result
 
 
 def get_app(settings=None):
     if settings is None:
         settings = {}
     app_cfg = Configurator(settings=settings)
-    app_cfg.add_view(json_exc_view, context=http_exc.HTTPError)
     app_cfg.add_route('create', '/create/{django_tablename}')
     app_cfg.add_route('update', '/update/{django_tablename}')
     app_cfg.add_route('get', '/get/{django_tablename}/{ident}')
