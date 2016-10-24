@@ -2,9 +2,10 @@ import json
 import logging
 import os
 
+import requests
 import sqlalchemy as sqla
 
-from korben.etl import transform, load, spec
+from korben.etl import transform, load, spec, utils as etl_utils
 from korben.services import db
 from korben import utils
 
@@ -33,12 +34,27 @@ def select_chunks(execute, basetable, select, chunksize=CHUNKSIZE):
 
 
 def get_django(client, django_tablename, guid):
-    'Get a single object from Django table name and GUID'
+    '''
+    Get a single object from Django table name and GUID, either by grabbing it
+    from the OData database or downloading from CDMS
+    '''
     odata_tablename = spec.DJANGO_LOOKUP[django_tablename]
-    resp = client.get(odata_tablename, "guid'{0}'".format(guid))
+    odata_table = db.get_odata_metadata().tables[odata_tablename]
+    odata_primary_key = etl_utils.primary_key(odata_table)
+    odata_col_names = [col.name for col in odata_table.columns]
+    select = sqla.select([odata_table])\
+                 .where(odata_table.c[odata_primary_key] == guid)
+    odata_row = odata_table.metadata.bind.execute(select).fetchone()
+    if odata_row:
+        return guid, transform.odata_to_django(odata_tablename, odata_row)
+    try:
+        resp = client.get(odata_tablename, "guid'{0}'".format(guid))
+    except requests.ConnectionError as exc:
+        LOGGER.error(exc)
+        return guid, False
     if resp.status_code == 404:
         LOGGER.info('%s %s doesn’t exist', odata_tablename, guid)
-        return
+        return guid, None
     try:
         odata_dict = resp.json()['d']
     except json.JSONDecodeError as exc:
@@ -46,9 +62,7 @@ def get_django(client, django_tablename, guid):
         client.auth.setup_session(True)
         return get_django(client, django_tablename, guid)
     odata_table = db.get_odata_metadata().tables[odata_tablename]
-    odata_row = utils.entry_row(
-        [col.name for col in odata_table.columns], odata_dict
-    )
+    odata_row = utils.entry_row(odata_col_names, odata_dict)
     results, missing = load.to_sqla_table_idempotent(odata_table, [odata_row])
     assert not any(missing) and all([x.rowcount is 1 for x in results])
-    return transform.odata_to_django(odata_tablename, odata_dict)
+    return guid, transform.odata_to_django(odata_tablename, odata_dict)

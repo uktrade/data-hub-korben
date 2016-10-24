@@ -24,22 +24,34 @@ def django_tables_dep_order(django_metadata):
     return odata_django
 
 
-def fetch_missing(metadata, missing):
+def fetch_missing(metadata, missing, attempts=0):
+    if attempts < 3:
+        pass
+    else:
+        return
     client = CDMSRestApi()
     for _, django_name in django_tables_dep_order(metadata):
         guids = missing[django_name]
         if not guids:
             continue
-        LOGGER.info('Downloading %s entries for %s', len(guids), django_name)
+        LOGGER.info(
+            'Backfilling %s entries for %s after %s attempts',
+            len(guids), django_name, attempts
+        )
         table = metadata.tables[django_name]
         get_fn = functools.partial(utils.get_django, client, table.name)
-        results, missing = etl.load.to_sqla_table_idempotent(
-            table, filter(None, map(get_fn, guids))
+        django_dicts = list(map(get_fn, guids))
+        results, still_missing = etl.load.to_sqla_table_idempotent(
+            table, [x for _, x in django_dicts if x]
         )
-        if missing:
-            for name, guids in missing.items():
-                LOGGER.info('%s is still missing %s entries', name, len(guids))
-        pass
+        count_non_existant = len([x for _, x in django_dicts if x is False])
+        if count_non_existant:
+            LOGGER.info(
+                '%s has %s non-existant entries',
+                django_name, count_non_existant
+            )
+        if still_missing:
+            return fetch_missing(metadata, still_missing, attempts=attempts + 1)
 
 
 def main(client=None):
