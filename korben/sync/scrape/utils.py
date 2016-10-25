@@ -50,7 +50,12 @@ def raise_on_cdms_resp_errors(entity_name, offset, resp):
             raise RuntimeError("{0} {1} unhandled".format(entity_name, offset))
     try:
         resp_json = json.loads(resp_str)
-        if not resp_json['d']['results']:
+        # plain OData doesn't return in `results` key
+        try:
+            results = resp_json['d']['results']
+        except TypeError as exc:
+            results = resp_json['d']
+        if not results:
             # paged out with empty response (ie. 'd.results' is an empty list)
             raise types.EntityPageNoData(
                 "{0} {1}".format(entity_name, offset)
