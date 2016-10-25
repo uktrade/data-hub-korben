@@ -76,7 +76,6 @@ def get(request):
     ident = request.matchdict['ident']
     result = DJANGO_FIXTURES.get(tablename, {}).get(ident)
     if not result:
-        return (tablename, ident)
         message = "Fixture for {0} with id {1} not found".format(
             tablename, ident
         )
