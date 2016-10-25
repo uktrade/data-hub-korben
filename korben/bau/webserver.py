@@ -82,7 +82,7 @@ def update(request):
     return odata_to_django(odata_tablename, response)
 
 
-@view_config(route_name='get', request_method=['GET'], renderer='json')
+@view_config(route_name='get', request_method=['POST'], renderer='json')
 def get(request):
     'Get an OData entity'
     django_tablename, odata_tablename = request_tablenames(request)
