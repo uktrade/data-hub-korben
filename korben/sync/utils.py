@@ -46,7 +46,7 @@ def get_django(client, django_tablename, guid):
                  .where(odata_table.c[odata_primary_key] == guid)
     odata_row = odata_table.metadata.bind.execute(select).fetchone()
     if odata_row:
-        return guid, transform.odata_to_django(odata_tablename, odata_row)
+        return guid, transform.odata_to_django(odata_tablename, dict(odata_row))
     try:
         resp = client.get(odata_tablename, "guid'{0}'".format(guid))
     except requests.ConnectionError as exc:
