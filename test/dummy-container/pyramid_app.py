@@ -68,8 +68,10 @@ def update(request):
     return request.json_body
 
 
-@view_config(route_name='get', request_method=['GET'], renderer='json')
+@view_config(route_name='get', request_method=['POST'], renderer='json')
 def get(request):
+    validate_tablename(request)
+    return request.json_body
     tablename = validate_tablename(request)
     ident = request.matchdict['ident']
     result = DJANGO_FIXTURES.get(tablename, {}).get(ident)
