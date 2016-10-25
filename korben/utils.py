@@ -83,7 +83,7 @@ def parse_json_entries(cache_dir, entity_name, name, path=None):
             json_resp = json.loads(cache_fh.read())
             try:
                 return json_resp['d']['results']
-            except ValueError:
+            except TypeError:
                 return json_resp['d']
         except json.JSONDecodeError:
             LOGGER.error('Bad JSON!')
