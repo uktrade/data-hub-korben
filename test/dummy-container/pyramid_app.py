@@ -1,5 +1,6 @@
 import collections
 import json
+import logging
 import os
 import uuid
 
@@ -10,6 +11,8 @@ from pyramid.response import Response
 from pyramid.view import view_config
 from wsgiref.simple_server import make_server
 
+logging.basicConfig(level=logging.INFO)
+LOGGER = logging.getLogger('dummy-korben')
 DJANGO_TABLENAMES = {
     'company_company',
     'company_advisor',
@@ -38,6 +41,7 @@ def json_exc_view(exc, _):
 @view_config(context=http_exc.HTTPError)
 def json_http_exc_view(exc, _):
     'JSONify a Python exception, return it as a Response object'
+    LOGGER.error(exc.message)
     kwargs = {
         'status_code': exc.status_code,
         'body': json.dumps({'message': exc.message}),
@@ -95,5 +99,6 @@ def get_app(settings=None):
 
 
 if __name__ == '__main__':
+    LOGGER.info('Starting dummy korben bau')
     server = make_server('0.0.0.0', 8080, get_app())
     server.serve_forever()
