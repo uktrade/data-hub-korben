@@ -20,14 +20,6 @@ DJANGO_TABLENAMES = {
     'company_interaction',
 }
 
-DJANGO_FIXTURES = collections.defaultdict(dict)
-with open('django_fixtures.yaml', 'r') as yaml_fh:
-    for django_fixture in yaml.load(yaml_fh):
-        tablename = django_fixture['model'].replace('.', '_')
-        ident = django_fixture.get('pk') or django_fixture['id']
-        django_fixture['fields'].update({'id': ident})
-        DJANGO_FIXTURES[tablename][ident] = django_fixture['fields']
-
 @view_config(context=Exception)
 def json_exc_view(exc, _):
     kwargs = {
@@ -76,15 +68,6 @@ def update(request):
 def get(request):
     validate_tablename(request)
     return request.json_body
-    tablename = validate_tablename(request)
-    ident = request.matchdict['ident']
-    result = DJANGO_FIXTURES.get(tablename, {}).get(ident)
-    if not result:
-        message = "Fixture for {0} with id {1} not found".format(
-            tablename, ident
-        )
-        raise http_exc.HTTPNotFound(message)
-    return result
 
 
 def get_app(settings=None):
