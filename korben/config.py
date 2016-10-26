@@ -25,6 +25,7 @@ __config_spec = {
     'database_url':                (True, True, None, __noop),
     'es_host':                     (True, True, 'es', __noop),
     'es_port':                     (True, True, 9200, __noop),
+    'datahub_api_key':             (True, True, None, __to_bytes),
 }
 
 
@@ -39,6 +40,9 @@ def __set_config(name, value=None):
         raise ConfigError(
             "`{0}` is not a recognised configuration key".format(name)
         )
+    if value:  # value was passed directly
+        globals()[name] = cast(value)
+        return
     value = __config_yaml.get(name)
     if read_env:
         try:
@@ -100,8 +104,8 @@ def populate(path=None, ignore=True):
 def temporarily(**changes):
     proper = {}
     for name, value in changes.items():
-        proper[name] = globals()[name]
-        globals()[name] = value
+        proper[name] = globals().get(name)
+        __set_config(name, value)
     yield
     for name, value in proper.items():
         globals()[name] = value
