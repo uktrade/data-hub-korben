@@ -13,6 +13,7 @@ requests_aws4auth
 requests_ntlm
 responses
 sqlparse
+streql
 
 pytest
 pytest-runner
