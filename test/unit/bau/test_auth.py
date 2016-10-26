@@ -5,7 +5,9 @@ from korben.bau.auth import generate_signature
 
 def test_auth_fail(test_app):
     with config.temporarily(datahub_api_key='abc'):
-        test_app.post_json('/get/abc/def', {}, headers={'X-Signature': 'xyz'}, status=403)
+        test_app.post_json(
+            '/get/abc/def', {}, headers={'X-Signature': 'xyz'}, status=403
+        )
 
 
 def test_auth(test_app):
@@ -17,4 +19,6 @@ def test_auth(test_app):
             bytes(json.dumps(body), 'utf-8'),
             config.datahub_api_key,
         )
-        test_app.post_json(path, body, headers={'X-Signature': signature}, status=404)
+        test_app.post_json(
+            path, body, headers={'X-Signature': signature}, status=404
+        )
