@@ -15,7 +15,7 @@ class SigningTestApp(TestApp):
     'Add support for signing auth to TestApp'
 
     def _signature_headers(self, path, body):
-        signature = generate_signature(path, body, config.datahub_api_key)
+        signature = generate_signature(path, body, config.datahub_secret)
         return {'X-Signature': signature}
 
     def post(self, path, **kwargs):

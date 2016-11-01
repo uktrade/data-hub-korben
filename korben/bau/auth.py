@@ -21,7 +21,7 @@ def generate_signature(path, body, salt):
 
 def sign_request(request):
     path = bytes(request.path, 'utf-8')
-    return generate_signature(path, request.body, config.datahub_api_key)
+    return generate_signature(path, request.body, config.datahub_secret)
 
 
 @interface.implementer(interfaces.IAuthenticationPolicy)
