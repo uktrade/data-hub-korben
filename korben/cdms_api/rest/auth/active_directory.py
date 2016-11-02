@@ -164,4 +164,6 @@ class ActiveDirectoryAuth:
         resp = getattr(self.session, verb)(
             url, data=data, headers=default_headers
         )
+        if resp.status_code == 401:
+            raise CDMSUnauthorizedException()
         return resp
