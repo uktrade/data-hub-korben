@@ -4,6 +4,7 @@ cryptography
 django
 elasticsearch
 lxml
+python-dateutil
 psycopg2
 pyquery
 pyramid

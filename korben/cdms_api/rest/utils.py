@@ -1,6 +1,7 @@
 import re
 import time
 import datetime
+import dateutil.parser
 
 
 DATETIME_RE = re.compile('/Date\(([-+]?\d+)\)/')
@@ -22,8 +23,8 @@ def datetime_to_cdms_datetime(value):
     """
     Returns the cdms string equivalent of the datetime value.
     """
-    if not value:
-        return value
+    if not isinstance(datetime.datetime, value):
+        value = dateutil.parser.parse(value)
     return '/Date({0})/'.format(
         int(time.mktime(value.timetuple()) * 1000)
     )

@@ -2,17 +2,42 @@ import pytest
 
 import collections
 import datetime
+import json
 
 from webtest import TestApp
 
+from korben import config
 from korben.bau import webserver
+from korben.bau.auth import generate_signature
 from korben.cdms_api.rest import api
+
+
+class SigningTestApp(TestApp):
+    'Add support for signing auth to TestApp'
+
+    def _signature_headers(self, path, body):
+        signature = generate_signature(path, body, config.datahub_secret)
+        return {'X-Signature': signature}
+
+    def post(self, path, **kwargs):
+        headers = kwargs.pop('headers', {})
+        headers.update(self._signature_headers(bytes(path, 'utf-8'), b''))
+        return super().post(path, headers=headers, **kwargs)
+
+    def post_json(self, path, data, **kwargs):
+        headers = kwargs.pop('headers', {})
+        headers.update(
+            self._signature_headers(
+                bytes(path, 'utf-8'), bytes(json.dumps(data), 'utf-8')
+            )
+        )
+        return super().post_json(path, data, headers=headers, **kwargs)
+
 
 
 @pytest.fixture
 def test_app():
-    app = webserver.get_app()
-    return TestApp(app)
+    return SigningTestApp(webserver.get_app())
 
 
 @pytest.fixture
