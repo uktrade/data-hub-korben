@@ -1,17 +1,39 @@
 import json
+import logging
 
 from pyramid import httpexceptions as http_exc
 from pyramid.response import Response
 from pyramid.view import view_config
 
+from korben import config
 from korben.etl import utils as etl_utils
 from . import common
+
+from raven import Client
+
+SENTRY_CLIENT = Client(config.korben_sentry_dsn)
+LOGGER = logging.getLogger('korben.bau.views')
+
 
 def fmt_guid(ident):
     return "guid'{0}'".format(ident)
 
-def json_exc_view(exc, request):
+
+@view_config(context=Exception)
+def json_exc_view(exc, _):
+    SENTRY_CLIENT.captureException()
+    kwargs = {
+        'status_code': 500,
+        'body': json.dumps({'message': str(exc)}),
+        'content_type': 'application/json',
+    }
+    return Response(**kwargs)
+
+
+@view_config(context=http_exc.HTTPError)
+def json_http_exc_view(exc, _):
     'JSONify a Python exception, return it as a Response object'
+    LOGGER.error(exc.message)
     kwargs = {
         'status_code': exc.status_code,
         'body': json.dumps({'message': exc.message}),

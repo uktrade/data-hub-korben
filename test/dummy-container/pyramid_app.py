@@ -20,6 +20,7 @@ DJANGO_TABLENAMES = {
     'company_interaction',
 }
 
+
 @view_config(context=Exception)
 def json_exc_view(exc, _):
     kwargs = {

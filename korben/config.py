@@ -26,6 +26,7 @@ __config_spec = {
     'es_host':                     (True, True, 'es', __noop),
     'es_port':                     (True, True, 9200, __noop),
     'datahub_secret':              (True, True, None, __to_bytes),
+    'korben_sentry_dsn':           (True, True, None, __noop),
 }
 
 
@@ -84,7 +85,6 @@ def populate(path=None, ignore=True):
                 raise ConfigError(msg.format(exc))
             if not __config_yaml:
                 raise ConfigError('Named config YAML was empty')
-            pass
 
     else:
         globals()['__config_yaml'] = {}

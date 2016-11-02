@@ -8,6 +8,7 @@ psycopg2
 pyquery
 pyramid
 pyyaml
+raven
 requests
 requests_aws4auth
 requests_ntlm
