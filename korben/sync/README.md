@@ -1,15 +1,21 @@
-# Sync
+# Initial setup
 
-Pull data from CDMS, service to poll CDMS for new data, relation traversal for
-loading object dependencies. Make appropriate calls to ETL with fresh data.
+``` python
+from korben.cdms_api.rest.api import CDMSRestApi
 
-## [`traverse`](traverse.py)
-Get a single object, traversing required dependencies.
-
-## [`poll`](poll.py)
-Poll for new rows in remoted tables mentioned in `etl.spec.MAPPINGS`, make
-updates based on `ModifiedOn` attribute.
-
-## [`populate`](populate.py)
-Load pickled responses, convert their XML content into CSV files and use `COPY`
-to throw them into the database.
+client = CDMSRestApi()
+client.create(
+    'optevia_businesstypeSet',
+    {
+        'optevia_businesstypeId': '9ed14e94-5d95-e211-a939-e4115bead28a',
+        'optevia_name': 'Private limited company'
+    }
+)
+client.create(
+    'optevia_businesstypeSet',
+    {
+        'optevia_businesstypeId': '9fd14e94-5d95-e211-a939-e4115bead28a',
+        'optevia_name': 'Public limited company'
+    }
+)
+```
