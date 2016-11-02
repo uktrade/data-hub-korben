@@ -7,6 +7,8 @@ from pyramid.view import view_config
 from korben.etl import utils as etl_utils
 from . import common
 
+def fmt_guid(ident):
+    return "guid'{0}'".format(ident)
 
 def json_exc_view(exc, request):
     'JSONify a Python exception, return it as a Response object'
@@ -37,7 +39,9 @@ def update(request):
     if ident is None:
         raise http_exc.HTTPBadRequest('No identifier provided; pass `id` key')
     cdms_client = request.registry.settings['cdms_client']
-    response = cdms_client.update(odata_tablename, etag, ident, odata_dict)
+    response = cdms_client.update(
+        odata_tablename, etag, fmt_guid(ident), odata_dict
+    )
     return common.odata_to_django(odata_tablename, response)
 
 
@@ -47,5 +51,5 @@ def get(request):
     django_tablename, odata_tablename = common.request_tablenames(request)
     ident = request.matchdict['ident']
     cdms_client = request.registry.settings['cdms_client']
-    response = cdms_client.get(odata_tablename, ident)
+    response = cdms_client.get(odata_tablename, fmt_guid(ident))
     return common.odata_to_django(odata_tablename, response)
