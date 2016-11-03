@@ -12,6 +12,8 @@ def cdms_datetime_to_datetime(value):
     Parses a cdms datetime as string and returns the equivalent datetime value.
     Dates in CDMS are always UTC.
     """
+    if isinstance(value, datetime.datetime):
+        return value
     match = DATETIME_RE.match(value or '')
     if match:
         parsed_val = int(match.group(1))
@@ -23,7 +25,7 @@ def datetime_to_cdms_datetime(value):
     """
     Returns the cdms string equivalent of the datetime value.
     """
-    if not isinstance(datetime.datetime, value):
+    if not isinstance(value, datetime.datetime):
         value = dateutil.parser.parse(value)
     return '/Date({0})/'.format(
         int(time.mktime(value.timetuple()) * 1000)
