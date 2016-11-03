@@ -1,3 +1,4 @@
+# Extra businesstypes for datahub
 - model: company.businesstype
   pk: 9ed14e94-5d95-e211-a939-e4115bead28a
   fields: {name: Private limited company }
