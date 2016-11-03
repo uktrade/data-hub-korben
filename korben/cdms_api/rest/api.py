@@ -2,6 +2,7 @@ import logging
 from korben import config
 
 from .auth.active_directory import ActiveDirectoryAuth
+from ..exceptions import UnexpectedResponseException
 
 LOGGER = logging.getLogger('korben.cdms_api.rest.api')
 
@@ -201,3 +202,14 @@ class CDMSRestApi(object):
                 counter += 1
 
         return counter
+
+    def exists(self, service, guid):
+        resp = self.get(service, guid)
+        if resp.status_code == 200:
+            return True
+        if resp.status_code == 404:
+            return False
+        else:
+            raise UnexpectedResponseException(
+                "Exists for {0} with guid {1}".format(service, guid)
+            )

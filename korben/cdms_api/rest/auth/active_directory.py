@@ -142,12 +142,11 @@ class ActiveDirectoryAuth:
         """
         if data is None:
             data = {}
-        try:
-            return self._make_request(verb, url, data=data, headers=headers)
-        except CDMSUnauthorizedException:
-            logger.debug('Session expired, reauthenticating and trying again')
-            self.setup_session(force=True)
-        return self._make_request(verb, url, data=data, headers=headers)
+            resp = self._make_request(verb, url, data=data, headers=headers)
+            if resp.status_code == 401:
+                self.setup_session(force=True)
+                return self._make_request(verb, url, data=data, headers=headers)
+            return resp
 
     def _make_request(self, verb, url, data=None, headers=None):
         if data is None:
