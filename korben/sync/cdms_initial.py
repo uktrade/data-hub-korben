@@ -11,16 +11,16 @@ LOGGER = logging.getLogger('korben.sync.cdms_initial')
 
 def transform_django_fixture_to_odata(client, django_fixture):
     odata_tups = []
-    for django_dict in django_fixture:
-        django_tablename = django_dict['model'].split('.').join('_')
-        name, guid = django_dict['name'], django_dict['pk']
+    for django_fixture_dict in django_fixture:
+        django_tablename = '_'.join(django_fixture_dict['model'].split('.'))
+        guid = django_fixture_dict['pk']
+        django_dict = django_fixture_dict['fields']
+        django_dict.update({'id': guid})
         odata_tablename = spec.DJANGO_LOOKUP[django_tablename]
         if not client.exists(odata_tablename, fmt_guid(guid)):
             odata_tup = (
                 odata_tablename,
-                transform.django_to_odata(
-                    django_tablename, {'id': guid, 'name': name}
-                )
+                transform.django_to_odata(django_tablename, django_dict)
             )
             odata_tups.append(odata_tup)
         else:
