@@ -18,11 +18,9 @@ def transform_django_fixture_to_odata(client, django_fixture):
         django_dict.update({'id': guid})
         odata_tablename = spec.DJANGO_LOOKUP[django_tablename]
         if not client.exists(odata_tablename, fmt_guid(guid)):
-            odata_tup = (
-                odata_tablename,
+            _, odata_dict =\
                 transform.django_to_odata(django_tablename, django_dict)
-            )
-            odata_tups.append(odata_tup)
+            odata_tups.append((odata_tablename, odata_dict))
         else:
             LOGGER.info(
                 "%s with id %s already exists in CDMS", django_tablename, guid

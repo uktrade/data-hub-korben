@@ -75,6 +75,7 @@ def main(names=None, client=None):
             classes.EntityChunk(client, entity_name, start, end)
         )
     last_report = 0
+    final_tick = False
 
     while True:  # take a deep breath
 
@@ -130,18 +131,42 @@ def main(names=None, client=None):
                     )
                     entity_page.state = types.EntityPageState.inserted
                 if entity_page.state == types.EntityPageState.spent:
-                    # there is no more data, stop requesting this entity
-                    entity_chunk.state = types.EntityChunkState.spent
-                    with open(SPENT_PATH, 'rb') as spent_fh:
-                        spent = pickle.load(spent_fh)
-                        spent.add(entity_chunk.entity_name)
-                    with open(SPENT_PATH, 'wb') as spent_fh:
-                        pickle.dump(spent, spent_fh)
-                    LOGGER.error(
-                        "{0} ({1}) spent".format(
-                            entity_page.entity_name, entity_page.offset
+                    # make cheeky call to etl.load
+                    try:
+                        results, _ = etl.main.from_odata_json(
+                            metadata.tables[entity_page.entity_name],
+                            utils.json_cache_key(
+                                entity_page.entity_name, entity_page.offset
+                            )
                         )
+                        LOGGER.info(
+                            "Records {0}-{1} went into {2}".format(
+                                entity_page.offset,
+                                entity_page.offset + sum(
+                                    result.rowcount for result in results
+                                ),
+                                entity_page.entity_name
+                            )
+                        )
+                    except FileNotFoundError:  # don’t care
+                        pass
+                    # if there is no pending requests, stop requesting this
+                    # entity (it’s spent)
+                    entitypage_states = set(
+                        x.state for x in entity_chunk.entity_pages
                     )
+                    if types.EntityPageState.pending not in entitypage_states:
+                        entity_chunk.state = types.EntityChunkState.spent
+                        with open(SPENT_PATH, 'rb') as spent_fh:
+                            spent = pickle.load(spent_fh)
+                            spent.add(entity_chunk.entity_name)
+                        with open(SPENT_PATH, 'wb') as spent_fh:
+                            pickle.dump(spent, spent_fh)
+                        LOGGER.error(
+                            "{0} ({1}) spent".format(
+                                entity_page.entity_name, entity_page.offset
+                            )
+                        )
                 if entity_page.state == types.EntityPageState.deauthd:
                     if not reauthd_this_tick:
                         CDMSRestApi().auth.setup_session(True)
@@ -158,6 +183,9 @@ def main(names=None, client=None):
             for entity_chunk in entity_chunks
         )
         if all(done):
+            if not final_tick:  # make sure last page is processed
+                final_tick = True
+                continue
             LOGGER.info('Waiting for Pool.close ...')
             pool.close()
             LOGGER.info('Waiting for Pool.join ...')
