@@ -142,11 +142,12 @@ class ActiveDirectoryAuth:
         """
         if data is None:
             data = {}
+        try:
             resp = self._make_request(verb, url, data=data, headers=headers)
-            if resp.status_code == 401:
-                self.setup_session(force=True)
-                return self._make_request(verb, url, data=data, headers=headers)
-            return resp
+        except CDMSUnauthorizedException:
+            self.setup_session(force=True)
+            return self.make_request(verb, url, data=data, headers=headers)
+        return resp
 
     def _make_request(self, verb, url, data=None, headers=None):
         if data is None:
