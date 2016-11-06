@@ -29,8 +29,8 @@ class EntityChunk(object):
             self.entity_pages.append(EntityPage(client, entity_name, offset))
 
     def __str__(self):
-        return "<EntityChunk {0} ({1}-{2})>".format(
-            self.entity_name, self.offset_start, self.offset_end
+        return "<EntityChunk {0} ({1}-{2}) {3}>".format(
+            self.entity_name, self.offset_start, self.offset_end, self.state
         )
 
     def pending(self):
@@ -48,12 +48,21 @@ class EntityChunk(object):
         'Are all the tasks complete?'
         if self.state == types.EntityChunkState.complete:
             return
-        done = (
-            entity_page.state == types.EntityPageState.inserted
-            for entity_page in self.entity_pages
+        entity_page_states = set(
+            entity_page.state for entity_page in self.entity_pages
         )
-        if all(done):
-            self.state = types.EntityChunkState.complete
+        if all(state == types.EntityPageState.initial for state in entity_page_states):
+            return
+        pending = (
+            types.EntityPageState.pending in entity_page_states
+            or
+            types.EntityPageState.deauthd in entity_page_states
+        )
+        if not pending:
+            if types.EntityPageState.spent in entity_page_states:
+                self.state = types.EntityChunkState.spent
+            else:
+                self.state = types.EntityChunkState.complete
 
 
 class EntityPage(object):

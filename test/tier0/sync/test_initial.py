@@ -10,8 +10,6 @@ isn’t required here). It basically does this:
     - Test should cases cover verfication that “intermediate” and “production”
       databases are in the expected state
 '''
-import pytest
-
 from korben import etl
 from korben.sync import scrape, django_initial
 

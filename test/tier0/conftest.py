@@ -21,6 +21,8 @@ from korben.cdms_api.rest.auth.noop import NoopAuth
 from korben.etl import spec as etl_spec
 from korben import services
 from korben.bau import poll
+from korben.bau import leeloo
+from korben.sync.scrape import constants as scrape_constants
 
 
 ATOM_PREFIX = '{http://www.w3.org/XML/1998/namespace}'
@@ -172,6 +174,12 @@ def tier0(monkeypatch, odata_utils, configure_django):
         return resp_json['d']
     monkeypatch.setattr(poll, 'get_entry_list', get_entry_list)
 
+    # not testing leeloo here
+    monkeypatch.setattr(leeloo, 'send', lambda *a, **b: None)
+
+    # tone down scrape
+    monkeypatch.setattr(scrape_constants, 'PROCESSES', 4)
+    monkeypatch.setattr(scrape_constants, 'CHUNKSIZE', 1)
 
     fixtures_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'fixtures')
     schema_fixtures = {
