@@ -1,7 +1,8 @@
 import datetime
+import hashlib
+import json
 import logging
 import os
-import json
 import re
 
 LOGGER = logging.getLogger('korben.utils')
@@ -89,3 +90,8 @@ def parse_json_entries(cache_dir, entity_name, name, path=None):
             LOGGER.error('Bad JSON!')
             # scrape failed
             return
+
+
+def generate_signature(path, body, salt):
+    message = path + body + salt
+    return hashlib.sha256(message).hexdigest()

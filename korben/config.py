@@ -25,8 +25,9 @@ __config_spec = {
     'database_url':                (True, True, None, __noop),
     'es_host':                     (True, True, 'es', __noop),
     'es_port':                     (True, True, 9200, __noop),
-    'datahub_secret':              (True, True, None, __to_bytes),
     'korben_sentry_dsn':           (True, True, None, __noop),
+    'datahub_secret':              (True, True, None, __to_bytes),
+    'leeloo_url':                  (True, True, 'http://leeloo:8000/korben', __noop),
 }
 
 
