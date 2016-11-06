@@ -21,7 +21,9 @@ def construct_request(django_tablename, django_dict):
     )
     prepared_request = unprepared_request.prepare()
     signature = generate_signature(
-        bytes(prepared_request.path_url, 'utf-8'), prepared_request.body, config.datahub_secret
+        bytes(prepared_request.path_url, 'utf-8'),
+        prepared_request.body,
+        config.datahub_secret
     )
     prepared_request.headers['X-Signature'] = signature
     return prepared_request
@@ -39,7 +41,7 @@ def send(django_tablename, django_dicts):
         for response in responses:
             if not response.ok:
                 LOGGER.error(
-                    '    %s %s',
+                    '    %s %s %s',
                     response.status_code,
                     response.request.path_url,
                     json.loads(response.request.body.decode('utf-8'))['id']

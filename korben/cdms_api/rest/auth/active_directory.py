@@ -161,9 +161,12 @@ class ActiveDirectoryAuth:
         }
         if headers is not None:
             default_headers.update(headers)
-        resp = getattr(self.session, verb)(
-            url, data=data, headers=default_headers
-        )
+        try:
+            resp = getattr(self.session, verb)(
+                url, data=data, headers=default_headers
+            )
+        except requests.exceptions.ConnectionError:
+            return self._make_request(verb, url, data=data, headers=headers)
         if resp.status_code == 401:
             raise CDMSUnauthorizedException()
         return resp
