@@ -1,3 +1,4 @@
+import json
 import logging
 
 
@@ -37,6 +38,10 @@ def send(django_tablename, django_dicts):
         LOGGER.error('The following requests failed:')
         for response in responses:
             if not response.ok:
-                import ipdb;ipdb.set_trace()
-                LOGGER.error('    %s', response)
+                LOGGER.error(
+                    '    %s %s',
+                    response.status_code,
+                    response.request.path_url,
+                    json.loads(response.request.body.decode('utf-8'))['id']
+                )
     return responses

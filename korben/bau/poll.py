@@ -110,7 +110,7 @@ def reverse_scrape(client,
     LOGGER.info(
         '%s %s INSERT %s UPDATE %s', now, table.name, new_rows, updated_rows
     )
-    if new_rows + updated_rows < 50:
+    if (new_rows + updated_rows < 50) and offset > 100:
         return offset + new_rows + updated_rows
     LOGGER.info(
         'Continuing reverse scrape for %s (from offset %s)', table.name, offset

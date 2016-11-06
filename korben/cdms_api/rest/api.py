@@ -42,6 +42,10 @@ class CDMSRestApi(object):
         return resp
 
     def list(self, service, top=50, skip=0, select=None, filters=None, order_by=None):
+        LOGGER.info(
+            'service=%s top=%s skip=%s select=%s filters=%s order_by=%s',
+            service, top, skip, select, filters, order_by
+        )
         params = {}
         if filters:
             params['$filter'] = filters
@@ -62,7 +66,9 @@ class CDMSRestApi(object):
             params='&'.join(sorted([u'%s=%s' % (k, v) for k, v in params.items()]))
         )
 
-        return self.make_request('get', url)
+        resp = self.make_request('get', url)
+        LOGGER.info('elapsed %s', resp.elapsed)
+        return resp
 
     def get(self, service, guid):
         """
