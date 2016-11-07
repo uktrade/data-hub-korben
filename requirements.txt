@@ -22,3 +22,5 @@ pytest-runner
 pytest-cov
 pytest-sugar
 webtest
+
+-e .
