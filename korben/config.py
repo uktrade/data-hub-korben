@@ -1,3 +1,4 @@
+from urllib.parse import urlparse as __urlparse
 from contextlib import contextmanager as __ctxmgr
 import os as __os
 import yaml as __yaml
@@ -9,6 +10,7 @@ class ConfigError(Exception):
 
 __to_bytes = lambda x: bytes(x, 'utf8')
 __noop = lambda x: x
+
 __config_spec = {
     #                                            default
     #                                  read from  value    cast
@@ -25,7 +27,7 @@ __config_spec = {
     'database_url':                (True, True, None, __noop),
     'es_host':                     (True, True, 'es', __noop),
     'es_port':                     (True, True, 9200, __noop),
-    'redis_url':                   (True, True, 'redis', __noop),
+    'redis_url':                   (True, True, 'tcp://redis', __urlparse),
     'korben_sentry_dsn':           (True, True, None, __noop),
     'datahub_secret':              (True, True, None, __to_bytes),
     'leeloo_url':                  (True, True, 'http://leeloo:8000/korben', __noop),
@@ -63,7 +65,7 @@ def __set_config(name, value=None):
                 else:
                     raise
     if not value and required and default:
-        value = default
+        value = cast(default)
     if value:
         globals()[name] = cast(value)
     elif required:
