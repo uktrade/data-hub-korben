@@ -5,6 +5,9 @@ import logging
 import os
 import re
 
+from korben.services import redis
+
+
 LOGGER = logging.getLogger('korben.utils')
 RE_ODATA_DATE = re.compile(
     r'\/Date\([-+]?(?P<timestamp_milliseconds_str>\d+)\)'
@@ -78,18 +81,20 @@ def entry_row(col_names, entry):
 def parse_json_entries(cache_dir, entity_name, name, path=None):
     'Parse entry objects from a JSON document'
     if path is None:
-        path = os.path.join(cache_dir, 'json', entity_name, name)
-    with open(path, 'r') as cache_fh:
+        path = os.path.join(*map(str, (cache_dir, 'json', entity_name, name)))
+    value = redis.get(path)
+    if not value:
+        LOGGER.error('Not found: %s', path)
+        return
+    try:
+        json_resp = json.loads(value)
         try:
-            json_resp = json.loads(cache_fh.read())
-            try:
-                return json_resp['d']['results']
-            except TypeError:
-                return json_resp['d']
-        except json.JSONDecodeError:
-            LOGGER.error('Bad JSON!')
-            # scrape failed
-            return
+            return json_resp['d']['results']
+        except TypeError:
+            return json_resp['d']
+    except json.JSONDecodeError:
+        LOGGER.error('Bad JSON!')
+        return
 
 
 def generate_signature(path, body, salt):

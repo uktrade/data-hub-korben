@@ -10,6 +10,7 @@ pyquery
 pyramid
 pyyaml
 raven
+redis
 requests
 requests_aws4auth
 requests_ntlm

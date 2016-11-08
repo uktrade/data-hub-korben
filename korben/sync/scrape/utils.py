@@ -4,7 +4,7 @@ import logging
 import os
 
 from korben.cdms_api.rest.api import CDMSRestApi
-from .. import utils as sync_utils
+from korben import services
 from . import types
 
 LOGGER = logging.getLogger('korben.sync.scrape.utils')
@@ -66,12 +66,12 @@ def raise_on_cdms_resp_errors(entity_name, offset, resp):
 
 def json_cache_key(entity_name, offset):
     'Return the path where JSON responses are cached'
-    return sync_utils.file_leaf('cache', 'json', entity_name, offset)
+    return os.path.join(*map(str, ('cache', 'json', entity_name, offset)))
 
 
 def duration_record(entity_name, offset):
     'Return the path where a request duration record should be written'
-    return sync_utils.file_leaf('cache', 'duration', entity_name, offset)
+    return os.path.join(*map(str, ('cache', 'duration', entity_name, offset)))
 
 
 def is_cached(entity_name, offset):
@@ -81,11 +81,11 @@ def is_cached(entity_name, offset):
     path it either is or should be cached at.
     '''
     path = json_cache_key(entity_name, offset)
-    if not os.path.isfile(path):
+    value = services.redis.get(path)
+    if not value:
         return False, path
     try:
-        with open(path, 'r') as cache_fh:
-            json.loads(cache_fh.read())
+        json.loads(value)
     except json.JSONDecodeError as exc:
         return False, path
     return True, path
@@ -108,8 +108,7 @@ def cdms_list(client, entity_name, offset):
     '''
     cached, cache_path = is_cached(entity_name, offset)
     if cached:  # nothing to do, just load resp from cache
-        with open(cache_path, 'rb') as cache_fh:
-            return cache_fh.read()
+        return services.redis.get(cache_path)
     start_time = datetime.datetime.now()
     if client is None:
         client = CDMSRestApi()
@@ -120,9 +119,9 @@ def cdms_list(client, entity_name, offset):
     raise_on_cdms_resp_errors(entity_name, offset, resp)
 
     # record our expensive network request
-    with open(duration_record(entity_name, offset), 'w') as duration_fh:
-        duration_fh.write(str(time_delta))
-    with open(cache_path, 'wb') as cache_fh:
-        cache_fh.write(resp.content)
+    services.redis.set(duration_record(entity_name, offset), str(time_delta))
+    services.redis.set(
+        cache_path, resp.content.decode(resp.encoding or 'utf-8')
+    )
     LOGGER.info("{0} ({1}) {2}s".format(entity_name, offset, time_delta))
     return resp.content

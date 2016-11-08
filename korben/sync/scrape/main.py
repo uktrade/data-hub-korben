@@ -1,10 +1,10 @@
 import datetime
+import json
 import logging
 import multiprocessing
 import os
-import pickle
-import time
 import random
+import time
 
 from korben import etl
 from korben import services
@@ -21,12 +21,10 @@ class LoggingFilter(logging.Filter):
     def filter(self, record):
         return not record.getMessage().startswith('requests')
 
-
+SPENT_KEY = 'cache/spent'
 logging.basicConfig(level=logging.INFO)
 LOGGER = logging.getLogger('korben.sync.scrape.main')
 logging.getLogger().addFilter(LoggingFilter())
-
-SPENT_PATH = sync_utils.file_leaf('cache', 'spent')
 
 
 def main(names=None, client=None):
@@ -40,14 +38,10 @@ def main(names=None, client=None):
     pool = multiprocessing.Pool(processes=scrape_constants.PROCESSES)
     entity_chunks = []
     metadata = services.db.get_odata_metadata()
-    try:
-        with open(SPENT_PATH, 'rb') as spent_fh:
-            spent = pickle.load(spent_fh)
-        print("Skipping {0} entity types \o/".format(len(spent)))
-    except FileNotFoundError:
-        spent = set()
-        with open(SPENT_PATH, 'wb') as spent_fh:
-            pickle.dump(spent, spent_fh)
+    spent = set(json.loads(services.redis.get(SPENT_KEY) or '[]'))
+    len_spent = len(spent)
+    if len_spent:
+        print("Skipping {0} entity types \o/".format(len_spent))
     to_scrape = names - spent
     LOGGER.info('Scraping the following entities:')
     for name in names:
@@ -55,11 +49,14 @@ def main(names=None, client=None):
     for entity_name in to_scrape:
         try:
             # validate cache is in good shape (ie. no missing requests)
-            cache_names = os.listdir(
-                os.path.join('cache', 'json', entity_name)
+            cache_names = map(
+                lambda path: path.split('/')[-1],
+                services.redis.keys(
+                    os.path.join('cache', 'json', entity_name, '*')
+                )
             )
             caches = sorted(map(int, cache_names))
-            for index, offset in list(enumerate(caches))[1:]:
+            for index, offset in list(enumerate(caches)):
                 if caches[index - 1] != offset - 50:
                     start = caches[index - 1] + 50
                     LOGGER.info(
@@ -148,7 +145,7 @@ def main(names=None, client=None):
                                 entity_page.entity_name
                             )
                         )
-                    except FileNotFoundError:  # don’t care
+                    except TypeError:  # don’t care
                         pass
                     # if there is no pending requests, stop requesting this
                     # entity (it’s spent)
@@ -157,11 +154,11 @@ def main(names=None, client=None):
                     )
                     if types.EntityPageState.pending not in entitypage_states:
                         entity_chunk.state = types.EntityChunkState.spent
-                        with open(SPENT_PATH, 'rb') as spent_fh:
-                            spent = pickle.load(spent_fh)
-                            spent.add(entity_chunk.entity_name)
-                        with open(SPENT_PATH, 'wb') as spent_fh:
-                            pickle.dump(spent, spent_fh)
+                        spent = set(
+                            json.loads(services.redis.get(SPENT_KEY) or '[]')
+                        )
+                        spent.add(entity_chunk.entity_name)
+                        services.redis.set(SPENT_KEY, json.dumps(tuple(spent)))
                         LOGGER.error(
                             "{0} ({1}) spent".format(
                                 entity_page.entity_name, entity_page.offset
