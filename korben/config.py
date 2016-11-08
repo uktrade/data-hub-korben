@@ -1,12 +1,19 @@
-from urllib.parse import urlparse as __urlparse
+from urllib import parse as __urlparse
 from contextlib import contextmanager as __ctxmgr
 import os as __os
 import yaml as __yaml
 import logging as __logging
 __logger = __logging.getLogger('korben.config')
 
+
 class ConfigError(Exception):
     pass
+
+
+def __to_url(url):
+    if isinstance(url, __urlparse.ParseResult):
+        return url
+    return __urlparse.urlparse(url)
 
 __to_bytes = lambda x: bytes(x, 'utf8')
 __noop = lambda x: x
@@ -27,7 +34,7 @@ __config_spec = {
     'database_url':                (True, True, None, __noop),
     'es_host':                     (True, True, 'es', __noop),
     'es_port':                     (True, True, 9200, __noop),
-    'redis_url':                   (True, True, 'tcp://redis', __urlparse),
+    'redis_url':                   (True, True, 'tcp://redis', __to_url),
     'korben_sentry_dsn':           (True, True, None, __noop),
     'datahub_secret':              (True, True, None, __to_bytes),
     'leeloo_url':                  (True, True, 'http://leeloo:8000/korben', __noop),
