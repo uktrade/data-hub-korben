@@ -2,6 +2,7 @@ import functools
 import logging
 
 import elasticsearch
+from elasticsearch import helpers as es_helpers
 import sqlalchemy as sqla
 from sqlalchemy.sql import functions as sqla_func
 
@@ -95,7 +96,7 @@ def main():
         )
         for rows in chunks:
             actions = list(map(functools.partial(row_es_add, table, 'id'), rows))
-            success_count, error_count = elasticsearch.helpers.bulk(
+            success_count, error_count = es_helpers.bulk(
                 client=services.es,
                 actions=actions,
                 stats_only=True,
