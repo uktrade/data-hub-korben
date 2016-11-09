@@ -10,8 +10,9 @@ redis_kwargs = {
 }
 
 for name in ('port', 'password'):
-    if hasattr(config.redis_url, name):
-        redis_kwargs[name] = getattr(config.redis_url, name)
+    value = getattr(config.redis_url, name)
+    if value is not None:
+        redis_kwargs[name] = value
 redis = Redis(**redis_kwargs)
 
 db = db_manager.DatabaseManager()
