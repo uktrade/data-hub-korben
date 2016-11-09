@@ -2,13 +2,11 @@ import functools
 import logging
 
 import elasticsearch
-from elasticsearch import helpers as es_helpers
 import sqlalchemy as sqla
 from sqlalchemy.sql import functions as sqla_func
 
 from korben import services
 from korben import etl
-from korben.services import es
 from . import constants
 from . import utils
 
@@ -32,9 +30,7 @@ def setup_index():
     Assume that if the index exists it is complete, otherwise create it and
     populate with mappings
     '''
-    indices_client = elasticsearch.client.IndicesClient(
-        client=services.es.client
-    )
+    indices_client = elasticsearch.client.IndicesClient(client=services.es)
     if not indices_client.exists(etl.spec.ES_INDEX):
         indices_client.create(index=etl.spec.ES_INDEX)
         for doc_type, body in etl.spec.get_es_types().items():
@@ -100,7 +96,7 @@ def main():
         for rows in chunks:
             actions = list(map(functools.partial(row_es_add, table, 'id'), rows))
             success_count, error_count = elasticsearch.helpers.bulk(
-                client=services.es.client,
+                client=services.es,
                 actions=actions,
                 stats_only=True,
                 chunk_size=1000,
@@ -129,7 +125,7 @@ def main():
             filtered_rows
         ))
         success_count, error_count = elasticsearch.helpers.bulk(
-            client=services.es.client,
+            client=services.es,
             actions=actions,
             stats_only=True,
             chunk_size=10,

@@ -26,7 +26,7 @@ class DatabaseManager(metaclass=Singleton):
     metadatas = {}
 
     def __init__(self):
-        self.logger = logging.getLogger('korben.services.db')
+        self.logger = logging.getLogger('korben.services.db_manager')
 
     def reset_connections(self):
         'Close all connections, clear metadata cache'
