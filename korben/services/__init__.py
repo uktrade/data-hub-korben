@@ -8,8 +8,10 @@ redis_kwargs = {
     'host': config.redis_url.hostname,
     'decode_responses': True,
 }
-if config.redis_url.port:
-    redis_kwargs['port'] = config.redis_url.port
+
+for name in ('port', 'password'):
+    if hasattr(config.redis_url, name):
+        redis_kwargs[name] = getattr(config.redis_url, name)
 redis = Redis(**redis_kwargs)
 
 db = db_manager.DatabaseManager()
