@@ -168,5 +168,5 @@ class ActiveDirectoryAuth:
         except requests.exceptions.ConnectionError:
             return self._make_request(verb, url, data=data, headers=headers)
         if resp.status_code == 401:
-            raise CDMSUnauthorizedException()
+            raise CDMSUnauthorizedException('De-auth')
         return resp
