@@ -67,7 +67,7 @@ class CDMSRestApi(object):
         )
 
         resp = self.make_request('get', url)
-        LOGGER.debug('elapsed %s', resp.elapsed)
+        LOGGER.info('%s complete %s elapsed', service, resp.elapsed)
         return resp
 
     def get(self, service, guid):
