@@ -22,7 +22,7 @@ def test_sentry_context_and_exception_view(monkeypatch, test_app):
     monkeypatch.setattr(common, 'request_tablenames', explode)  # BOOM!
     monkeypatch.setattr(SENTRY_CLIENT, 'capture', assert_about_capture)
     with config.temporarily(datahub_secret='abc'):
-        path = '/get/abc/def'
+        path = '/get/abc/def/'
         body = {}
         signature = generate_signature(
             bytes(path, 'utf-8'),
