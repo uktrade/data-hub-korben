@@ -27,9 +27,9 @@ def get_app(overrides=None):
     app_cfg.set_authentication_policy(auth.AuthenticationPolicy())
     app_cfg.set_authorization_policy(ACLAuthorizationPolicy())
     app_cfg.set_default_permission('access')
-    app_cfg.add_route('create', '/create/{django_tablename}')
-    app_cfg.add_route('update', '/update/{django_tablename}')
-    app_cfg.add_route('get', '/get/{django_tablename}/{ident}')
+    app_cfg.add_route('create', '/create/{django_tablename}/')
+    app_cfg.add_route('update', '/update/{django_tablename}/')
+    app_cfg.add_route('get', '/get/{django_tablename}/{ident}/')
     app_cfg.scan('korben.bau.views')
     return app_cfg.make_wsgi_app()
 
