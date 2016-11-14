@@ -2,7 +2,7 @@ def test_update_category(test_app):
     id_val = 1
     name = 'Cakes'
     resp = test_app.post_json(
-        '/update/categories', {'id': id_val, 'name': name}
+        '/update/categories/', {'id': id_val, 'name': name}
     )
     assert resp.json_body['id'] == id_val
     assert resp.json_body['name'] == name
@@ -18,7 +18,7 @@ def test_update_supplier(test_app):
         'address_country': 'e',
         'concurrency': 2,
     }
-    resp = test_app.post_json('/update/suppliers', expected)
+    resp = test_app.post_json('/update/suppliers/', expected)
     assert resp.json_body == expected
 
 
@@ -27,5 +27,5 @@ def test_update_fail(test_app):
         'id': 1,
         'concurrency': 'f',  # that’s not a number!
     }
-    response = test_app.post_json('/update/suppliers', bad_request, status=400)
+    response = test_app.post_json('/update/suppliers/', bad_request, status=400)
     assert 'Int32' in response.json_body['error']['message']['value']
