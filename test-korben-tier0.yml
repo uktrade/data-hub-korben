@@ -1,0 +1,29 @@
+version: "2"
+services:
+  test:
+    environment:
+      DATABASE_ODATA_URL: postgres://postgres@test-postgres/test
+      DATABASE_URL: postgres://postgres@test-postgres-django/test_django
+      ES_HOST: es
+      ES_PORT: 9200
+      DATAHUB_SECRET: abc
+      KORBEN_SENTRY_DSN: http://abc:xyz@etc.com/etc/123
+      REDIS_URL: tcp://test-redis
+    build:
+      context: .
+    links:
+      - test-postgres
+      - test-postgres-django
+      - test-redis
+    command: py.test test/tier0
+  test-postgres:
+    image: postgres:9.5
+    environment:
+      POSTGRES_DB: test
+  test-postgres-django:
+    image: postgres:9.5
+    environment:
+      POSTGRES_DB: test_django
+
+  test-redis:
+    image: redis:3.2.5
