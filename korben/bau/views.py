@@ -87,12 +87,14 @@ def validate_credentials(request):
         password = json_data.get('password')
 
         if not (username and password):
+            SENTRY_CLIENT.captureMessage('Missing credentials from validate-credentials request body')
             return False
 
         with config.temporarily(cdms_username=username, cdms_password=password):
             api_client = CDMSRestApi()
             api_client.auth.login()
     except (ValueError, RequestException):
+        SENTRY_CLIENT.captureException()
         return False
 
     return True
