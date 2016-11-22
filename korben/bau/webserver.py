@@ -30,6 +30,7 @@ def get_app(overrides=None):
     app_cfg.add_route('create', '/create/{django_tablename}/')
     app_cfg.add_route('update', '/update/{django_tablename}/')
     app_cfg.add_route('get', '/get/{django_tablename}/{ident}/')
+    app_cfg.add_route('validate-credentials', '/auth/validate-credentials/')
     app_cfg.scan('korben.bau.views')
     return app_cfg.make_wsgi_app()
 
