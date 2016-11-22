@@ -4,10 +4,12 @@ import logging
 from pyramid import httpexceptions as http_exc
 from pyramid.response import Response
 from pyramid.view import view_config
+from requests.exceptions import RequestException
 
 from korben import config
 from korben.etl import utils as etl_utils
 from . import common
+from korben.cdms_api.rest.api import CDMSRestApi
 
 from raven import Client
 
@@ -75,3 +77,22 @@ def get(request):
     cdms_client = request.registry.settings['cdms_client']
     response = cdms_client.get(odata_tablename, fmt_guid(ident))
     return common.odata_to_django(odata_tablename, response)
+
+
+@view_config(route_name='validate-credentials', request_method=['POST'], renderer='json')
+def validate_credentials(request):
+    try:
+        json_data = request.json_body
+        username = json_data.get('username')
+        password = json_data.get('password')
+
+        if not (username and password):
+            return False
+
+        with config.temporarily(cdms_username=username, cdms_password=password):
+            api_client = CDMSRestApi()
+            api_client.auth.login()
+    except (ValueError, RequestException):
+        return False
+
+    return True
