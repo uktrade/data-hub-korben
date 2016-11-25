@@ -1,4 +1,5 @@
 from korben.etl import transform
+from korben.cdms_api.rest.utils import datetime_to_cdms_datetime
 
 
 DJANGO_DATA = dict(
@@ -87,3 +88,16 @@ def test_odata_to_django():
         address_same_as_company=False, archived=False, archived_reason='',
     ))
     assert result == django_data
+
+
+def test_round_trip_for_concat():
+    original_result = transform.odata_to_django('ContactSet', ODATA_OUTPUT_DATA)
+    _, result_interim = transform.django_to_odata('company_contact', original_result)
+
+    # We need to convert datetime format here
+    result_interim['ModifiedOn'] = datetime_to_cdms_datetime(result_interim['ModifiedOn'])
+    result_interim['CreatedOn'] = datetime_to_cdms_datetime(result_interim['CreatedOn'])
+
+    end_result = transform.odata_to_django('ContactSet', result_interim)
+
+    assert end_result == original_result
