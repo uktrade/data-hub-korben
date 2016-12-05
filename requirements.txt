@@ -1,4 +1,3 @@
-# this file exists to satisfy herku, refer to actual-requirements.txt for the
-actual dependencies
+# this file exists to satisfy herku, refer to actual-requirements.txt for the actual dependencies
 -r actual-requirements.txt
 -e .
