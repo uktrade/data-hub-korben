@@ -7,6 +7,7 @@ import functools
 import json
 import operator
 import logging
+from json import JSONDecodeError
 
 import sqlalchemy as sqla
 
@@ -53,7 +54,13 @@ def reverse_scrape(client,
         COLNAME_SHORTLONG.get((table.name, short_col), short_col)
         for short_col in col_names
     ]
-    for entry in get_entry_list(resp):
+
+    try:
+        entry_list = get_entry_list(resp)
+    except (KeyError, JSONDecodeError):
+        return reverse_scrape(client, table, against, comparitor, col_names, primary_key, offset)
+
+    for entry in entry_list:
         rows.append(short_cols(utils.entry_row(long_cols, entry)))
     # end ewwwww
 
