@@ -1,6 +1,6 @@
 'Namespace for sync module'
 from . import traverse, scrape  # NOQA
-from . import odata_initial, django_initial, ch, es_initial
+from . import django_initial, ch, es_initial
 
 COMMANDS = {
     # should be run in this order
