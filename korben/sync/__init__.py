@@ -3,10 +3,10 @@ from . import traverse, scrape  # NOQA
 from . import odata_initial, django_initial, ch, es_initial
 
 COMMANDS = {
+    # should be run in this order
     'scrape': scrape.main,
-    'odata': odata_initial.main,
-    'django': django_initial.main,
     'ch': ch.main,
+    'django': django_initial.main,
     'es': es_initial.main,
 }
 
