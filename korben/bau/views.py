@@ -1,5 +1,7 @@
 import json
 import logging
+import os
+import tempfile
 
 from pyramid import httpexceptions as http_exc
 from pyramid.response import Response
@@ -18,11 +20,13 @@ LOGGER = logging.getLogger('korben.bau.views')
 
 
 def fmt_guid(ident):
+    'Format some string as a Dynamics GUID'
     return "guid'{0}'".format(ident)
 
 
 @view_config(context=Exception)
 def json_exc_view(exc, _):
+    'Generic view to log and return exceptions'
     SENTRY_CLIENT.captureException()
     kwargs = {
         'status_code': 500,
@@ -72,7 +76,7 @@ def update(request):
 @view_config(route_name='get', request_method=['POST'], renderer='json')
 def get(request):
     'Get an OData entity'
-    django_tablename, odata_tablename = common.request_tablenames(request)
+    _, odata_tablename = common.request_tablenames(request)
     ident = request.matchdict['ident']
     cdms_client = request.registry.settings['cdms_client']
     response = cdms_client.get(odata_tablename, fmt_guid(ident))
@@ -81,20 +85,31 @@ def get(request):
 
 @view_config(route_name='validate-credentials', request_method=['POST'], renderer='json')
 def validate_credentials(request):
+    'Validate a set of CDMS credentials'
+    _, cdms_cookie_path = tempfile.mkstemp()
     try:
         json_data = request.json_body
         username = json_data.get('username')
         password = json_data.get('password')
 
         if not (username and password):
-            SENTRY_CLIENT.captureMessage('Missing credentials from validate-credentials request body')
+            SENTRY_CLIENT.captureMessage(
+                'Missing credentials from validate-credentials request body'
+            )
             return False
 
-        with config.temporarily(cdms_username=username, cdms_password=password):
+        config_context = config.temporarily(
+            cdms_username=username,
+            cdms_password=password,
+            cdms_cookie_path=cdms_cookie_path,
+        )
+        with config_context:
             api_client = CDMSRestApi()
             api_client.auth.login()
     except (ValueError, RequestException):
         SENTRY_CLIENT.captureException()
         return False
+    finally:
+        os.remove(cdms_cookie_path)
 
     return True
