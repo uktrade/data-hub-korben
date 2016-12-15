@@ -12,6 +12,7 @@ from korben import config
 from korben.etl import utils as etl_utils
 from . import common
 from korben.cdms_api.rest.api import CDMSRestApi
+from korben.cdms_api.rest.auth import ActiveDirectoryAuth
 
 from raven import Client
 
@@ -97,15 +98,9 @@ def validate_credentials(request):
                 'Missing credentials from validate-credentials request body'
             )
             return False
-
-        config_context = config.temporarily(
-            cdms_username=username,
-            cdms_password=password,
-            cdms_cookie_path=cdms_cookie_path,
-        )
-        with config_context:
-            api_client = CDMSRestApi()
-            api_client.auth.login()
+        auth = ActiveDirectoryAuth(username, password, cdms_cookie_path)
+        api_client = CDMSRestApi(auth)
+        api_client.auth.login()
     except (ValueError, RequestException):
         SENTRY_CLIENT.captureException()
         return False
