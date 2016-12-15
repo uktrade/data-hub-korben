@@ -95,6 +95,7 @@ class ActiveDirectoryAuth:
         resp = self._submit_form(session, resp.content)
 
         # 5. re-submit the form again to validate the token and get as result the authenticated cookie
+        print(resp.content.decode(resp.encoding or 'utf-8'))
         self._submit_form(session, resp.content)
         return session
 
@@ -145,6 +146,7 @@ class ActiveDirectoryAuth:
         try:
             resp = self._make_request(verb, url, data=data, headers=headers)
         except CDMSUnauthorizedException:
+            print('handling de-auth exception')
             self.setup_session(force=True)
             return self.make_request(verb, url, data=data, headers=headers)
         return resp
@@ -168,5 +170,6 @@ class ActiveDirectoryAuth:
         except requests.exceptions.ConnectionError:
             return self._make_request(verb, url, data=data, headers=headers)
         if resp.status_code == 401:
+            print('de-auth from 401')
             raise CDMSUnauthorizedException('De-auth')
         return resp
