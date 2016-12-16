@@ -30,8 +30,18 @@ class ActiveDirectoryAuth:
     many of them are mocked and this does not prove that auth works with API.
     """
 
-    def __init__(self):
-        self.cookie_storage = CookieStorage()
+    username = None
+    password = None
+    cookie_path = None
+
+    def __init__(self, username=None, password=None, cookie_path=None):
+        if username is None:
+            self.username = config.cdms_username
+        if password is None:
+            self.password = config.cdms_password
+        if cookie_path is None:
+            self.cookie_path = config.cdms_cookie_path
+        self.cookie_storage = CookieStorage(self.cookie_path)
         self.setup_session()
 
     def setup_session(self, force=False):

@@ -41,7 +41,7 @@ def main(names=None, client=None):
     spent = set(json.loads(services.redis.get(SPENT_KEY) or '[]'))
     len_spent = len(spent)
     if len_spent:
-        print("Skipping {0} entity types \o/".format(len_spent))
+        LOGGER.info("Skipping {0} entity types \o/".format(len_spent))
     to_scrape = names - spent
     LOGGER.info('Scraping the following entities:')
     for name in names:
