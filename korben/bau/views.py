@@ -105,6 +105,8 @@ def validate_credentials(request):
         SENTRY_CLIENT.captureException()
         return False
     finally:
-        os.remove(cdms_cookie_path)
-
+        try:
+            os.remove(cdms_cookie_path)
+        except:
+            pass
     return True

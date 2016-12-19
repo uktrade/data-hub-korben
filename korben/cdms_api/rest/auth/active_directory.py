@@ -7,9 +7,7 @@ from pyquery import PyQuery
 
 from korben.cdms_api.cookie_storage import CookieStorage
 from korben.cdms_api.exceptions import (
-    CDMSNotFoundException,
     CDMSUnauthorizedException,
-    ErrorResponseException,
     LoginErrorException,
     UnexpectedResponseException,
 )
