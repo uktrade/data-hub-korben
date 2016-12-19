@@ -107,6 +107,6 @@ def validate_credentials(request):
     finally:
         try:
             os.remove(cdms_cookie_path)
-        except:
+        except FileNotFoundError:
             pass
     return True
