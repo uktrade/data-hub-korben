@@ -104,9 +104,6 @@ def validate_credentials(request):
     except (ValueError, RequestException):
         SENTRY_CLIENT.captureException()
         return False
-    finally:
-        try:
-            os.remove(cdms_cookie_path)
-        except FileNotFoundError:
-            pass
+    else:
+        os.remove(cdms_cookie_path)
     return True
