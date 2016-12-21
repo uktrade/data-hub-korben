@@ -7,9 +7,7 @@ from pyquery import PyQuery
 
 from korben.cdms_api.cookie_storage import CookieStorage
 from korben.cdms_api.exceptions import (
-    CDMSNotFoundException,
     CDMSUnauthorizedException,
-    ErrorResponseException,
     LoginErrorException,
     UnexpectedResponseException,
 )
@@ -35,12 +33,9 @@ class ActiveDirectoryAuth:
     cookie_path = None
 
     def __init__(self, username=None, password=None, cookie_path=None):
-        if username is None:
-            self.username = config.cdms_username
-        if password is None:
-            self.password = config.cdms_password
-        if cookie_path is None:
-            self.cookie_path = config.cdms_cookie_path
+        self.username = username or config.cdms_username
+        self.password = password or config.cdms_password
+        self.cookie_path = cookie_path or config.cdms_cookie_path
         self.cookie_storage = CookieStorage(self.cookie_path)
         self.setup_session()
 
@@ -96,8 +91,8 @@ class ActiveDirectoryAuth:
             session, resp.content,
             url=resp.url,
             params={
-                username_field_name: config.cdms_username,
-                password_field_name: config.cdms_password,
+                username_field_name: self.username,
+                password_field_name: self.password,
             }
         )
 
