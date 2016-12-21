@@ -31,8 +31,6 @@ class ActiveDirectoryAuth:
     username = None
     password = None
     cookie_path = None
-    login_repetitions = 0
-    login_max_attempts = 10
 
     def __init__(self, username=None, password=None, cookie_path=None):
         self.username = username or config.cdms_username
@@ -85,16 +83,8 @@ class ActiveDirectoryAuth:
             )
 
         html_parser = PyQuery(resp.content)
-        try:
-            username_field_name = html_parser('input[name*=Username]')[0].name
-            password_field_name = html_parser('input[name*=Password]')[0].name
-        except IndexError as e:
-            # CDMS produced an unexpected HTML markup, we try again for 10 times
-            if self.login_repetitions < self.login_max_attempts:
-                self.login()
-                self.login_repetitions += 1
-            else:
-                raise e
+        username_field_name = html_parser('input[name*=Username]')[0].name
+        password_field_name = html_parser('input[name*=Password]')[0].name
 
         # 2. submit the login form with username and password
         resp = self._submit_form(
