@@ -31,6 +31,8 @@ class ActiveDirectoryAuth:
     username = None
     password = None
     cookie_path = None
+    login_repetitions = 0
+    login_max_attempts = 10
 
     def __init__(self, username=None, password=None, cookie_path=None):
         self.username = username or config.cdms_username
@@ -87,12 +89,12 @@ class ActiveDirectoryAuth:
             username_field_name = html_parser('input[name*=Username]')[0].name
             password_field_name = html_parser('input[name*=Password]')[0].name
         except IndexError as exc:
-            raise UnexpectedResponseException(
-                '{} for status code {}'.format(url, resp.status_code),
-                content=resp.content,
-                status_code=resp.status_code
-            )
-
+            # CDMS produced an unexpected HTML markup, we try again for 10 times
+            if self.login_repetitions < self.login_max_attempts:
+                self.login_repetitions += 1
+                return self.login()
+            else:
+                raise exc
 
         # 2. submit the login form with username and password
         resp = self._submit_form(
