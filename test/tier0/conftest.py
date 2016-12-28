@@ -22,6 +22,7 @@ from korben.etl import spec as etl_spec
 from korben import services
 from korben.bau import poll
 from korben.bau import leeloo
+from korben.bau import views
 from korben.sync.scrape import constants as scrape_constants
 
 
@@ -163,6 +164,11 @@ def django_models():
     from target_models import models
     return models
 
+class FakeSentryClient:
+    def __init__(self, *args, **kwargs):
+        pass
+    def captureException(self, *args, **kwargs):
+        pass
 
 @pytest.yield_fixture
 def tier0(monkeypatch, odata_utils, configure_django):
@@ -176,6 +182,9 @@ def tier0(monkeypatch, odata_utils, configure_django):
 
     # not testing leeloo here
     monkeypatch.setattr(leeloo, 'send', lambda *a, **b: None)
+
+    # use fake raven client to not report to sentry
+    monkeypatch.setattr(views, 'SENTRY_CLIENT', FakeSentryClient())
 
     # tone down scrape
     monkeypatch.setattr(scrape_constants, 'PROCESSES', 4)

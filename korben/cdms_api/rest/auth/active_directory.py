@@ -83,8 +83,16 @@ class ActiveDirectoryAuth:
             )
 
         html_parser = PyQuery(resp.content)
-        username_field_name = html_parser('input[name*=Username]')[0].name
-        password_field_name = html_parser('input[name*=Password]')[0].name
+        try:
+            username_field_name = html_parser('input[name*=Username]')[0].name
+            password_field_name = html_parser('input[name*=Password]')[0].name
+        except IndexError as exc:
+            raise UnexpectedResponseException(
+                '{} for status code {}'.format(url, resp.status_code),
+                content=resp.content,
+                status_code=resp.status_code
+            )
+
 
         # 2. submit the login form with username and password
         resp = self._submit_form(
