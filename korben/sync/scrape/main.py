@@ -183,7 +183,7 @@ def main(names=None, client=None):
             )
             for entity_chunk in entity_chunks
         )
-        LOGGER.info("{0}/{1} entity chunks report complete".format(len([x for x in done if x]), len(done)))
+        LOGGER.info("{0}/{1} entity chunks report complete".format(len([x for x in done if x]), len(entity_chunks)))
         if all(done):
             if not final_tick:  # make sure last page is processed
                 final_tick = True
