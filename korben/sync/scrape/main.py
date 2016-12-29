@@ -151,8 +151,9 @@ def main(names=None, client=None):
                                 entity_page.entity_name
                             )
                         )
-                    except TypeError:  # don’t care
-                        LOGGER.info('Hit some TypeError')
+                    except TypeError as exc:  # don’t care
+                        LOGGER.info(entity_page)
+                        LOGGER.info(exc)
                         pass
                     # if there is no pending requests, stop requesting this
                     # entity (it’s spent)
