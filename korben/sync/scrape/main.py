@@ -96,9 +96,6 @@ def main(names=None, client=None):
             if entity_chunk.state in (
                 types.EntityChunkState.complete, types.EntityChunkState.spent
             ):
-                LOGGER.info(
-                    "{0.entity_name} ({0.offset_start}-{0.offset_end}) reports complete".format(entity_chunk)
-                )
                 continue  # NOQA
 
             # how many tasks pending in total
@@ -186,6 +183,7 @@ def main(names=None, client=None):
             )
             for entity_chunk in entity_chunks
         )
+        LOGGER.info("{0}/{1} entity chunks report complete".format(len([x for x in done if x]), len(done)))
         if all(done):
             if not final_tick:  # make sure last page is processed
                 final_tick = True
