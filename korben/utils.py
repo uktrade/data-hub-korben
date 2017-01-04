@@ -81,10 +81,10 @@ def entry_row(col_names, entry):
 def parse_json_entries(cache_dir, entity_name, name, path=None):
     'Parse entry objects from a JSON document'
     if path is None:
-        path = os.path.join(*map(str, (cache_dir, 'json', entity_name, name)))
+        path = os.path.join(cache_dir, 'json', entity_name, str(name))
     value = redis.get(path)
     if not value:
-        LOGGER.error('Not found: %s', path)
+        LOGGER.debug('Not found: %s', path)
         return
     try:
         json_resp = json.loads(value)

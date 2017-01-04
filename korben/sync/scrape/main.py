@@ -86,7 +86,7 @@ def main(names=None, client=None):
         if not all(report_conditions):
             continue  # this isn’t a report loop
 
-        LOGGER.info("{0}".format(now.strftime("%Y-%m-%d %H:%M:%S")))
+        LOGGER.info("Tick at {0}".format(now.strftime("%Y-%m-%d %H:%M:%S")))
 
         last_report = now.second
         reauthd_this_tick = False
@@ -96,7 +96,6 @@ def main(names=None, client=None):
             if entity_chunk.state in (
                 types.EntityChunkState.complete, types.EntityChunkState.spent
             ):
-                # LOGGER.info("{0} reports complete".format(entity_chunk))
                 continue  # NOQA
 
             # how many tasks pending in total
@@ -106,6 +105,10 @@ def main(names=None, client=None):
             if pending <= scrape_constants.PROCESSES:  # throttling
                 if entity_chunk.state == types.EntityChunkState.incomplete:
                     entity_chunk.start(pool)
+            else:
+                LOGGER.info(
+                    "Throttling {0.entity_name} ({0.offset_start}-{0.offset_end})".format(entity_chunk)
+                )
 
             for entity_page in entity_chunk.entity_pages:
                 entity_page.poll()  # updates the state of the EntityPage
@@ -145,7 +148,8 @@ def main(names=None, client=None):
                                 entity_page.entity_name
                             )
                         )
-                    except TypeError:  # don’t care
+                    except TypeError as exc:
+                        # happens when spent EntityPage doesn’t have any data
                         pass
                     # if there is no pending requests, stop requesting this
                     # entity (it’s spent)
@@ -190,4 +194,5 @@ def main(names=None, client=None):
             if not client:  # assume this is not a testing case
                 exit(1)
             return
+        LOGGER.info("{0}/{1} entity chunks report complete".format(len([x for x in done if x]), len(entity_chunks)))
         time.sleep(1)  # don’t spam
