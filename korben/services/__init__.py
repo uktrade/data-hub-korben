@@ -6,14 +6,15 @@ from . import db_manager
 
 redis_kwargs = {
     'host': config.redis_url.hostname,
-    'decode_responses': True,
 }
 
 for name in ('port', 'password'):
     value = getattr(config.redis_url, name)
     if value is not None:
         redis_kwargs[name] = value
-redis = Redis(**redis_kwargs)
+
+redis = Redis(decode_responses=True, **redis_kwargs)
+redis_bytes = Redis(**redis_kwargs)
 
 db = db_manager.DatabaseManager()
 

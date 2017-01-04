@@ -89,7 +89,7 @@ def get(request):
 @view_config(route_name='validate-credentials', request_method=['POST'], renderer='json')
 def validate_credentials(request):
     'Validate a set of CDMS credentials'
-    _, cdms_cookie_path = tempfile.mkstemp()
+    cdms_cookie_path = uuid.uuid4().hex
     try:
         json_data = request.json_body
         username = json_data.get('username')
@@ -106,6 +106,4 @@ def validate_credentials(request):
     except (ValueError, RequestException):
         SENTRY_CLIENT.captureException()
         return False
-    else:
-        os.remove(cdms_cookie_path)
     return True
