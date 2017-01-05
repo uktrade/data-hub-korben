@@ -11,6 +11,7 @@ from requests.exceptions import RequestException
 from korben import config
 from korben.etl import utils as etl_utils
 from . import common
+from . import status
 from korben.cdms_api.rest.api import CDMSRestApi
 from korben.cdms_api.rest.auth.active_directory import ActiveDirectoryAuth
 
