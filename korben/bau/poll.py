@@ -18,6 +18,8 @@ from korben.etl.spec import COLNAME_LONGSHORT, COLNAME_SHORTLONG
 from . import leeloo
 
 LOGGER = logging.getLogger('korben.sync.poll')
+HEARTBEAT = 'cdms-polling-heartbeat'
+HEARTBEAT_FREQ = 900
 
 
 def get_entry_list(resp):
@@ -153,6 +155,7 @@ def poll(client=None,
         reverse_scrape(
             client, table, against, comparitor, col_names, primary_key, 0
         )
+        services.redis.set(HEARTBEAT, 'bumbum', ex=HEARTBEAT_FREQ)
 
 
 def main():
