@@ -146,6 +146,7 @@ def poll(client=None,
     odata_metadata = services.db.get_odata_metadata()
     django_metadata = services.db.get_django_metadata()
 
+    print(odata_metadata.tables.keys())
     for table_name in entities or get_django_tables(django_metadata):
         table = odata_metadata.tables[table_name]
         col_names = [x.name for x in table.columns]
