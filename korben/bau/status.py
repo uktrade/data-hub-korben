@@ -1,6 +1,7 @@
 import sqlalchemy as sqla
 from pyramid.response import Response
 from pyramid.view import view_config
+from pyramid.security import NO_PERMISSION_REQUIRED
 
 from korben import services
 from korben.cdms_api.rest.api import CDMSRestApi
@@ -36,9 +37,12 @@ def cdms():
 
 
 def polling():
-    heartbeat = services.redis.get(HEARTBEAT)
-    if not heartbeat:  # that’s bad, right?
-        return False, 'Heartbeat was found to be missing'
+    try:
+        heartbeat = services.redis.get(HEARTBEAT)
+        if not heartbeat:  # that’s bad, right?
+            return False, 'Heartbeat was found to be missing'
+    except Exception as exc:
+        return False, str(exc)
     return True, None
 
 
@@ -52,8 +56,8 @@ PINGDOM_TEMPLATE = '''<?xml version="1.0" encoding="UTF-8"?>
 COMMENT_TEMPLATE = '<!--{0}-->\n'
 
 
-@view_config(route_name='status')
-def pingdom():
+@view_config(route_name='status', permission=NO_PERMISSION_REQUIRED)
+def pingdom(request):
     'Return some Pingdom formatted XML describing status of attached systems'
     failures = []
     for status_function in status_functions:

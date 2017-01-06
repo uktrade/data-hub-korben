@@ -13,17 +13,20 @@ from korben.services import db
 from . import auth
 from . import views
 
+DEFAULT_SETTINGS = {
+    'odata_metadata': lambda: db.get_odata_metadata(),
+    'django_metadata': lambda: db.get_django_metadata(),
+    'cdms_client': lambda: api.CDMSRestApi()
+}
 
 def get_app(overrides=None):
-    settings = {
-        'odata_metadata': db.get_odata_metadata(),
-        'django_metadata': db.get_django_metadata(),
-        'cdms_client': api.CDMSRestApi()
-    }
-    if overrides is not None:
-        settings.update(overrides)
+    if not overrides:
+        overrides = {}
+    for key in DEFAULT_SETTINGS:
+        if key not in overrides:
+            overrides[key] = DEFAULT_SETTINGS[key]()
 
-    app_cfg = Configurator(root_factory=auth.Root, settings=settings)
+    app_cfg = Configurator(root_factory=auth.Root, settings=overrides)
     app_cfg.set_authentication_policy(auth.AuthenticationPolicy())
     app_cfg.set_authorization_policy(ACLAuthorizationPolicy())
     app_cfg.set_default_permission('access')
