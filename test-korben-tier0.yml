@@ -15,7 +15,7 @@ services:
       - test-postgres
       - test-postgres-django
       - test-redis
-    command: py.test -vv --tb=short test/tier0/bau/test_pingdom.py
+    command: py.test -vv --tb=short test/tier0
   test-postgres:
     image: postgres:9.5
     environment:
