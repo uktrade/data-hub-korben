@@ -37,7 +37,6 @@ class DatabaseManager(metaclass=Singleton):
 
     def create_odata_tables(self, connection):
         'Create OData tables against passed connection'
-        print('create_odata_tables')
         this_dir = os.path.dirname(__file__)
         create_sql_path = os.path.join(this_dir, 'cdms-psql-create.sql')
         with open(create_sql_path, 'r') as create_sql_fh:
