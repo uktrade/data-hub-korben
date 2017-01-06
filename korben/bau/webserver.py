@@ -31,7 +31,7 @@ def get_app(overrides=None):
     app_cfg.add_route('update', '/update/{django_tablename}/')
     app_cfg.add_route('get', '/get/{django_tablename}/{ident}/')
     app_cfg.add_route('validate-credentials', '/auth/validate-credentials/')
-    app_cfg.add_route('status', '/status/pingdom/')
+    app_cfg.add_route('status', '/ping.xml')
     app_cfg.scan('korben.bau.views')
     app_cfg.scan('korben.bau.status')
     return app_cfg.make_wsgi_app()
