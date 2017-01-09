@@ -3,7 +3,7 @@ import pytest
 import sqlalchemy as sqla
 
 from korben.services import db
-from korben.bau.poll import poll
+from korben.bau import poll
 
 
 @pytest.mark.skipif(True, reason='Don’t control staging')
@@ -11,7 +11,8 @@ def test_poll(cdms_client, account_object):
     'Test poll picks up changes to newer objects'
     new_name = 'Magic account'
     # one poll call to get the newest 50
-    poll(cdms_client, entities=['AccountSet'])
+    poller = poll.CDMSPoller(client=cdms_client)
+    poller.poll_entities(['AccountSet'])
     # set up our query
     django_metadata = db.get_django_metadata()
     table = django_metadata.tables['company_company']
@@ -29,6 +30,6 @@ def test_poll(cdms_client, account_object):
     )
     assert update_resp.ok
     # the below poops rows into the django database
-    poll(cdms_client, entities=['AccountSet'])
+    poller.poll_entities(['AccountSet'])
     django_name_now = django_metadata.bind.execute(select_statement).scalar()
     assert django_name_now == new_name

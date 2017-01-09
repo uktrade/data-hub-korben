@@ -41,7 +41,7 @@ class CDMSPoller:
         self.django_metadata = services.db.get_django_metadata()
         self.conn = services.db.poll_for_connection(config.database_odata_url)
 
-    def pool_entities(self, entities=None):
+    def poll_entities(self, entities=None):
         entities = entities or self._get_django_tables()
 
         for table_name in entities:
@@ -161,17 +161,8 @@ class CDMSPoller:
         return rows
 
 
-def poll(client=None,
-         against='ModifiedOn',
-         comparitor=operator.lt,
-         entities=None):
-
-    pooler = CDMSPoller(client, against, comparitor)
-    pooler.pool_entities(entities)
-
-
 def main():
-    'Poll forever'
+    """Poll forever"""
     while True:
         pollable_entities = (
             'SystemUserSet',
@@ -179,4 +170,5 @@ def main():
             'ContactSet',
             'detica_interactionSet',
         )
-        poll(entities=pollable_entities)
+        poller = CDMSPoller()
+        poller.poll_entities(pollable_entities)
