@@ -11,12 +11,14 @@ def test_local_status_functions(status_function):
 
 
 def test_polling_status(tier0, odata_test_service):
-    poll.poll(odata_test_service, against='Name')  # set polling heartbeat
+    poller = poll.CDMSPoller(client=odata_test_service, against='Name')
+    poller.poll_entities()
     assert polling() == (True, None)
 
 
 def test_update_category(monkeypatch, tier0, odata_test_service, test_app):
-    poll.poll(odata_test_service, against='Name')  # set polling heartbeat
+    poller = poll.CDMSPoller(client=odata_test_service, against='Name')
+    poller.poll_entities()
     response = test_app.get('/ping.xml', status=500)
     expected_body = '''\
 <?xml version="1.0" encoding="UTF-8"?>

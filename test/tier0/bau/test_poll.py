@@ -13,8 +13,8 @@ def category_object(tier0, tier0_postinitial, odata_test_service):
 
 def test_poll_create(odata_test_service, odata_fetchall, category_object):
     'Create an object in the service and check a call to `poll` is reflective'
-    poller = poll.CDMSPoller(against='Name')
-    poller.poll_entities(odata_test_service)
+    poller = poll.CDMSPoller(client=odata_test_service, against='Name')
+    poller.poll_entities()
     result = odata_fetchall(
         'SELECT "Name" FROM "Categories" WHERE "ID"={0}'.format(
             category_object['ID']
@@ -30,8 +30,8 @@ def test_poll_update(odata_test_service, odata_fetchall, category_object):
         'Categories', False, category_object['ID'], update_dict,
     )
     assert resp.status_code == 200
-    poller = poll.CDMSPoller(against='Name')
-    poller.poll_entities(odata_test_service)
+    poller = poll.CDMSPoller(client=odata_test_service, against='Name')
+    poller.poll_entities()
     result = odata_fetchall(
         'SELECT "Name" FROM "Categories" WHERE "ID"={0}'.format(
             category_object['ID']
