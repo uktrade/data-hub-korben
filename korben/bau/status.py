@@ -70,6 +70,7 @@ def pingdom(request):
             )
     status_code, status_msg = (500, 'FALSE') if any(failures) else (200, 'OK')
     body = PINGDOM_TEMPLATE.format(status_msg)
+    print(failures)
     for message in failures:
         body += COMMENT_TEMPLATE.format(message)
     response_kwargs = {
