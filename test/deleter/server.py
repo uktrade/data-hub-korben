@@ -22,6 +22,7 @@ def json_exc_view(exc, _):
         'status_code': 500,
         'body': json.dumps({'message': str(exc)}),
         'content_type': 'application/json',
+        'charset': 'utf-8',
     }
     return Response(**kwargs)
 
@@ -34,6 +35,7 @@ def json_http_exc_view(exc, _):
         'status_code': exc.status_code,
         'body': json.dumps({'message': exc.message}),
         'content_type': 'application/json',
+        'charset': 'utf-8',
     }
     return Response(**kwargs)
 

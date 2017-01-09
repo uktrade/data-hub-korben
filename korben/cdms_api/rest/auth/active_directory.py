@@ -7,9 +7,7 @@ from pyquery import PyQuery
 
 from korben.cdms_api.cookie_storage import CookieStorage
 from korben.cdms_api.exceptions import (
-    CDMSNotFoundException,
     CDMSUnauthorizedException,
-    ErrorResponseException,
     LoginErrorException,
     UnexpectedResponseException,
 )
@@ -30,8 +28,17 @@ class ActiveDirectoryAuth:
     many of them are mocked and this does not prove that auth works with API.
     """
 
-    def __init__(self):
-        self.cookie_storage = CookieStorage()
+    username = None
+    password = None
+    cookie_path = None
+    login_repetitions = 0
+    login_max_attempts = 10
+
+    def __init__(self, username=None, password=None, cookie_path=None):
+        self.username = username or config.cdms_username
+        self.password = password or config.cdms_password
+        self.cookie_path = cookie_path or config.cdms_cookie_path
+        self.cookie_storage = CookieStorage(self.cookie_path)
         self.setup_session()
 
     def setup_session(self, force=False):
@@ -78,16 +85,24 @@ class ActiveDirectoryAuth:
             )
 
         html_parser = PyQuery(resp.content)
-        username_field_name = html_parser('input[name*=Username]')[0].name
-        password_field_name = html_parser('input[name*=Password]')[0].name
+        try:
+            username_field_name = html_parser('input[name*=Username]')[0].name
+            password_field_name = html_parser('input[name*=Password]')[0].name
+        except IndexError as exc:
+            # CDMS produced an unexpected HTML markup, we try again for 10 times
+            if self.login_repetitions < self.login_max_attempts:
+                self.login_repetitions += 1
+                return self.login()
+            else:
+                raise exc
 
         # 2. submit the login form with username and password
         resp = self._submit_form(
             session, resp.content,
             url=resp.url,
             params={
-                username_field_name: config.cdms_username,
-                password_field_name: config.cdms_password,
+                username_field_name: self.username,
+                password_field_name: self.password,
             }
         )
 

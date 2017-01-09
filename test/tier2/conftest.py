@@ -4,6 +4,12 @@ from korben import config
 from korben.etl import transform
 from korben.cdms_api.rest.api import CDMSRestApi
 
+
+def call_zorg(entity_type, guid):
+    # queue a cdms object for deletion
+    raise NotImplementedError()
+
+
 @pytest.fixture(scope='session')
 def cdms_client():
     'Placeholder for disconnect management and stuff?'

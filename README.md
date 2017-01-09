@@ -11,18 +11,25 @@ This directory contains application code for a service offering two-way CDMS
 sync. It also contains code for loading CDMS and CH data into an Elastic Search
 index.
 
-There is code forming an ETL “pipeline” for getting data to a database with a
-schema that we control and a client library for “reverse ETL” allowing Django
-objects to be written back to CDMS.
+# Initial
 
-# [Sync](korben/sync)
-Pull data from CDMS, service to poll CDMS for new data, relation traversal for
-loading object dependencies. Make appropriate calls to ETL with fresh data.
+Run the following commands from the Korben container to get the system
+populated with initial dataset:
+``` bash
+# Download everything we can from Dynamics instance
+# and dump into OData database
+korben sync scrape
 
-# [ETL](korben/etl)
-Map data from CDMS and CH schemata to our schema, populate/update Django
-database and ElasticSearch index.
+# Download Companies House data, transform and insert
+# into Django database
+korben sync ch
 
-# [Client](korben/client)
-Provide CRUD functions which talk about Django model objects, but handle
-individual CDMS sync operations “behind the scenes”.
+# Transform relevant contents of OData database
+# and insert into Django database
+korben sync django
+
+# Dump entire contents of Django database into ElasticSearch index
+korben sync es
+```
+
+# BAU

@@ -31,7 +31,13 @@ class SigningTestApp(TestApp):
                 bytes(path, 'utf-8'), bytes(json.dumps(data), 'utf-8')
             )
         )
-        return super().post_json(path, data, headers=headers, **kwargs)
+        return super().post_json(
+            path,
+            data,
+            headers=headers,
+            content_type='application/json; charset=utf-8',
+            **kwargs
+        )
 
 
 @pytest.fixture

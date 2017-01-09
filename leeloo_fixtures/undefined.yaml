@@ -12,7 +12,6 @@
     dit_team: 0167b456-0ddd-49bd-8184-e3227a0b6396,
   }
 
-
 - model: metadata.businesstype
   pk: 0167b456-0ddd-49bd-8184-e3227a0b6396
   fields: {name: Undefined}
@@ -62,7 +61,6 @@
     primary: True,
     first_name: Undefined,
     last_name: Undefined,
-    role: 0167b456-0ddd-49bd-8184-e3227a0b6396,
     company: 0167b456-0ddd-49bd-8184-e3227a0b6396,
     address_country: 0167b456-0ddd-49bd-8184-e3227a0b6396,
   }

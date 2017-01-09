@@ -1,5 +1,7 @@
 import json
 import logging
+import os
+import tempfile
 
 from pyramid import httpexceptions as http_exc
 from pyramid.response import Response
@@ -9,7 +11,9 @@ from requests.exceptions import RequestException
 from korben import config
 from korben.etl import utils as etl_utils
 from . import common
+from . import status
 from korben.cdms_api.rest.api import CDMSRestApi
+from korben.cdms_api.rest.auth.active_directory import ActiveDirectoryAuth
 
 from raven import Client
 
@@ -18,16 +22,19 @@ LOGGER = logging.getLogger('korben.bau.views')
 
 
 def fmt_guid(ident):
+    'Format some string as a Dynamics GUID'
     return "guid'{0}'".format(ident)
 
 
 @view_config(context=Exception)
 def json_exc_view(exc, _):
+    'Generic view to log and return exceptions'
     SENTRY_CLIENT.captureException()
     kwargs = {
         'status_code': 500,
         'body': json.dumps({'message': str(exc)}),
         'content_type': 'application/json',
+        'charset': 'utf-8',
     }
     return Response(**kwargs)
 
@@ -40,6 +47,7 @@ def json_http_exc_view(exc, _):
         'status_code': exc.status_code,
         'body': json.dumps({'message': exc.message}),
         'content_type': 'application/json',
+        'charset': 'utf-8',
     }
     return Response(**kwargs)
 
@@ -72,7 +80,7 @@ def update(request):
 @view_config(route_name='get', request_method=['POST'], renderer='json')
 def get(request):
     'Get an OData entity'
-    django_tablename, odata_tablename = common.request_tablenames(request)
+    _, odata_tablename = common.request_tablenames(request)
     ident = request.matchdict['ident']
     cdms_client = request.registry.settings['cdms_client']
     response = cdms_client.get(odata_tablename, fmt_guid(ident))
@@ -81,20 +89,24 @@ def get(request):
 
 @view_config(route_name='validate-credentials', request_method=['POST'], renderer='json')
 def validate_credentials(request):
+    'Validate a set of CDMS credentials'
+    _, cdms_cookie_path = tempfile.mkstemp()
     try:
         json_data = request.json_body
         username = json_data.get('username')
         password = json_data.get('password')
 
         if not (username and password):
-            SENTRY_CLIENT.captureMessage('Missing credentials from validate-credentials request body')
+            SENTRY_CLIENT.captureMessage(
+                'Missing credentials from validate-credentials request body'
+            )
             return False
-
-        with config.temporarily(cdms_username=username, cdms_password=password):
-            api_client = CDMSRestApi()
-            api_client.auth.login()
+        auth = ActiveDirectoryAuth(username, password, cdms_cookie_path)
+        api_client = CDMSRestApi(auth)
+        api_client.auth.login()
     except (ValueError, RequestException):
         SENTRY_CLIENT.captureException()
         return False
-
+    else:
+        os.remove(cdms_cookie_path)
     return True

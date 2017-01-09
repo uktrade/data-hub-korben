@@ -115,21 +115,23 @@ MAPPINGS.update({
             ('BusinessUnitId', (('Id', 'dit_team_id'),),),
         ),
         'defaults': (
-            ('email', lambda: FAKE_EMAIL),
-
             # django user model -_-
             ('password', lambda: uuid.uuid4().hex),
             ('is_superuser', lambda: False),
-            ('username', lambda: uuid.uuid4().hex),
             ('is_staff', lambda: False),
-            ('is_active', lambda: False),
+            ('is_active', lambda: True),
             ('date_joined', lambda: datetime.now().isoformat()),
+        ),
+        'empty_strings': (
+            'first_name',
+            'last_name',
         ),
     },
     'ContactSet': {
         'to': 'company_contact',
         'local': (
             ('ContactId', 'id'),
+            ('JobTitle', 'job_title'),
             ('LastName', 'last_name'),
             ('optevia_PrimaryContact', 'primary'),
             ('optevia_CountryCode', 'telephone_countrycode'),
@@ -153,7 +155,6 @@ MAPPINGS.update({
         'nonflat': (
             ('ParentCustomerId', (('Id', 'company_id'),),),
             ('optevia_Country', (('Id', 'address_country_id'),),),
-            ('optevia_ContactRole', (('Id', 'role_id'),),),
             ('optevia_Title', (('Id', 'title_id'),),),
         ),
         'nonflat_defaults': (
@@ -161,7 +162,6 @@ MAPPINGS.update({
         ),
         'use_undefined': (
             'title_id',
-            'role_id',
             'company_id',
         ),
         'empty_strings': (

@@ -7,6 +7,7 @@ import functools
 import json
 import operator
 import logging
+from json import JSONDecodeError
 
 import sqlalchemy as sqla
 
@@ -17,6 +18,8 @@ from korben.etl.spec import COLNAME_LONGSHORT, COLNAME_SHORTLONG
 from . import leeloo
 
 LOGGER = logging.getLogger('korben.sync.poll')
+HEARTBEAT = 'cdms-polling-heartbeat'
+HEARTBEAT_FREQ = 900
 
 
 def get_entry_list(resp):
@@ -53,6 +56,7 @@ class CDMSPoller:
             LOGGER.info('Starting reverse scrape for %s', table.name)
 
             self.reverse_scrape(table, col_names, primary_key)
+            services.redis.set(HEARTBEAT, 'bumbum', ex=HEARTBEAT_FREQ)
 
     def reverse_scrape(self, table, col_names, primary_key):
         new_rows = updated_rows = offset = 0

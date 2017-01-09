@@ -39,6 +39,7 @@ def odata_to_django(odata_tablename, response):
             'status_code': response.status_code,
             'body': json.dumps(response.json()),
             'content_type': 'application/json',
+            'charset': 'utf-8',
         }
         return Response(**kwargs)
     return transform.odata_to_django(odata_tablename, response.json()['d'])
