@@ -55,3 +55,4 @@ SUPPORTED_CSV_FIELDNAMES = (  # ask @ztolley
     'previous_name_10_change_of_name_date',
     'previous_name_10_company_name'
 )
+CH_FLAG = 'flags/ch-sync'

@@ -38,6 +38,7 @@ CH_FIELDS = (
 
 UNITED_KINGDOM_COUNTRY_ID = '80756b9a-5d95-e211-a939-e4115bead28a'
 
+
 def ch_date(row, column):
     try:
         day, month, year = row[column].split('/')
@@ -59,6 +60,7 @@ def csv_chcompany(row):
 
     return ch_company
 
+
 def insert_or_report(execute_fn, table, rows):
     try:
         execute_fn(insert(table).values(rows))
@@ -72,7 +74,8 @@ def insert_or_report(execute_fn, table, rows):
         len(rows)
     )
 
-def main():
+
+def sync():
     csv_paths = download.extract(download.zips(download.filenames()))
     metadata = services.db.get_django_metadata()
     ch_company_table = metadata.tables['company_companieshousecompany']
@@ -108,3 +111,12 @@ def main():
     LOGGER.info("{0.seconds}.{0.microseconds} overall".format(
         datetime.datetime.now() - start_all
     ))
+
+def main():
+    one_month = 2629744
+    one_day = 86400
+    while True:
+        if not services.redis.get(constants.CH_FLAG):
+            sync()
+            services.redis.set(constants.CH_FLAG, '1', ex=one_month)
+        sleep(one_day)
