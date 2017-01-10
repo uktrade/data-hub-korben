@@ -131,7 +131,7 @@ def main():
     linked_companies = frozenset([x.company_number for x in result])
     table = django_metadata.tables[name]
     chunks = utils.select_chunks(
-        django_metadata.bind.execute, table, joined_select(table)
+        django_metadata.bind.execute, table, joined_select(table), 50000
     )
     for rows in chunks:
         filtered_rows = [
