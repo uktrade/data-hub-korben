@@ -122,7 +122,7 @@ def main():
 
     # do ch company logic
     name = 'company_companieshousecompany'
-    ch_chunksize = 50000
+    ch_chunksize = 10000
     company_table = django_metadata.tables['company_company']
     LOGGER.info('Indexing from django database for %s', name)
     result = django_metadata.bind.execute(
