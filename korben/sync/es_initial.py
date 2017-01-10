@@ -122,6 +122,7 @@ def main():
 
     # do ch company logic
     name = 'company_companieshousecompany'
+    ch_chunksize = 50000
     company_table = django_metadata.tables['company_company']
     LOGGER.info('Indexing from django database for %s', name)
     result = django_metadata.bind.execute(
@@ -131,7 +132,7 @@ def main():
     linked_companies = frozenset([x.company_number for x in result])
     table = django_metadata.tables[name]
     chunks = utils.select_chunks(
-        django_metadata.bind.execute, table, joined_select(table), 50000
+        django_metadata.bind.execute, table, joined_select(table), ch_chunksize
     )
     for rows in chunks:
         filtered_rows = [
@@ -145,7 +146,7 @@ def main():
             client=services.es,
             actions=actions,
             stats_only=True,
-            chunk_size=10,
+            chunk_size=ch_chunksize,
             request_timeout=300,
             raise_on_error=True,
             raise_on_exception=True,
