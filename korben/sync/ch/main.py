@@ -119,4 +119,4 @@ def main():
         if not services.redis.get(constants.CH_FLAG):
             sync()
             services.redis.set(constants.CH_FLAG, '1', ex=one_month)
-        sleep(one_day)
+        time.sleep(one_day)
