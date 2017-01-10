@@ -1,3 +1,4 @@
+import io
 import datetime
 import os
 import csv
@@ -83,25 +84,25 @@ def main():
         LOGGER.info("Starting {0}".format(csv_path))
         start_csv = datetime.datetime.now()
         csv_rows = []
-        with open(csv_path, 'r') as csv_fh:
-            reader = csv.DictReader(
-                csv_fh, fieldnames=constants.SUPPORTED_CSV_FIELDNAMES
-            )
-            start_chunk = datetime.datetime.now()
-            for index, row in enumerate(reader):
-                if index == 0:
-                    continue  # skip 0th row, since we’re using our own names
-                csv_rows.append(csv_chcompany(row))
-                if index % 1000 == 0:  # periodically puke rows into the db
-                    insert_or_report(
-                        metadata.bind.execute, ch_company_table, csv_rows
-                    )
-                    csv_rows = []
-                    LOGGER.debug(chunk_log_fmt.format(
-                        datetime.datetime.now() - start_chunk, csv_path, index
-                    ))
-                    start_chunk = datetime.datetime.now()
-            insert_or_report(metadata.bind.execute, ch_company_table, csv_rows)
+        csv_fh = io.BytesIO(redis_bytes.get(csv_path))
+        reader = csv.DictReader(
+            csv_fh, fieldnames=constants.SUPPORTED_CSV_FIELDNAMES
+        )
+        start_chunk = datetime.datetime.now()
+        for index, row in enumerate(reader):
+            if index == 0:
+                continue  # skip 0th row, since we’re using our own names
+            csv_rows.append(csv_chcompany(row))
+            if index % 1000 == 0:  # periodically puke rows into the db
+                insert_or_report(
+                    metadata.bind.execute, ch_company_table, csv_rows
+                )
+                csv_rows = []
+                LOGGER.debug(chunk_log_fmt.format(
+                    datetime.datetime.now() - start_chunk, csv_path, index
+                ))
+                start_chunk = datetime.datetime.now()
+        insert_or_report(metadata.bind.execute, ch_company_table, csv_rows)
         LOGGER.info("{0.seconds}.{0.microseconds} for {1}".format(
             datetime.datetime.now() - start_csv, csv_path
         ))

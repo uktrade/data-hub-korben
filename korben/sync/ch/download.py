@@ -6,6 +6,7 @@ import zipfile
 from lxml import etree
 import requests
 
+from korben.services import redis_bytes
 from . import constants
 from .. import utils as sync_utils
 
@@ -34,8 +35,7 @@ def zips(names):
             continue
         zip_url = "{0.scheme}://{0.hostname}/{1}".format(base_url, name)
         zip_resp = requests.get(zip_url)
-        with open(cache_path, 'wb') as zip_fh:
-            zip_fh.write(zip_resp.content)
+        redis_bytes.set(cache_path, zip_resp.content)
         retval.append(cache_path)
     return retval
 
@@ -44,15 +44,17 @@ def extract(zip_paths):
     'Extract first file from each of the passed paths (to zip files)'
     csv_paths = []
     for zip_path in zip_paths:
-        with zipfile.ZipFile(zip_path) as zf_cache_check:
+        downloaded_file = io.BytesIO(redis_bytes.get(zip_path))
+        with zipfile.ZipFile(downloaded_file) as zf_cache_check:
             name = zf_cache_check.filelist[0].filename
-        cache_path = sync_utils.file_leaf(
+        csv_path = sync_utils.file_leaf(
             constants.CACHE_PATH, 'ch', 'csv', name
         )
-        if os.path.isfile(cache_path):  # assume that if it exists all is well
-            csv_paths.append(cache_path)
+        if redis_bytes.get(csv_path):  # assume that if it exists all is well
+            csv_paths.append(csv_path)
             continue
-        with zipfile.ZipFile(zip_path) as zf_extract:
-            zf_extract.extract(name, os.path.dirname(cache_path))
-            csv_paths.append(cache_path)
+        with zipfile.ZipFile(downloaded_file) as zf_extract:
+            file_bytes = zf_extract.read(name)
+            redis_bytes.set(csv_path, file_bytes)
+            csv_paths.append(csv_path)
     return csv_paths
