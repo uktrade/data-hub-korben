@@ -3,6 +3,7 @@ import os
 import csv
 import logging
 import tempfile
+import time
 
 import sqlalchemy as sqla
 from sqlalchemy.dialects.postgresql import insert
