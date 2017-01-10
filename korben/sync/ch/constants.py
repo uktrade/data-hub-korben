@@ -1,5 +1,5 @@
 DOWNLOAD_URL = 'http://download.companieshouse.gov.uk/en_output.html'
-CACHE_PATH = 'cache'  # TODO: find out where this type of thing should live
+CACHE_PATH = '/dev/cache'  # TODO: find out where this type of thing should live
 SUPPORTED_CSV_FIELDNAMES = (  # ask @ztolley
     'name',
     'company_number',
