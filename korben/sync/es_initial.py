@@ -17,7 +17,7 @@ class ESFilter(logging.Filter):
         return 'elasticsearch' not in record.name
 
 logging.getLogger().addFilter(ESFilter())
-LOGGER = logging.getLogger('korben.sync.es_initital')
+LOGGER = logging.getLogger('korben.sync.es_initial')
 
 
 def row_es_add(table, es_id_col, row):
@@ -105,7 +105,7 @@ def main():
         LOGGER.info('Indexing from django database for %s', name)
         table = django_metadata.tables[name]
         chunks = utils.select_chunks(
-            django_metadata.bind.execute, table, joined_select(table)
+            django_metadata.bind.execute, table, joined_select(table), 10000
         )
         for rows in chunks:
             actions = list(map(functools.partial(row_es_add, table, 'id'), rows))
