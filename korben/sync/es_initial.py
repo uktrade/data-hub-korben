@@ -101,6 +101,7 @@ def main():
     'Send the contents of the django database to es'
     django_metadata = services.db.get_django_metadata()
     setup_indices()
+    '''
     for name in constants.INDEXED_ES_TYPES:
         LOGGER.info('Indexing from django database for %s', name)
         table = django_metadata.tables[name]
@@ -117,6 +118,7 @@ def main():
                 request_timeout=300,
             )
             assert error_count is 0
+    '''
 
     # do ch company logic
     name = 'company_companieshousecompany'
