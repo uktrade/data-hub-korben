@@ -1,6 +1,7 @@
 import json
 import logging
 import os
+import uuid
 import tempfile
 
 from pyramid import httpexceptions as http_exc
