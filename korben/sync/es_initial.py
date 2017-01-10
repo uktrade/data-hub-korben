@@ -99,6 +99,7 @@ def joined_select(table):
 
 def main():
     'Send the contents of the django database to es'
+    local_chunksize = 10000
     django_metadata = services.db.get_django_metadata()
     setup_indices()
     '''
@@ -106,7 +107,8 @@ def main():
         LOGGER.info('Indexing from django database for %s', name)
         table = django_metadata.tables[name]
         chunks = utils.select_chunks(
-            django_metadata.bind.execute, table, joined_select(table), 10000
+            django_metadata.bind.execute, table,
+            joined_select(table), local_chunksize
         )
         for rows in chunks:
             actions = list(map(functools.partial(row_es_add, table, 'id'), rows))
@@ -122,7 +124,6 @@ def main():
 
     # do ch company logic
     name = 'company_companieshousecompany'
-    ch_chunksize = 10000
     company_table = django_metadata.tables['company_company']
     LOGGER.info('Indexing from django database for %s', name)
     result = django_metadata.bind.execute(
@@ -132,23 +133,28 @@ def main():
     linked_companies = frozenset([x.company_number for x in result])
     table = django_metadata.tables[name]
     chunks = utils.select_chunks(
-        django_metadata.bind.execute, table, joined_select(table), ch_chunksize
+        django_metadata.bind.execute, table, joined_select(table), local_chunksize
     )
     for rows in chunks:
+        print(0)
         filtered_rows = [
             row for row in rows if row.company_number not in linked_companies
         ]
+        print(1)
         actions = list(map(
             functools.partial(row_es_add, table, 'company_number'),
             filtered_rows
         ))
+        print(2)
         _, error_count = elasticsearch.helpers.bulk(
             client=services.es,
             actions=actions,
             stats_only=True,
-            chunk_size=ch_chunksize,
+            chunk_size=local_chunksize,
             request_timeout=300,
             raise_on_error=True,
             raise_on_exception=True,
         )
+        print(3)
         assert error_count is 0
+        print(4)
