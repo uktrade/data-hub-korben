@@ -1,4 +1,5 @@
 # TODO: Use click to formalise, add generic opts etc
+import logging
 import types
 import sys
 from . import sync, etl, bau
@@ -7,6 +8,7 @@ MODULES = {
     'sync': sync,
     'bau': bau,
 }
+LOGGER = logging.getLogger('korben.cli')
 
 
 def print_modules():
@@ -57,4 +59,9 @@ def main():
             return exit(1)
 
     assert isinstance(func, types.FunctionType)
-    return func(*sys.argv[3:])
+    try:
+        return func(*sys.argv[3:])
+    except Exception as exc:
+        LOGGER.error("Command failed")
+        LOGGER.error(exc)
+        raise
