@@ -99,10 +99,9 @@ def joined_select(table):
 
 def main():
     'Send the contents of the django database to es'
-    local_chunksize = 10000
+    local_chunksize = 50000
     django_metadata = services.db.get_django_metadata()
     setup_indices()
-    '''
     for name in constants.INDEXED_ES_TYPES:
         LOGGER.info('Indexing from django database for %s', name)
         table = django_metadata.tables[name]
@@ -120,7 +119,6 @@ def main():
                 request_timeout=300,
             )
             assert error_count is 0
-    '''
 
     # do ch company logic
     name = 'company_companieshousecompany'
@@ -136,16 +134,13 @@ def main():
         django_metadata.bind.execute, table, joined_select(table), local_chunksize
     )
     for rows in chunks:
-        print(0)
         filtered_rows = [
             row for row in rows if row.company_number not in linked_companies
         ]
-        print(1)
         actions = list(map(
             functools.partial(row_es_add, table, 'company_number'),
             filtered_rows
         ))
-        print(2)
         _, error_count = elasticsearch.helpers.bulk(
             client=services.es,
             actions=actions,
@@ -155,6 +150,4 @@ def main():
             raise_on_error=True,
             raise_on_exception=True,
         )
-        print(3)
         assert error_count is 0
-        print(4)
