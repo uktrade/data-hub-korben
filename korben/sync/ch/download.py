@@ -27,16 +27,16 @@ def zips(names):
     base_url = urllib.parse.urlparse(constants.DOWNLOAD_URL)
     retval = []
     for name in names:
-        cache_path = sync_utils.file_leaf(
+        zip_path = sync_utils.file_leaf(
             constants.CACHE_PATH, 'ch', 'zip', name
         )
-        if zipfile.is_zipfile(cache_path):
-            retval.append(cache_path)
+        if redis_bytes.get(zip_path):
+            retval.append(zip_path)
             continue
         zip_url = "{0.scheme}://{0.hostname}/{1}".format(base_url, name)
         zip_resp = requests.get(zip_url)
-        redis_bytes.set(cache_path, zip_resp.content)
-        retval.append(cache_path)
+        redis_bytes.set(zip_path, zip_resp.content)
+        retval.append(zip_path)
     return retval
 
 

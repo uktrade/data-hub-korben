@@ -84,7 +84,7 @@ def main():
         LOGGER.info("Starting {0}".format(csv_path))
         start_csv = datetime.datetime.now()
         csv_rows = []
-        csv_fh = io.BytesIO(redis_bytes.get(csv_path))
+        csv_fh = io.StringIO(services.redis.get(csv_path))
         reader = csv.DictReader(
             csv_fh, fieldnames=constants.SUPPORTED_CSV_FIELDNAMES
         )
