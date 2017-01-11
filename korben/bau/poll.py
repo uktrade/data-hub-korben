@@ -2,12 +2,13 @@
 Do some rough “polling” for entities that have a "ModifiedOn" column, this code
 operates under the assumption that there is a fully populated local database.
 '''
+from json import JSONDecodeError
 import datetime
 import functools
 import json
-import operator
 import logging
-from json import JSONDecodeError
+import operator
+import time
 
 import sqlalchemy as sqla
 
@@ -156,6 +157,7 @@ def poll(client=None,
             client, table, against, comparitor, col_names, primary_key, 0
         )
         services.redis.set(HEARTBEAT, 'bumbum', ex=HEARTBEAT_FREQ)
+        time.sleep(5)
 
 
 def main():
