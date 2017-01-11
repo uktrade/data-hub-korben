@@ -13,6 +13,10 @@ from korben.services import db
 from . import auth
 from . import views
 
+
+WSGI_APP = None
+
+
 DEFAULT_SETTINGS = {
     'odata_metadata': lambda: db.get_odata_metadata(),
     'django_metadata': lambda: db.get_django_metadata(),
@@ -39,7 +43,13 @@ def get_app(overrides=None):
     return app_cfg.make_wsgi_app()
 
 
-wsgi_app = get_app()
+def wsgi_app(environ, start_request):
+    """Wrapper for WSGI app with delayed instantiation"""
+    global WSGI_APP
+    if WSGI_APP is None:
+        WSGI_APP = get_app()
+
+    return WSGI_APP(environ, start_request)
 
 
 def start():
