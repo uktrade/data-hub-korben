@@ -1,4 +1,4 @@
-web: korben bau
+web: gunicorn -w 5 -b 0.0.0.0:8080 korben.bau.webserver:get_app
 worker: korben bau poll
 sync_cdms: ./scrape-forever.sh
 sync_ch: korben sync ch
