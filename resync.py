@@ -7,6 +7,7 @@ from korben.sync.utils import select_chunks
 
 
 def sync(odata_tablename, odata_pkey, django_tablename, failure_fmt):
+    print("{0} -> {1}".format(odata_tablename, django_tablename))
     odata_metadata = services.db.get_odata_metadata()
     odata_table = odata_metadata.tables[odata_tablename]
     django_metadata = services.db.get_django_metadata()
@@ -54,7 +55,7 @@ def main():
         (
             'ContactSet',
             'ContactId',
-            'company_contanct',
+            'company_contact',
             'contact-failures/{0}'
         ),
         (
