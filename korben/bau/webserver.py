@@ -1,3 +1,5 @@
+import os
+
 from pyramid import httpexceptions as http_exc
 from pyramid.authentication import RemoteUserAuthenticationPolicy, BasicAuthAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
@@ -14,14 +16,12 @@ from . import auth
 from . import views
 
 
-WSGI_APP = None
-
-
 DEFAULT_SETTINGS = {
     'odata_metadata': lambda: db.get_odata_metadata(),
     'django_metadata': lambda: db.get_django_metadata(),
     'cdms_client': lambda: api.CDMSRestApi()
 }
+
 
 def get_app(overrides=None):
     if not overrides:
@@ -43,13 +43,8 @@ def get_app(overrides=None):
     return app_cfg.make_wsgi_app()
 
 
-def wsgi_app(environ, start_request):
-    """Wrapper for WSGI app with delayed instantiation"""
-    global WSGI_APP
-    if WSGI_APP is None:
-        WSGI_APP = get_app()
-
-    return WSGI_APP(environ, start_request)
+if not os.environ.get('UNIT_TESTS'):
+    wsgi_app = get_app()
 
 
 def start():

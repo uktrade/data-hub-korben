@@ -9,6 +9,7 @@ services:
       DATAHUB_SECRET: abc
       KORBEN_SENTRY_DSN: http://abc:xyz@etc.com/etc/123
       REDIS_URL: tcp://test-redis
+      UNIT_TESTS: yes
     build:
       context: .
     links:
