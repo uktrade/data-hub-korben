@@ -40,6 +40,9 @@ def get_app(overrides=None):
     return app_cfg.make_wsgi_app()
 
 
+wsgi_app = get_app()
+
+
 def start():
     server = make_server('0.0.0.0', 8080, get_app())
     server.serve_forever()
