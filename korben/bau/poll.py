@@ -159,7 +159,7 @@ def poll(client=None,
             client, table, against, comparitor, col_names, primary_key, 0
         )
         services.redis.set(HEARTBEAT, 'bumbum', ex=HEARTBEAT_FREQ)
-        time.sleep(SLEEP_TIME)
+        time.sleep(POLL_SLEEP)
 
 
 def main():
