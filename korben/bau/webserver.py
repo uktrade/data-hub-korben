@@ -1,3 +1,5 @@
+import os
+
 from pyramid import httpexceptions as http_exc
 from pyramid.authentication import RemoteUserAuthenticationPolicy, BasicAuthAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
@@ -13,11 +15,13 @@ from korben.services import db
 from . import auth
 from . import views
 
+
 DEFAULT_SETTINGS = {
     'odata_metadata': lambda: db.get_odata_metadata(),
     'django_metadata': lambda: db.get_django_metadata(),
     'cdms_client': lambda: api.CDMSRestApi()
 }
+
 
 def get_app(overrides=None):
     if not overrides:
@@ -35,9 +39,12 @@ def get_app(overrides=None):
     app_cfg.add_route('get', '/get/{django_tablename}/{ident}/')
     app_cfg.add_route('validate-credentials', '/auth/validate-credentials/')
     app_cfg.add_route('status', '/ping.xml')
-    app_cfg.scan('korben.bau.views')
-    app_cfg.scan('korben.bau.status')
+    app_cfg.scan()
     return app_cfg.make_wsgi_app()
+
+
+if not os.environ.get('UNIT_TESTS'):
+    wsgi_app = get_app()
 
 
 def start():

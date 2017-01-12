@@ -11,8 +11,13 @@ from korben import etl
 from . import constants
 from . import utils
 
+class ESFilter(logging.Filter):
+    'Filter out spamming ES logging'
+    def filter(self, record):
+        return 'elasticsearch' not in record.name
 
-LOGGER = logging.getLogger('korben.sync.es_initital')
+logging.getLogger().addFilter(ESFilter())
+LOGGER = logging.getLogger('korben.sync.es_initial')
 
 
 def row_es_add(table, es_id_col, row):
@@ -26,11 +31,12 @@ def row_es_add(table, es_id_col, row):
     }
 
 
-def setup_index():
+def setup_indices():
     '''
     Assume that if the index exists it is complete, otherwise create it and
     populate with mappings
     '''
+    LOGGER.info('Setting up indices')
     indices_client = elasticsearch.client.IndicesClient(client=services.es)
     if not indices_client.exists(etl.spec.ES_INDEX):
         indices_client.create(index=etl.spec.ES_INDEX)
@@ -53,12 +59,18 @@ def get_remote_name_select(cols):
             sqla_func.coalesce(getattr(cols, 'last_name'), '')
         )
 
+
 def joined_select(table):
+    '''
+    Return a select statement for a table that joins on all fkeys, grabbing a
+    name column for the remote table.
+    '''
     fkey_data_cols = []
     joined = table
     # knock together the joins in a general, if rather assumptive manner
     joined_tables = set()
-    for col in filter(lambda col: bool(col.foreign_keys), table.columns):
+    fkey_cols = [col for col in table.columns if bool(col.foreign_keys)]
+    for col in fkey_cols:
         fkey = next(iter(col.foreign_keys))  # assume fkeys
                                              # are non-composite
         # don’t try to join twice
@@ -81,22 +93,25 @@ def joined_select(table):
             )
         else:
             fkey_data_cols.append(remote_name_select.label(local_name))
-    cols = list(filter(lambda col: not bool(col.foreign_keys), table.columns))
+    cols = [col for col in table.columns if not bool(col.foreign_keys)]
     return sqla.select(cols + fkey_data_cols, from_obj=joined)
 
 
 def main():
+    'Send the contents of the django database to es'
+    local_chunksize = 50000
     django_metadata = services.db.get_django_metadata()
-    setup_index()
+    setup_indices()
     for name in constants.INDEXED_ES_TYPES:
-        LOGGER.info("Indexing from django database for {0}".format(name))
+        LOGGER.info('Indexing from django database for %s', name)
         table = django_metadata.tables[name]
         chunks = utils.select_chunks(
-            django_metadata.bind.execute, table, joined_select(table)
+            django_metadata.bind.execute, table,
+            joined_select(table), local_chunksize
         )
         for rows in chunks:
             actions = list(map(functools.partial(row_es_add, table, 'id'), rows))
-            success_count, error_count = es_helpers.bulk(
+            _, error_count = es_helpers.bulk(
                 client=services.es,
                 actions=actions,
                 stats_only=True,
@@ -108,28 +123,29 @@ def main():
     # do ch company logic
     name = 'company_companieshousecompany'
     company_table = django_metadata.tables['company_company']
+    LOGGER.info('Indexing from django database for %s', name)
     result = django_metadata.bind.execute(
-        sqla.select([company_table.columns['company_number']])
-            .where(company_table.columns['company_number'] != None)  # NOQA
+        sqla.select([company_table.columns['company_number']])\
+            .where(company_table.columns['company_number'] != None)
     ).fetchall()
     linked_companies = frozenset([x.company_number for x in result])
     table = django_metadata.tables[name]
     chunks = utils.select_chunks(
-        django_metadata.bind.execute, table, joined_select(table)
+        django_metadata.bind.execute, table, joined_select(table), local_chunksize
     )
     for rows in chunks:
-        filtered_rows = filter(
-            lambda row: row.company_number not in linked_companies, rows
-        )
+        filtered_rows = [
+            row for row in rows if row.company_number not in linked_companies
+        ]
         actions = list(map(
             functools.partial(row_es_add, table, 'company_number'),
             filtered_rows
         ))
-        success_count, error_count = elasticsearch.helpers.bulk(
+        _, error_count = elasticsearch.helpers.bulk(
             client=services.es,
             actions=actions,
             stats_only=True,
-            chunk_size=10,
+            chunk_size=local_chunksize,
             request_timeout=300,
             raise_on_error=True,
             raise_on_exception=True,

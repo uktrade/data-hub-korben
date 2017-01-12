@@ -3,6 +3,7 @@ git+https://github.com/zzzeek/sqlalchemy.git#egg=sqlalchemy
 cryptography
 django
 elasticsearch
+gunicorn
 lxml
 python-dateutil
 psycopg2

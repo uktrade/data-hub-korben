@@ -2,7 +2,9 @@ import os
 import pickle
 
 from cryptography.fernet import Fernet, InvalidToken
+
 from korben import config
+from korben import services
 
 
 class CookieStorage(object):
@@ -26,13 +28,13 @@ class CookieStorage(object):
         """
         Returns the cookie if valid and exists, None otherwise.
         """
-        if self.exists():
-            with open(self.cookie_path, 'rb') as f:
-                try:
-                    ciphertext = self.crypto.decrypt(f.read())
-                    return pickle.loads(ciphertext)
-                except (InvalidToken, TypeError):
-                    self.reset()
+        cookie_bytes = services.redis_bytes.get(self.cookie_path)
+        if cookie_bytes:
+            try:
+                ciphertext = self.crypto.decrypt(cookie_bytes)
+                return pickle.loads(ciphertext)
+            except (InvalidToken, TypeError):
+                self.reset()
         return None
 
     def write(self, cookie):
@@ -40,18 +42,10 @@ class CookieStorage(object):
         Writes a cookie overriding any existing ones.
         """
         ciphertext = self.crypto.encrypt(pickle.dumps(cookie))
-        with open(self.cookie_path, 'wb') as f:
-            f.write(ciphertext)
-
-    def exists(self):
-        """
-        Returns True if the cookie exists, False otherwise.
-        """
-        return os.path.exists(self.cookie_path)
+        services.redis.set(self.cookie_path, ciphertext, ex=7200)  # 2 hours
 
     def reset(self):
         """
         Deletes the cookie.
         """
-        if self.exists():
-            os.remove(self.cookie_path)
+        services.redis.delete(self.cookie_path)

@@ -2,12 +2,14 @@
 Do some rough “polling” for entities that have a "ModifiedOn" column, this code
 operates under the assumption that there is a fully populated local database.
 '''
+from json import JSONDecodeError
 import datetime
 import functools
 import json
-import operator
 import logging
-from json import JSONDecodeError
+import operator
+import time
+import os
 
 import sqlalchemy as sqla
 
@@ -20,6 +22,7 @@ from . import leeloo
 LOGGER = logging.getLogger('korben.sync.poll')
 HEARTBEAT = 'cdms-polling-heartbeat'
 HEARTBEAT_FREQ = 900
+POLL_SLEEP = int(os.environ.get('KORBEN_POLL_SLEEP', 5))
 
 
 def get_entry_list(resp):
@@ -57,6 +60,7 @@ class CDMSPoller:
 
             self.reverse_scrape(table, col_names, primary_key)
             services.redis.set(HEARTBEAT, 'bumbum', ex=HEARTBEAT_FREQ)
+            time.sleep(POLL_SLEEP)
 
     def reverse_scrape(self, table, col_names, primary_key):
         new_rows = updated_rows = offset = 0
@@ -148,6 +152,7 @@ class CDMSPoller:
         resp = self.client.list(
             table.name, order_by="{0} desc".format(self.against), skip=offset
         )
+
         rows = []
 
         # ewwww mapping short to long and long to short column names
