@@ -6,6 +6,17 @@ from korben.etl import transform
 from korben.sync.utils import select_chunks
 
 
+def send_forever(django_tablename, django_dict):
+    sent = False
+    while not sent:
+        try:
+            response = leeloo.send(django_tablename, [django_dict])[0]
+            sent = True
+            return response
+        except Exception:
+            pass
+
+
 def sync(odata_tablename, odata_pkey, django_tablename, failure_fmt):
     print("{0} -> {1}".format(odata_tablename, django_tablename))
     odata_metadata = services.db.get_odata_metadata()
@@ -16,7 +27,7 @@ def sync(odata_tablename, odata_pkey, django_tablename, failure_fmt):
         odata_metadata.bind.execute,
         odata_table,
         sqla.select([odata_table]),
-        start=502000
+        start=507000
     )
 
     for odata_chunk in odata_chunks:
@@ -34,7 +45,7 @@ def sync(odata_tablename, odata_pkey, django_tablename, failure_fmt):
                 k: str(v) for k, v in
                 transform.odata_to_django(odata_tablename, dict(odata_row)).items()
             }
-            response = leeloo.send(django_tablename, [django_dict])[0]
+            response = send_forever(django_tablename, django_dict)
             sent = sent + 1
             if response.status_code != 200:
                 failed = failed + 1
