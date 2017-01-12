@@ -15,7 +15,8 @@ def sync(odata_tablename, odata_pkey, django_tablename, failure_fmt):
     odata_chunks = select_chunks(
         odata_metadata.bind.execute,
         odata_table,
-        sqla.select([odata_table])
+        sqla.select([odata_table]),
+        start=502000
     )
 
     for odata_chunk in odata_chunks:
@@ -45,19 +46,21 @@ def sync(odata_tablename, odata_pkey, django_tablename, failure_fmt):
 
 
 def main():
+    '''
+    (
+        'AccountSet',
+        'AccountId',
+        'company_company',
+        'company-failures/{0}'
+    ),
+    (
+        'ContactSet',
+        'ContactId',
+        'company_contact',
+        'contact-failures/{0}'
+    ),
+    '''
     entity_specs = (
-        (
-            'AccountSet',
-            'AccountId',
-            'company_company',
-            'company-failures/{0}'
-        ),
-        (
-            'ContactSet',
-            'ContactId',
-            'company_contact',
-            'contact-failures/{0}'
-        ),
         (
             'detica_interactionSet',
             'ActivityId',
