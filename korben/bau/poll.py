@@ -35,135 +35,143 @@ def get_entry_list(resp):
         return resp_json['d']
 
 
-def reverse_scrape(client,
-                   table,
-                   against,
-                   comparitor,
-                   col_names,
-                   primary_key,
-                   offset):
+class CDMSPoller:
+    PAGE_SIZE = 50
 
-    if client is None:
-        client = CDMSRestApi()
+    def __init__(self, client=None, against='ModifiedOn', comparator=operator.lt):
+        self.client = client or CDMSRestApi()
+        self.against = against
+        self.comparator = comparator
 
-    resp = client.list(
-        table.name, order_by="{0} desc".format(against), skip=offset
-    )
-    rows = []
+        self.odata_metadata = services.db.get_odata_metadata()
+        self.django_metadata = services.db.get_django_metadata()
+        self.conn = services.db.poll_for_connection(config.database_odata_url)
 
-    # ewwww mapping short to long and long to short column names
-    short_cols = functools.partial(
-        etl.transform.colnames_longshort, table.name
-    )
-    long_cols = [
-        COLNAME_SHORTLONG.get((table.name, short_col), short_col)
-        for short_col in col_names
-    ]
+    def poll_entities(self, entities=None):
+        entities = entities or self._get_django_tables()
 
-    try:
-        entry_list = get_entry_list(resp)
-    except (KeyError, JSONDecodeError):
-        return reverse_scrape(client, table, against, comparitor, col_names, primary_key, offset)
+        for table_name in entities:
+            table = self.odata_metadata.tables[table_name]
+            col_names = [x.name for x in table.columns]
 
-    for entry in entry_list:
-        rows.append(short_cols(utils.entry_row(long_cols, entry)))
-    # end ewwwww
+            # assume a single column
+            primary_key = etl.utils.primary_key(table)
+            LOGGER.info('Starting reverse scrape for %s', table.name)
 
-    new_rows = 0
-    updated_rows = 0
-    connection = services.db.poll_for_connection(config.database_odata_url)
-    for row in rows:
-        cols_pkey_against = [
-            getattr(table.c, primary_key),
-            getattr(table.c, against)
-        ]
-        select_statement = (
-            sqla.select(cols_pkey_against, table)
-                .where(table.columns[primary_key] == row[primary_key])
+            self.reverse_scrape(table, col_names, primary_key)
+            services.redis.set(HEARTBEAT, 'bumbum', ex=HEARTBEAT_FREQ)
+            time.sleep(POLL_SLEEP)
+
+    def reverse_scrape(self, table, col_names, primary_key):
+        new_rows = updated_rows = offset = 0
+
+        while new_rows + updated_rows > 0 or offset == 0:
+            self.reverse_scrape_page(table, col_names, primary_key, offset)
+            offset += self.PAGE_SIZE
+
+            LOGGER.info(
+                'Continuing reverse scrape for %s (from offset %s)', table.name, offset
+            )
+
+    def reverse_scrape_page(self, table, col_names, primary_key, offset):
+        new_rows = 0
+        updated_rows = 0
+
+        for row in self._get_rows_to_scrape(table, col_names, offset):
+            cols_pkey_against = [
+                getattr(table.c, primary_key),
+                getattr(table.c, self.against)
+            ]
+            select_statement = (
+                sqla.select(cols_pkey_against, table)
+                    .where(table.columns[primary_key] == row[primary_key])
+            )
+
+            try:
+                _, local_against = self.conn.execute(select_statement).fetchone()
+            except TypeError:
+                LOGGER.debug('Row in %s doesn’t exist', table.name)
+                result = self.conn.execute(table.insert().values(**row))
+                assert result.rowcount == 1
+                leeloo.send(  # to django
+                    *etl.main.from_odata(table, [row[primary_key]], dont_load=True)
+                )
+                new_rows += 1
+
+                # New row saved, stop here
+                continue
+
+            # Existing row, try to update
+
+            LOGGER.debug('local_modified %s', local_against)
+            LOGGER.debug('Row in %s exists', table.name)
+            # This is quite hacky, since datetime case-handling is hardcoded but
+            # optional -- to cover utils.entry_row returning a string and OData
+            # test services not having a ModifiedOn type field
+            try:
+                remote_against = \
+                    datetime.datetime.strptime(row[self.against], '%Y-%m-%d %H:%M:%S')
+            except TypeError:
+                LOGGER.error('Bad data in %s', table.name)
+                continue
+            except ValueError:  # TODO: type introspection (needs lookup object)
+                remote_against = row[self.against]
+
+            if self.comparator(local_against, remote_against) is True:
+                LOGGER.debug('Row in %s outdated', table.name)
+                update_statement = (
+                    table.update()
+                         .where(table.columns[primary_key] == row[primary_key])
+                         .values(**row)
+                )
+                self.conn.execute(update_statement)
+                leeloo.send(  # to django
+                    *etl.main.from_odata(table, [row[primary_key]], dont_load=True)
+                )
+                updated_rows += 1
+
+            # END LOOP
+
+        now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        LOGGER.info(
+            '%s %s INSERT %s UPDATE %s', now, table.name, new_rows, updated_rows
         )
-        try:
-            _, local_against =\
-                connection.execute(select_statement).fetchone()
-        except TypeError:
-            LOGGER.debug('Row in %s doesn’t exist', table.name)
-            result = connection.execute(table.insert().values(**row))
-            assert result.rowcount == 1
-            leeloo.send(  # to django
-                *etl.main.from_odata(table, [row[primary_key]], dont_load=True)
-            )
-            new_rows += 1
-            continue
-        LOGGER.debug('local_modified %s', local_against)
-        LOGGER.debug('Row in %s exists', table.name)
-        # This is quite hacky, since datetime case-handling is hardcoded but
-        # optional -- to cover utils.entry_row returning a string and OData
-        # test services not having a ModifiedOn type field
-        try:
-            remote_against =\
-                datetime.datetime.strptime(row[against], '%Y-%m-%d %H:%M:%S')
-        except TypeError:
-            LOGGER.error('Bad data in %s', table.name)
-            continue
-        except ValueError:  # TODO: type introspection (needs lookup object)
-            remote_against = row[against]
-        if comparitor(local_against, remote_against) is True:
-            LOGGER.debug('Row in %s outdated', table.name)
-            update_statement = (
-                table.update()
-                     .where(table.columns[primary_key] == row[primary_key])
-                     .values(**row)
-            )
-            result = connection.execute(update_statement)
-            leeloo.send(  # to django
-                *etl.main.from_odata(table, [row[primary_key]], dont_load=True)
-            )
-            updated_rows += 1
-    now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-    LOGGER.info(
-        '%s %s INSERT %s UPDATE %s', now, table.name, new_rows, updated_rows
-    )
-    if (new_rows + updated_rows < 50) and offset > 100:
-        return offset + new_rows + updated_rows
-    LOGGER.info(
-        'Continuing reverse scrape for %s (from offset %s)', table.name, offset
-    )
-    return reverse_scrape(
-        client, table, against, comparitor, col_names, primary_key, offset + 50
-    )
 
+        return new_rows, updated_rows
 
-def get_django_tables(django_metadata):
-    live_entities = []
-    django_fkey_deps = etl.utils.fkey_deps(django_metadata)
-    for depth in sorted(django_fkey_deps.keys()):
-        for table_name in django_fkey_deps[depth]:
-            if table_name in etl.spec.DJANGO_LOOKUP:
-                live_entities.append(etl.spec.DJANGO_LOOKUP[table_name])
-    return live_entities
+    def _get_django_tables(self):
+        live_entities = []
+        django_fkey_deps = etl.utils.fkey_deps(self.django_metadata)
+        for depth in sorted(django_fkey_deps.keys()):
+            for table_name in django_fkey_deps[depth]:
+                if table_name in etl.spec.DJANGO_LOOKUP:
+                    live_entities.append(etl.spec.DJANGO_LOOKUP[table_name])
+        return live_entities
 
-
-def poll(client=None,
-         against='ModifiedOn',
-         comparitor=operator.lt,
-         entities=None):
-    odata_metadata = services.db.get_odata_metadata()
-    django_metadata = services.db.get_django_metadata()
-
-    for table_name in entities or get_django_tables(django_metadata):
-        table = odata_metadata.tables[table_name]
-        col_names = [x.name for x in table.columns]
-        # assume a single column
-        primary_key = etl.utils.primary_key(table)
-        LOGGER.info('Starting reverse scrape for %s', table.name)
-        reverse_scrape(
-            client, table, against, comparitor, col_names, primary_key, 0
+    def _get_rows_to_scrape(self, table, col_names, offset):
+        resp = self.client.list(
+            table.name, order_by="{0} desc".format(self.against), skip=offset
         )
-        services.redis.set(HEARTBEAT, 'bumbum', ex=HEARTBEAT_FREQ)
-        time.sleep(POLL_SLEEP)
+
+        rows = []
+
+        # ewwww mapping short to long and long to short column names
+        short_cols = functools.partial(
+            etl.transform.colnames_longshort, table.name
+        )
+        long_cols = [
+            COLNAME_SHORTLONG.get((table.name, short_col), short_col)
+            for short_col in col_names
+            ]
+        for entry in get_entry_list(resp):
+            rows.append(short_cols(utils.entry_row(long_cols, entry)))
+        # end ewwwww
+
+        return rows
 
 
 def main():
-    'Poll forever'
+    """Poll forever"""
     while True:
         pollable_entities = (
             'SystemUserSet',
@@ -171,4 +179,5 @@ def main():
             'ContactSet',
             'detica_interactionSet',
         )
-        poll(entities=pollable_entities)
+        poller = CDMSPoller()
+        poller.poll_entities(pollable_entities)
