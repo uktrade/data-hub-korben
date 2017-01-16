@@ -39,6 +39,9 @@ def process_response(target, response):
 def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
     'Page through some request'
     response = cdms_client.list(odata_target.name, filters=filters)
+    LOGGER.info(
+        "%s %s took %ss", odata_target.name, offset, response.elapsed.seconds
+    )
     try:
         scrape_utils.raise_on_cdms_resp_errors(
             odata_target.name, offset, response
@@ -103,7 +106,8 @@ def main():
     odata_chunks = select_chunks(
         odata_metadata.bind.execute,
         odata_table,
-        sqla.select([odata_table])
+        sqla.select([odata_table]),
+        10
     )
 
     for odata_chunk in odata_chunks:
