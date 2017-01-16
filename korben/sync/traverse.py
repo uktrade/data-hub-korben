@@ -36,8 +36,8 @@ def process_response(target, response):
         })
     return retval
 
-def get_django(account_guid, odata_target, filters, offset):
-    response = client.list(odata_target.name, filters=filters)
+def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
+    response = cdms_client.list(odata_target.name, filters=filters)
     try:
         scrape_utils.raise_on_cdms_resp_errors(
             odata_target.name, offset, response
@@ -45,19 +45,18 @@ def get_django(account_guid, odata_target, filters, offset):
     except types.EntityPageNoData:
         return []
     django_dicts = process_response(odata_target, response)
-    while not len(django_dicts) < offset:
+    paging_done = len(django_dicts) < offset
+    while not paging_done:
+        offset = offset + 50
         django_dicts.extend(
-            get_django(
-                account_guid, odata_target, filters, offset + 50
-            )
+            cdms_pages(cdms_client, account_guid, odata_target, filters, offset)
         )
+        paging_done = len(django_dicts) < offset
     return django_dicts
 
 
-def cdms_to_leeloo(account_guid, odata_target, django_target, filters):
-    django_dicts = cdms_pages(
-        account_guid, odata_target, django_target, filters, 0
-    )
+def cdms_to_leeloo(cdms_client, account_guid, odata_target, django_target, filters):
+    django_dicts = cdms_pages(cdms_client, account_guid, odata_target, filters, 0)
     return leeloo.send(django_target, django_dicts)
 
 def traverse_from_account(cdms_client, odata_metadata, django_metadata, account_guid):
@@ -79,15 +78,15 @@ def traverse_from_account(cdms_client, odata_metadata, django_metadata, account_
     )
 
     for response in contact_responses + interaction_responses:
-
-    '''
         if response.status_code != 200:
+            print(response.request)
+            '''
             services.redis.set(
                 failure_fmt.format(getattr(odata_row, odata_pkey)),
                 response.content.decode(response.encoding)
             )
     print("{0} already existed, {1} sent, {2} failed".format(skipped, sent, failed))
-    '''
+            '''
 
 
 def main():
