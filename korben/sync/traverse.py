@@ -1,3 +1,4 @@
+import datetime
 import operator
 import functools
 import logging
@@ -14,7 +15,8 @@ from korben.utils import entry_row
 
 from korben.cdms_api.rest.api import CDMSRestApi
 
-LOGGER = logging.getLogger('korben.sync.traversal_fill')
+FMT_TRAVERSE_FLAG = 'AccountSet/traversed/{0}'
+LOGGER = logging.getLogger('korben.sync.traverse')
 
 
 def process_response(target, response):
@@ -34,6 +36,7 @@ def process_response(target, response):
     return retval
 
 def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
+    'Page through some request'
     response = cdms_client.list(odata_target.name, filters=filters)
     try:
         scrape_utils.raise_on_cdms_resp_errors(
@@ -54,7 +57,8 @@ def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
 
 def cdms_to_leeloo(cdms_client, account_guid, odata_target, django_target, filters):
     django_dicts = cdms_pages(cdms_client, account_guid, odata_target, filters, 0)
-    return leeloo.send(django_target, django_dicts)
+    return leeloo.send(django_target, django_dicts)  # errors recorded here
+
 
 def traverse_from_account(cdms_client, odata_metadata, django_metadata, account_guid):
     'Query CDMS, downloading contacts and interactions for a given company'
@@ -72,6 +76,10 @@ def traverse_from_account(cdms_client, odata_metadata, django_metadata, account_
         odata_metadata.tables['detica_interactionSet'],
         'company_interaction',
         "optevia_Organisation/Id eq {0}".format(fmt_guid(account_guid)),
+    )
+    services.redis.set(
+        FMT_TRAVERSE_FLAG.format(account_guid),
+        datetime.datetime.now().isoformat()
     )
 
 
