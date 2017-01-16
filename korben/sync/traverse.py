@@ -60,6 +60,10 @@ def cdms_to_leeloo(cdms_client, account_guid, odata_target, django_target, filte
     redis_key = FMT_TRAVERSE_FLAG.format(django_target, account_guid)
     already_done = bool(services.redis.get(redis_key))
     if already_done:
+        LOGGER.info(
+            "company_company %s -> %s traverse already done",
+            account_guid, django_target
+        )
         return []
     django_dicts = cdms_pages(cdms_client, account_guid, odata_target, filters, 0)
     retval = leeloo.send(django_target, django_dicts)  # errors recorded here
