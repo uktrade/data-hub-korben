@@ -7,7 +7,7 @@ import sqlalchemy as sqla
 from korben import services
 from korben.bau import leeloo
 from korben.bau.views import fmt_guid
-from korben.etl import transform, load
+from korben.etl import transform, load, spec
 from korben.sync.utils import select_chunks
 from korben.utils import entry_row
 
@@ -21,13 +21,13 @@ def process_response(target, response):
     'Return leeloo-ready dicts, write to odata database'
     short_cols = functools.partial(transform.colnames_longshort, target.name)
     long_cols = [
-        COLNAME_SHORTLONG.get((target.name, short_col), short_col)
+        spec.COLNAME_SHORTLONG.get((target.name, short_col), short_col)
         for short_col in map(operator.attrgetter('name'), target.columns)
     ]
     odata_dicts = []
     for cdms_dict in response.json()['d']['results']:
-        odata_dicts.append(short_cols(utils.entry_row(long_cols, cdms_dict)))
-    load.to_sqla_table_idempotent(target, odata_rows)
+        odata_dicts.append(short_cols(entry_row(long_cols, cdms_dict)))
+    load.to_sqla_table_idempotent(target, odata_dicts)
     retval = []
     for odata_dict in odata_dicts:
         retval.append({
@@ -48,12 +48,14 @@ def traverse_from_account(odata_metadata, django_metadata, account_guid):
     'Query CDMS, downloading contacts and interactions for a given company'
 
     contact_responses = cdms_to_leeloo(
+        account_guid,
         odata_metadata.tables['ContactSet'],
         'company_contact',
         "ParentCustomerId/Id eq {0}".format(fmt_guid(account_guid)),
     )
 
     interaction_responses = cdms_to_leeloo(
+        account_guid,
         odata_metadata.tables['detica_interactionSet'],
         'company_interaction',
         "optevia_Organisation/Id eq {0}".format(fmt_guid(account_guid)),
@@ -110,12 +112,12 @@ def main():
     send all interactions that aren't held in django
     record 'interaction-failures/{guid}' for failures
     '''
-    # odata_tablename, odata_pkey, django_tablename, failure_fmt, traversal_key
-    LOGGER.info("{0} -> {1}".format(odata_tablename, django_tablename))
+    import ipdb;ipdb.set_trace()
     odata_metadata = services.db.get_odata_metadata()
-    odata_table = odata_metadata.tables['detica_interactionSet']
-    django_table = django_metadata.tables['company_company']
     django_metadata = services.db.get_django_metadata()
+
+    odata_table = odata_metadata.tables['AccountSet']
+    django_table = django_metadata.tables['company_company']
     odata_chunks = select_chunks(
         odata_metadata.bind.execute,
         odata_table,
@@ -124,11 +126,11 @@ def main():
 
     for odata_chunk in odata_chunks:
         for odata_row in odata_chunk:
-            account_guid = getattr(odata_row, 'AccountId')
-            comparitor = django_table.c.id == account_guid
-            select = sqla.select([django_table]).where(comparitor)
-            result = django_metadata.bind.execute(select).fetchone()
-            traverse(odata_metadata, django_metadata, account_guid)
+            traverse_from_account(
+                odata_metadata,
+                django_metadata,
+                getattr(odata_row, 'AccountId'),
+            )
 
 if __name__ == '__main__':
     main()
