@@ -15,7 +15,7 @@ from korben.utils import entry_row
 
 from korben.cdms_api.rest.api import CDMSRestApi
 
-FMT_TRAVERSE_FLAG = 'AccountSet/traversed/{0}'
+FMT_TRAVERSE_FLAG = '{0}/traverse/{1}'
 LOGGER = logging.getLogger('korben.sync.traverse')
 
 
@@ -34,6 +34,7 @@ def process_response(target, response):
     for odata_dict in odata_dicts:
         retval.append(transform.odata_to_django(target.name, odata_dict))
     return retval
+
 
 def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
     'Page through some request'
@@ -56,11 +57,20 @@ def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
 
 
 def cdms_to_leeloo(cdms_client, account_guid, odata_target, django_target, filters):
+    redis_key = FMT_TRAVERSE_FLAG.format(django_target, account_guid)
+    already_done = bool(services.redis.get(redis_key))
+    if already_done:
+        return []
     django_dicts = cdms_pages(cdms_client, account_guid, odata_target, filters, 0)
-    return leeloo.send(django_target, django_dicts)  # errors recorded here
+    retval = leeloo.send(django_target, django_dicts)  # errors recorded here
+    services.redis.set(redis_key, datetime.datetime.now().isoformat())
+    LOGGER.info(
+        "company_company %s -> %s traverse complete", account_guid, django_target
+    )
+    return retval
 
 
-def traverse_from_account(cdms_client, odata_metadata, django_metadata, account_guid):
+def traverse_from_account(cdms_client, odata_metadata, account_guid):
     'Query CDMS, downloading contacts and interactions for a given company'
     contact_responses = cdms_to_leeloo(
         cdms_client,
@@ -69,17 +79,12 @@ def traverse_from_account(cdms_client, odata_metadata, django_metadata, account_
         'company_contact',
         "ParentCustomerId/Id eq {0}".format(fmt_guid(account_guid)),
     )
-
     interaction_responses = cdms_to_leeloo(
         cdms_client,
         account_guid,
         odata_metadata.tables['detica_interactionSet'],
         'company_interaction',
         "optevia_Organisation/Id eq {0}".format(fmt_guid(account_guid)),
-    )
-    services.redis.set(
-        FMT_TRAVERSE_FLAG.format(account_guid),
-        datetime.datetime.now().isoformat()
     )
 
 
@@ -90,10 +95,7 @@ def main():
     '''
     cdms_client = CDMSRestApi()
     odata_metadata = services.db.get_odata_metadata()
-    django_metadata = services.db.get_django_metadata()
-
     odata_table = odata_metadata.tables['AccountSet']
-    django_table = django_metadata.tables['company_company']
     odata_chunks = select_chunks(
         odata_metadata.bind.execute,
         odata_table,
@@ -104,7 +106,7 @@ def main():
         for odata_row in odata_chunk:
             account_guid = getattr(odata_row, 'AccountId')
             traverse_from_account(
-                cdms_client, odata_metadata, django_metadata, account_guid,
+                cdms_client, odata_metadata, account_guid,
             )
 
 if __name__ == '__main__':
