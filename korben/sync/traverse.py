@@ -9,11 +9,11 @@ from korben.bau import leeloo
 from korben.bau.views import fmt_guid
 from korben.etl import transform, load, spec
 from korben.sync.utils import select_chunks
+from korben.sync.scrape import utils as scrape_utils, types
 from korben.utils import entry_row
 
 from korben.cdms_api.rest.api import CDMSRestApi
 
-client = CDMSRestApi()
 LOGGER = logging.getLogger('korben.sync.traversal_fill')
 
 
@@ -36,18 +36,34 @@ def process_response(target, response):
         })
     return retval
 
+def get_django(account_guid, odata_target, filters, offset):
+    response = client.list(odata_target.name, filters=filters)
+    try:
+        scrape_utils.raise_on_cdms_resp_errors(
+            odata_target.name, offset, response
+        )
+    except types.EntityPageNoData:
+        return []
+    django_dicts = process_response(odata_target, response)
+    while not len(django_dicts) < offset:
+        django_dicts.extend(
+            get_django(
+                account_guid, odata_target, filters, offset + 50
+            )
+        )
+    return django_dicts
+
 
 def cdms_to_leeloo(account_guid, odata_target, django_target, filters):
-    response = client.list(odata_target.name, filters=filters)
-    assert response.ok
-    django_dicts = process_response(odata_target, response)
+    django_dicts = cdms_pages(
+        account_guid, odata_target, django_target, filters, 0
+    )
     return leeloo.send(django_target, django_dicts)
 
-
-def traverse_from_account(odata_metadata, django_metadata, account_guid):
+def traverse_from_account(cdms_client, odata_metadata, django_metadata, account_guid):
     'Query CDMS, downloading contacts and interactions for a given company'
-
     contact_responses = cdms_to_leeloo(
+        cdms_client,
         account_guid,
         odata_metadata.tables['ContactSet'],
         'company_contact',
@@ -55,64 +71,31 @@ def traverse_from_account(odata_metadata, django_metadata, account_guid):
     )
 
     interaction_responses = cdms_to_leeloo(
+        cdms_client,
         account_guid,
         odata_metadata.tables['detica_interactionSet'],
         'company_interaction',
         "optevia_Organisation/Id eq {0}".format(fmt_guid(account_guid)),
     )
 
+    for response in contact_responses + interaction_responses:
+
     '''
-    django_dict = {
-        k: str(v) for k, v in
-        transform.odata_to_django('company_contact', dict(odata_row)).items()
-    }
-    response = leeloo.send(django_tablename, [django_dict])[0]
-    if response.status_code != 200:
-        services.redis.set(
-            failure_fmt.format(getattr(odata_row, odata_pkey)),
-            response.content.decode(response.encoding)
-        )
+        if response.status_code != 200:
+            services.redis.set(
+                failure_fmt.format(getattr(odata_row, odata_pkey)),
+                response.content.decode(response.encoding)
+            )
     print("{0} already existed, {1} sent, {2} failed".format(skipped, sent, failed))
     '''
 
 
 def main():
     '''
-        (
-            'ContactSet',
-            'ContactId',
-            'company_contact',
-            'contact-failures/{0}'
-        ),
-        (
-            'detica_interactionSet',
-            'ActivityId',
-            'company_interaction',
-            'interaction-failures/{0}'
-        ),
-    traversal = (
-        (
-            'AccountSet',
-            'AccountId',
-            'company_company',
-            'company-failures/{0}',
-            None
-        ),
-    )
-    for step in traversal:
-        sync(*step)
-    get company guid
-    list contacts, filtering on copmany guid
-    list interactions, filtering on copmany guid
-    download all the contacts (pagination?)
-    send all the contacts that aren't already held in django
-    record 'contact-failures/{guid}' if something fails
-    hit the interactions link
-    download all the interactions (pagination?)
-    send all interactions that aren't held in django
-    record 'interaction-failures/{guid}' for failures
+    Download everything, traversing from company to contact and then
+    interaction. Tee the data to the OData database and Leeloo web API.
     '''
-    import ipdb;ipdb.set_trace()
+    cdms_client = CDMSRestApi()
     odata_metadata = services.db.get_odata_metadata()
     django_metadata = services.db.get_django_metadata()
 
@@ -126,10 +109,9 @@ def main():
 
     for odata_chunk in odata_chunks:
         for odata_row in odata_chunk:
+            account_guid = getattr(odata_row, 'AccountId')
             traverse_from_account(
-                odata_metadata,
-                django_metadata,
-                getattr(odata_row, 'AccountId'),
+                cdms_client, odata_metadata, django_metadata, account_guid,
             )
 
 if __name__ == '__main__':
