@@ -30,10 +30,7 @@ def process_response(target, response):
     load.to_sqla_table_idempotent(target, odata_dicts)
     retval = []
     for odata_dict in odata_dicts:
-        retval.append({
-            left: str(right) for left, right in
-            transform.odata_to_django(target.name, odata_dict).items()
-        })
+        retval.append(transform.odata_to_django(target.name, odata_dict))
     return retval
 
 def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
@@ -45,7 +42,7 @@ def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
     except types.EntityPageNoData:
         return []
     django_dicts = process_response(odata_target, response)
-    paging_done = len(django_dicts) < offset
+    paging_done = len(django_dicts) < offset + 50
     while not paging_done:
         offset = offset + 50
         django_dicts.extend(
@@ -76,17 +73,6 @@ def traverse_from_account(cdms_client, odata_metadata, django_metadata, account_
         'company_interaction',
         "optevia_Organisation/Id eq {0}".format(fmt_guid(account_guid)),
     )
-
-    for response in contact_responses + interaction_responses:
-        if response.status_code != 200:
-            print(response.request)
-            '''
-            services.redis.set(
-                failure_fmt.format(getattr(odata_row, odata_pkey)),
-                response.content.decode(response.encoding)
-            )
-    print("{0} already existed, {1} sent, {2} failed".format(skipped, sent, failed))
-            '''
 
 
 def main():

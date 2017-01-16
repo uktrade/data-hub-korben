@@ -4,6 +4,7 @@ import logging
 
 from korben import config
 from korben.utils import generate_signature
+from korben.services import redis
 
 import requests
 
@@ -39,11 +40,16 @@ def send(django_tablename, django_dicts):
     if not all([response.ok for response in responses]):
         LOGGER.error('The following requests failed:')
         for response in responses:
+            guid = json.loads(response.request.body.decode('utf-8'))['id']
+            redis_key = "{0}/fail/{1}".format(django_tablename, guid)
             if not response.ok:
                 LOGGER.error(
                     '    %s %s %s',
                     response.status_code,
                     response.request.path_url,
-                    json.loads(response.request.body.decode('utf-8'))['id']
+                    guid
                 )
+                redis.set(redis_key, response.status_code)
+            else:
+                redis.delete(redis_key)
     return responses
