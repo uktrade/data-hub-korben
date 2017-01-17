@@ -8,6 +8,7 @@ COMMANDS = {
     'ch': ch.main,
     'django': django_initial.main,
     'es': es_initial.main,
+    'traverse': traverse.main,
 }
 
 __all__ = ('COMMANDS', 'traverse')

@@ -24,11 +24,11 @@ def file_leaf(*args):
     return path
 
 
-def select_chunks(execute, basetable, select, chunksize=CHUNKSIZE):
+def select_chunks(execute, basetable, select, chunksize=CHUNKSIZE, start=0):
     'Generator yielding chunks of a select'
     count_q = sqla.select([sqla.func.count()]).select_from(basetable)
     count = execute(count_q).scalar()
-    for offset in range(0, count, chunksize):
+    for offset in range(start, count, chunksize):
         LOGGER.info('Evaluating chunk %s', offset)
         yield execute(select.offset(offset).limit(chunksize)).fetchall()
 
