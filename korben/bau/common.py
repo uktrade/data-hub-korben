@@ -38,6 +38,7 @@ def odata_to_django(odata_tablename, response):
     '''
     if not response.ok:
         LOGGER.warn('CDMS was unhappy and said %s', response.status_code)
+        LOGGER.debug(response.content.decode(response.encoding or 'utf-8'))
         kwargs = {
             'status_code': response.status_code,
             'body': json.dumps(response.json()),
