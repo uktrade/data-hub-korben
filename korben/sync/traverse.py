@@ -41,8 +41,7 @@ def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
     response = cdms_client.list(odata_target.name, filters=filters)
     if response.elapsed.seconds > 5:
         LOGGER.info(
-            "! %s (%s) %ss", odata_target.name,
-            offset, response.elapsed.seconds
+            "%s ! %s (%s) %ss", account_guid, odata_target.name, offset, response.elapsed.seconds
         )
     try:
         scrape_utils.raise_on_cdms_resp_errors(
@@ -51,6 +50,8 @@ def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
     except types.EntityPageNoData:
         return []
     django_dicts = process_response(odata_target, response)
+    if not django_dicts:
+        return django_dicts
     paging_done = len(django_dicts) < offset + 50
     while not paging_done:
         offset = offset + 50
