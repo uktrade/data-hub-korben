@@ -1,10 +1,12 @@
 import json
+import logging
 
 from pyramid import httpexceptions as http_exc
 from pyramid.response import Response
 
 from korben.etl import spec, transform
 
+LOGGER = logging.getLogger('korben.bau.common')
 
 def request_tablenames(request):
     'Extract table names from a request, raise things'
@@ -35,6 +37,7 @@ def odata_to_django(odata_tablename, response):
     just an “passed-through” error response)
     '''
     if not response.ok:
+        LOGGER.warn('CDMS was unhappy and said %s', response.status_code)
         kwargs = {
             'status_code': response.status_code,
             'body': json.dumps(response.json()),
