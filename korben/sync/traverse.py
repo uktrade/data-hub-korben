@@ -39,9 +39,8 @@ def process_response(target, response):
 def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
     'Page through some request'
     response = cdms_client.list(odata_target.name, filters=filters)
-    LOGGER.info(
-        "%s %s took %ss", odata_target.name, offset, response.elapsed.seconds
-    )
+    if response.elapsed.seconds > 5:
+        LOGGER.info("! %s (%s) %ss", odata_target.name, offset, response.elapsed.seconds)
     try:
         scrape_utils.raise_on_cdms_resp_errors(
             odata_target.name, offset, response
@@ -65,12 +64,9 @@ def cdms_to_leeloo(cdms_client, account_guid, odata_target, django_target, filte
     if already_done:
         return []
     django_dicts = cdms_pages(cdms_client, account_guid, odata_target, filters, 0)
-    LOGGER.info("Sending %s of %s to Leeloo", len(django_dicts), django_target)
+    LOGGER.info("(%s) -> %s of %s", accout_guid, len(django_dicts), django_target,)
     retval = leeloo.send(django_target, django_dicts)  # errors recorded here
     services.redis.set(redis_key, datetime.datetime.now().isoformat())
-    LOGGER.info(
-        "company_company %s -> %s traverse complete", account_guid, django_target
-    )
     return retval
 
 
