@@ -1,16 +1,18 @@
 import datetime
-import operator
 import functools
 import logging
+import operator
+import time
 
 import sqlalchemy as sqla
 
 from korben import services
 from korben.bau import leeloo
+from korben.bau.poll import POLL_SLEEP
 from korben.bau.views import fmt_guid
 from korben.etl import transform, load, spec
-from korben.sync.utils import select_chunks
 from korben.sync.scrape import utils as scrape_utils, types
+from korben.sync.utils import select_chunks
 from korben.utils import entry_row
 
 from korben.cdms_api.rest.api import CDMSRestApi
@@ -47,8 +49,14 @@ def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
         scrape_utils.raise_on_cdms_resp_errors(
             odata_target.name, offset, response
         )
-    except types.EntityPageNoData:
+    except types.EntityPageNoData:  # particular case, pass
         return []
+    except types.EntityPageException:  # general case, retry
+        time.sleep(POLL_SLEEP)
+        LOGGER.info('%s -> %s failed', account_guid, odata_target.name)
+        return cdms_pages(
+            cdms_client, account_guid, odata_target, filters, offset
+        )
     django_dicts = process_response(odata_target, response)
     if not django_dicts:
         return django_dicts
