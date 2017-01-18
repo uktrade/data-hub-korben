@@ -64,7 +64,7 @@ def cdms_to_leeloo(cdms_client, account_guid, odata_target, django_target, filte
     if already_done:
         return []
     django_dicts = cdms_pages(cdms_client, account_guid, odata_target, filters, 0)
-    LOGGER.info("(%s) -> %s of %s", accout_guid, len(django_dicts), django_target,)
+    LOGGER.info("(%s) -> %s of %s", account_guid, len(django_dicts), django_target,)
     retval = leeloo.send(django_target, django_dicts)  # errors recorded here
     services.redis.set(redis_key, datetime.datetime.now().isoformat())
     return retval
