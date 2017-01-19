@@ -8,16 +8,18 @@ import functools
 import json
 import logging
 import operator
-import time
 import os
+import time
 
 import sqlalchemy as sqla
 
-from ..cdms_api.rest.api import CDMSRestApi
-from .. import etl
 from korben import config, services, utils
+from korben.bau.views import SENTRY_CLIENT
 from korben.etl.spec import COLNAME_LONGSHORT, COLNAME_SHORTLONG
+
 from . import leeloo
+from .. import etl
+from ..cdms_api.rest.api import CDMSRestApi
 
 LOGGER = logging.getLogger('korben.sync.poll')
 HEARTBEAT = 'cdms-polling-heartbeat'
@@ -56,7 +58,7 @@ class CDMSPoller:
 
             # assume a single column
             primary_key = etl.utils.primary_key(table)
-            LOGGER.info('Starting reverse scrape for %s', table.name)
+            LOGGER.debug('Starting reverse scrape for %s', table.name)
 
             self.reverse_scrape(table, col_names, primary_key)
             services.redis.set(HEARTBEAT, 'bumbum', ex=HEARTBEAT_FREQ)
@@ -69,7 +71,7 @@ class CDMSPoller:
             self.reverse_scrape_page(table, col_names, primary_key, offset)
             offset += self.PAGE_SIZE
 
-            LOGGER.info(
+            LOGGER.debug(
                 'Continuing reverse scrape for %s (from offset %s)', table.name, offset
             )
 
@@ -133,7 +135,7 @@ class CDMSPoller:
             # END LOOP
 
         now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        LOGGER.info(
+        LOGGER.debug(
             '%s %s INSERT %s UPDATE %s', now, table.name, new_rows, updated_rows
         )
 
@@ -149,8 +151,15 @@ class CDMSPoller:
         return live_entities
 
     def _get_rows_to_scrape(self, table, col_names, offset):
-        resp = self.client.list(
-            table.name, order_by="{0} desc".format(self.against), skip=offset
+        try:
+            resp = self.client.list(
+                table.name, order_by="{0} desc".format(self.against), skip=offset
+            )
+        except Exception as exc:
+            SENTRY_CLIENT.captureException()
+            raise exc
+        LOGGER.info(
+            '%s offset %s took %s seconds', table.name, offset, resp.elapsed.seconds
         )
 
         rows = []
