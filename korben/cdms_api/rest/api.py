@@ -48,7 +48,7 @@ class CDMSRestApi(object):
             SENTRY_CLIENT.captureException()
             raise exc
         if not resp.ok:
-            SENTRY_CLIENT.captureMessage('raven.events.Message',
+            SENTRY_CLIENT.captureMessage(
                 message='cdms-request-fail',
                 data={
                     'data': data,
