@@ -1,5 +1,6 @@
 import logging
 from korben import config
+from korben.bau.views import SENTRY_CLIENT
 
 from .auth.active_directory import ActiveDirectoryAuth
 from ..exceptions import UnexpectedResponseException
@@ -29,7 +30,11 @@ class CDMSRestApi(object):
         if auth is not None:
             self.auth = auth
         else:
-            self.auth = ActiveDirectoryAuth()
+            try:
+                self.auth = ActiveDirectoryAuth()
+            except Exception as exc:
+                SENTRY_CLIENT.captureException()
+                raise exc
 
     def make_request(self, verb, url, data=None, headers=None):
         """
@@ -37,7 +42,23 @@ class CDMSRestApi(object):
         """
         if data is None:
             data = {}
-        resp = self.auth.make_request(verb, url, data=data, headers=headers)
+        try:
+            resp = self.auth.make_request(verb, url, data=data, headers=headers)
+        except Exception as exc:
+            SENTRY_CLIENT.captureException()
+            raise exc
+        if not resp.ok:
+            SENTRY_CLIENT.captureMessage('raven.events.Message',
+                message='cdms-request-fail',
+                data={
+                    'data': data,
+                    'url': url,
+                    'status_code': resp.status_code,
+                    'content': resp.content.decode(resp.encoding or 'utf-8'),
+                },
+                time_spent=int(resp.elapsed.microseconds / 1000),  # sentry requirement
+                stack=True,  # record stack frame
+            )
         LOGGER.debug('%s request took %s', verb, resp.elapsed)
         return resp
 
