@@ -2,7 +2,7 @@ import json
 
 from korben import config
 from korben.bau import common
-from korben.bau.views import SENTRY_CLIENT
+from korben.bau.sentry_client import SENTRY_CLIENT
 from korben.bau.auth import generate_signature
 
 EXC_MESSAGE = 'BOOM!'

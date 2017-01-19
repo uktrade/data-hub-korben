@@ -14,7 +14,7 @@ import time
 import sqlalchemy as sqla
 
 from korben import config, services, utils
-from korben.bau.views import SENTRY_CLIENT
+from korben.bau.sentry_client import SENTRY_CLIENT
 from korben.etl.spec import COLNAME_LONGSHORT, COLNAME_SHORTLONG
 
 from . import leeloo

@@ -16,13 +16,14 @@ from django.conf import settings as django_settings_module
 from lxml import etree
 
 from korben import config
+from korben import services
+from korben.bau import leeloo
+from korben.bau import poll
+from korben.bau import sentry_client
+from korben.bau import views
 from korben.cdms_api.rest import api
 from korben.cdms_api.rest.auth.noop import NoopAuth
 from korben.etl import spec as etl_spec
-from korben import services
-from korben.bau import poll
-from korben.bau import leeloo
-from korben.bau import views
 from korben.sync.scrape import constants as scrape_constants
 
 
@@ -184,7 +185,7 @@ def tier0(monkeypatch, odata_utils, configure_django):
     monkeypatch.setattr(leeloo, 'send', lambda *a, **b: None)
 
     # use fake raven client to not report to sentry
-    monkeypatch.setattr(views, 'SENTRY_CLIENT', FakeSentryClient())
+    monkeypatch.setattr(sentry_client, 'SENTRY_CLIENT', FakeSentryClient())
 
     # tone down scrape
     monkeypatch.setattr(scrape_constants, 'PROCESSES', 4)
