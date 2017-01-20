@@ -14,6 +14,11 @@ SELECT relname, n_live_tup
         ORDER BY n_live_tup DESC;
 '''
 
-for connection in (odata_connection, django_connection):
-    result = connection.execute(COUNT_ALL_SQL).fetchall()
-    pprint.pprint(result)
+def main():
+    for connection in (odata_connection, django_connection):
+        result = connection.execute(COUNT_ALL_SQL).fetchall()
+        pprint.pprint(result)
+
+
+if __name__ == '__main__':
+    main()
