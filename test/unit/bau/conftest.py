@@ -5,7 +5,7 @@ from unittest.mock import Mock
 from webtest import TestApp
 
 from korben.bau import webserver
-from korben.bau import views
+from korben.bau import sentry_client
 from korben.cdms_api.rest import api
 from korben.services import db
 
@@ -19,6 +19,6 @@ def mock_client(monkeypatch):
 def test_app(monkeypatch, mock_client):
     monkeypatch.setattr(db, 'get_odata_metadata', Mock)
     monkeypatch.setattr(db, 'get_django_metadata', Mock)
-    monkeypatch.setattr(views, 'SENTRY_CLIENT', Mock())
+    monkeypatch.setattr(sentry_client, 'SENTRY_CLIENT', Mock())
     app = webserver.get_app()
     return TestApp(app)

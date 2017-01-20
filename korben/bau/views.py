@@ -10,15 +10,14 @@ from pyramid.view import view_config
 from requests.exceptions import RequestException
 
 from korben import config
-from korben.etl import utils as etl_utils
-from . import common
-from . import status
 from korben.cdms_api.rest.api import CDMSRestApi
 from korben.cdms_api.rest.auth.active_directory import ActiveDirectoryAuth
+from korben.etl import utils as etl_utils
 
-from raven import Client
+from . import common
+from . import status
+from .sentry_client import SENTRY_CLIENT
 
-SENTRY_CLIENT = Client(config.korben_sentry_dsn)
 LOGGER = logging.getLogger('korben.bau.views')
 
 
