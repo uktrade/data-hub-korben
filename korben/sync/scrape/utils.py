@@ -21,15 +21,15 @@ def raise_on_cdms_resp_errors(entity_name, offset, resp):
     resp_str = resp.content.decode(resp.encoding or 'utf8')
     if not resp.ok:
         if resp.status_code == 401:  # ACCESS DENIED!
-            raise types.EntityPageDeAuth("{0} {1}".format(entity_name, offset))
+            raise types.EntityPageDeAuth(
+                "{0} {1} said ACCESS DENIED!".format(entity_name, offset)
+            )
         try:
             resp_json = json.loads(resp_str)
             if 'paging' in resp_json['error']['message']['value']:
                 # assuming this means we tried to reach beyond the last page
                 raise types.EntityPageNoData(
-                    "500 page out {0} {1}".format(
-                        entity_name, offset
-                    )
+                    "500 page out {0} {1}".format(entity_name, offset)
                 )
         except types.EntityPageNoData:  # pass through
             raise
@@ -37,17 +37,21 @@ def raise_on_cdms_resp_errors(entity_name, offset, resp):
             # no error message in json
             LOGGER.error(resp_str)
             raise types.EntityPageDynamicsBombed(
-                "{0} {1}".format(entity_name, offset)
+                "{0} {1} had no error message".format(entity_name, offset)
             )
         except json.JSONDecodeError:
             # no json in json
             LOGGER.error(resp_str)
             raise types.EntityPageDynamicsBombed(
-                "{0} {1}".format(entity_name, offset)
+                "{0} {1} wasn’t in JSON".format(entity_name, offset)
             )
         except Exception as exc:
             LOGGER.error(resp_str)
-            raise RuntimeError("{0} {1} unhandled".format(entity_name, offset))
+            raise RuntimeError(
+                "{0} {1} raised something unhandled".format(
+                    entity_name, offset
+                )
+            )
     try:
         resp_json = json.loads(resp_str)
         # plain OData doesn't return in `results` key
@@ -58,10 +62,12 @@ def raise_on_cdms_resp_errors(entity_name, offset, resp):
         if not results:
             # paged out with empty response (ie. 'd.results' is an empty list)
             raise types.EntityPageNoData(
-                "{0} {1}".format(entity_name, offset)
+                "{0} {1} was beyond the last page".format(entity_name, offset)
             )
     except json.JSONDecodeError:
-        raise types.EntityPageDeAuth("{0} {1}".format(entity_name, offset))
+        raise types.EntityPageDeAuth(
+            "{0} {1} said OK but not in JSON".format(entity_name, offset)
+        )
 
 
 def json_cache_key(entity_name, offset):
@@ -94,9 +100,6 @@ def is_cached(entity_name, offset):
 def is_pending(entity_page):
     'Convenience function to test if an EntityPage object is in pending state'
     return entity_page.state == types.EntityPageState.pending
-
-
-api = None
 
 
 def cdms_list(client, entity_name, offset):

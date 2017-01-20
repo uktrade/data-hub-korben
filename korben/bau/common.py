@@ -1,10 +1,12 @@
 import json
+import logging
 
 from pyramid import httpexceptions as http_exc
 from pyramid.response import Response
 
 from korben.etl import spec, transform
 
+LOGGER = logging.getLogger('korben.bau.common')
 
 def request_tablenames(request):
     'Extract table names from a request, raise things'
@@ -35,10 +37,16 @@ def odata_to_django(odata_tablename, response):
     just an “passed-through” error response)
     '''
     if not response.ok:
+        try:
+            body = json.dumps(response.json())
+            content_type = 'application/json'
+        except json.JSONDecodeError:
+            body = response.content.decode(response.encoding or 'utf-8')
+            content_type = 'text/plain'
         kwargs = {
             'status_code': response.status_code,
-            'body': json.dumps(response.json()),
-            'content_type': 'application/json',
+            'body': body,
+            'content_type': content_type,
             'charset': 'utf-8',
         }
         return Response(**kwargs)
