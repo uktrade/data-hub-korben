@@ -40,7 +40,7 @@ def process_response(target, response):
 
 def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
     'Page through some request'
-    response = cdms_client.list(odata_target.name, filters=filters)
+    response = cdms_client.list(odata_target.name, filters=filters, skip=offset)
     if response.elapsed.seconds > 5:
         LOGGER.info(
             "%s ! %s (%s) %ss", account_guid, odata_target.name, offset, response.elapsed.seconds
