@@ -2,7 +2,7 @@ import pprint
 from korben import config
 from korben.services import db
 
-odata_connection = db.poll_for_connection(config.odata_database_url)
+odata_connection = db.poll_for_connection(config.database_odata_url)
 django_connection = db.poll_for_connection(config.django_database_url)
 
 
