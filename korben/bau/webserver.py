@@ -1,8 +1,9 @@
 import os
 
+from wsgiref.simple_server import make_server
+
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
-from wsgiref.simple_server import make_server
 
 from korben.cdms_api.rest import api
 from korben.services import db
