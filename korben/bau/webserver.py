@@ -12,9 +12,9 @@ from . import auth
 
 
 DEFAULT_SETTINGS = {
-    'odata_metadata': lambda: db.get_odata_metadata(),
-    'django_metadata': lambda: db.get_django_metadata(),
-    'cdms_client': lambda: api.CDMSRestApi()
+    'odata_metadata': db.get_odata_metadata,
+    'django_metadata': db.get_django_metadata,
+    'cdms_client': api.CDMSRestApi
 }
 
 
