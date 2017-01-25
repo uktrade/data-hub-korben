@@ -170,7 +170,8 @@ class CDMSPoller:
             resp = self.client.list(
                 table.name,
                 order_by="{0} desc".format(self.against),
-                skip=offset
+                skip=offset,
+                top=self.PAGE_SIZE,
             )
         except Exception as exc:
             SENTRY_CLIENT.captureException()

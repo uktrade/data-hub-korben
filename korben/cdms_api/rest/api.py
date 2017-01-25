@@ -1,6 +1,6 @@
 import logging
 from korben import config
-from korben.bau.sentry_client import SENTRY_CLIENT
+from korben.bau import sentry_client
 
 from .auth.active_directory import ActiveDirectoryAuth
 from ..exceptions import UnexpectedResponseException
@@ -33,7 +33,7 @@ class CDMSRestApi(object):
             try:
                 self.auth = ActiveDirectoryAuth()
             except Exception as exc:
-                SENTRY_CLIENT.captureException()
+                sentry_client.SENTRY_CLIENT.captureException()
                 raise exc
 
     def make_request(self, verb, url, data=None, headers=None):
@@ -45,10 +45,10 @@ class CDMSRestApi(object):
         try:
             resp = self.auth.make_request(verb, url, data=data, headers=headers)
         except Exception as exc:
-            SENTRY_CLIENT.captureException()
+            sentry_client.SENTRY_CLIENT.captureException()
             raise exc
         if not resp.ok:
-            SENTRY_CLIENT.captureMessage(
+            sentry_client.SENTRY_CLIENT.captureMessage(
                 message='cdms-request-fail',
                 data={
                     'data': data,

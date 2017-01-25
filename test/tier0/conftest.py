@@ -1,5 +1,6 @@
 import pytest
 
+from unittest.mock import Mock
 import copy
 import json
 import os
@@ -165,12 +166,6 @@ def django_models():
     from target_models import models
     return models
 
-class FakeSentryClient:
-    def __init__(self, *args, **kwargs):
-        pass
-    def captureException(self, *args, **kwargs):
-        pass
-
 @pytest.yield_fixture
 def tier0(monkeypatch, odata_utils, configure_django):
     'Mega-fixture for setting up tier0 databases, and cleaning them afterwards'
@@ -185,7 +180,7 @@ def tier0(monkeypatch, odata_utils, configure_django):
     monkeypatch.setattr(leeloo, 'send', lambda *a, **b: None)
 
     # use fake raven client to not report to sentry
-    monkeypatch.setattr(sentry_client, 'SENTRY_CLIENT', FakeSentryClient())
+    monkeypatch.setattr(sentry_client, 'SENTRY_CLIENT', Mock())
 
     # tone down scrape
     monkeypatch.setattr(scrape_constants, 'PROCESSES', 4)
