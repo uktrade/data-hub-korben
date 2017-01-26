@@ -48,14 +48,13 @@ class CDMSRestApi(object):
             sentry_client.SENTRY_CLIENT.captureException()
             raise exc
         if not resp.ok:
-            sentry_client.SENTRY_CLIENT.captureMessage(
-                message='cdms-request-fail',
-                data={
-                    'data': data,
-                    'url': url,
-                    'status_code': resp.status_code,
-                    'content': resp.content.decode(resp.encoding or 'utf-8'),
-                },
+            sentry_client.SENTRY_CLIENT.extra_context({
+                'data': data,
+                'url': url,
+                'status_code': resp.status_code,
+                'content': resp.content.decode(resp.encoding or 'utf-8'),
+            })
+            sentry_client.SENTRY_CLIENT.captureMessage(message='cdms-request-fail',
                 time_spent=int(resp.elapsed.microseconds / 1000),  # sentry requirement
                 stack=True,  # record stack frame
             )
