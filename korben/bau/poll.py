@@ -78,13 +78,45 @@ class CDMSPoller:
         updates = offset = 0
 
         while not updates < self.PAGE_SIZE or offset == 0:
-            updates =\
-                self.reverse_scrape_page(table, col_names, primary_key, offset)
+            updates = self.reverse_scrape_page(
+                table, col_names, primary_key, offset
+            )
             offset += self.PAGE_SIZE
 
             LOGGER.debug(
                 'Continuing reverse scrape for %s (from offset %s)', table.name, offset
             )
+
+    def _insert(self, table, primary_key, row):
+        result = self.db.execute(table.insert().values(**row))
+        leeloo.send(
+            *etl.main.from_odata(table, [row[primary_key]], dont_load=True)
+        )
+        return result.rowcount
+
+    def _local_against(self, table, primary_key, row):
+        cols_pkey_against = [
+            getattr(table.c, primary_key),
+            getattr(table.c, self.against)
+        ]
+        select_statement = (
+            sqla.select(cols_pkey_against, table)
+                .where(table.columns[primary_key] == row_pkey)
+        )
+        _, local_against = self.db.execute(select_statement).fetchone()
+        return local_against
+
+    def _update(self, table, primary_key, row):
+        update_statement = (
+            table.update()
+                 .where(table.columns[primary_key] == row[primary_key])
+                 .values(**row)
+        )
+        result = self.db.execute(update_statement)
+        leeloo.send(  # to django
+            *etl.main.from_odata(table, [row[primary_key]], dont_load=True)
+        )
+        return result.rowcount
 
     def reverse_scrape_page(self, table, col_names, primary_key, offset):
         '''
@@ -95,35 +127,17 @@ class CDMSPoller:
         new_rows = updated_rows = 0
 
         for row in self._get_rows_to_scrape(table, col_names, offset):
-            cols_pkey_against = [
-                getattr(table.c, primary_key),
-                getattr(table.c, self.against)
-            ]
-            select_statement = (
-                sqla.select(cols_pkey_against, table)
-                    .where(table.columns[primary_key] == row[primary_key])
-            )
-
             try:
-                _, local_against = self.db.execute(select_statement).fetchone()
+                local_against = self._local_against(table, primary_key, row)
             except TypeError:
                 LOGGER.debug('Row in %s doesn’t exist', table.name)
-                result = self.db.execute(table.insert().values(**row))
-                assert result.rowcount == 1
-                leeloo.send(  # to django
-                    *etl.main.from_odata(
-                        table, [row[primary_key]], dont_load=True
-                    )
-                )
-                new_rows += 1
-
-                # New row saved, stop here
-                continue
+                new_rows += self._insert(table, primary_key, row)
+                continue # New row saved, stop here
 
             # Existing row, try to update
 
-            LOGGER.debug('local_modified %s', local_against)
             LOGGER.debug('Row in %s exists', table.name)
+            LOGGER.debug('Local against value is %s', local_against)
             # This is quite hacky, since datetime case-handling is hardcoded
             # but optional -- to cover utils.entry_row returning a string and
             # OData test services not having a ModifiedOn type field
@@ -139,22 +153,12 @@ class CDMSPoller:
 
             if self.comparator(local_against, remote_against) is True:
                 LOGGER.debug('Row in %s outdated', table.name)
-                update_statement = (
-                    table.update()
-                         .where(table.columns[primary_key] == row[primary_key])
-                         .values(**row)
-                )
-                self.db.execute(update_statement)
-                leeloo.send(  # to django
-                    *etl.main.from_odata(table, [row[primary_key]], dont_load=True)
-                )
-                updated_rows += 1
-
-            # END LOOP
+                updated_rows += self._update(table, primary_key, row)
 
         now = datetime.datetime.now().strftime('%Y-%m-%d %H:%M:%S')
         LOGGER.debug(
-            '%s %s INSERT %s UPDATE %s', now, table.name, new_rows, updated_rows
+            '%s %s INSERT %s UPDATE %s',
+            now, table.name, new_rows, updated_rows
         )
 
         return new_rows + updated_rows
