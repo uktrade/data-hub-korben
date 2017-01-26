@@ -216,6 +216,7 @@ MAPPINGS.update({
             'service_id',
             'dit_advisor_id',
             'dit_team_id',
+            'interaction_type_id',
         ),
         'empty_strings': (
             'archived_reason',
