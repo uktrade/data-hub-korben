@@ -101,7 +101,7 @@ class CDMSPoller:
         ]
         select_statement = (
             sqla.select(cols_pkey_against, table)
-                .where(table.columns[primary_key] == row_pkey)
+                .where(table.columns[primary_key] == row[primary_key])
         )
         _, local_against = self.db.execute(select_statement).fetchone()
         return local_against
