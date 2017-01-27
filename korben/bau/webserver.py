@@ -18,7 +18,7 @@ from . import views
 
 DEFAULT_SETTINGS = {
     'odata_metadata': lambda: db.get_odata_metadata(),
-    'django_metadata': lambda: db.get_django_metadata(),
+    #'django_metadata': lambda: db.get_django_metadata(),
     'cdms_client': lambda: api.CDMSRestApi()
 }
 
