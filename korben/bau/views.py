@@ -108,10 +108,3 @@ def validate_credentials(request):
         SENTRY_CLIENT.captureException()
         return False
     return True
-
-
-@view_config(route_name='health', request_method=['GET'], renderer='json')
-def health_check(request):
-    """Return 200 if the system is up and running."""
-    return True
-

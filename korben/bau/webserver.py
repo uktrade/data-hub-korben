@@ -39,7 +39,7 @@ def get_app(overrides=None):
     app_cfg.add_route('get', '/get/{django_tablename}/{ident}/')
     app_cfg.add_route('validate-credentials', '/auth/validate-credentials/')
     app_cfg.add_route('status', '/ping.xml')
-    app_cfg.add_route('health', '/')
+    app_cfg.add_route('health', '/health/')
     app_cfg.scan()
     return app_cfg.make_wsgi_app()
 

@@ -79,3 +79,9 @@ def pingdom(request):
         'charset': 'utf-8',
     }
     return Response(**response_kwargs)
+
+
+@view_config(route_name='health', permission=NO_PERMISSION_REQUIRED)
+def health_check(request):
+    """Return 200 if the system is up and running."""
+    return Response(body='OK', status_code=200)
