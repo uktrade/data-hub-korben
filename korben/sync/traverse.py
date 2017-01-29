@@ -51,7 +51,7 @@ def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
         )
     except types.EntityPageNoData:  # particular case, pass
         return []
-    except types.EntityPageException:  # general case, retry
+    except (types.EntityPageException, KeyError):  # general case, retry
         time.sleep(POLL_SLEEP)
         LOGGER.info('%s -> %s failed', account_guid, odata_target.name)
         return cdms_pages(
