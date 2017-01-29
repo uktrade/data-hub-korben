@@ -7,7 +7,9 @@ services:
       KORBEN_SENTRY_DSN: http://abc:xyz@etc.com/etc/123
       UNIT_TESTS: "yes"
       CODECOV_TOKEN: ${CODECOV_TOKEN}
-    command: ./test-unit.sh
+      CIRCLECI: ${CIRCLECI}
+      CI: ${CI}
+    command: ./test-runner.sh test/unit
 
   redis:
     image: redis:3.2.5

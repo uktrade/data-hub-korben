@@ -11,13 +11,15 @@ services:
       REDIS_URL: tcp://test-redis
       UNIT_TESTS: "yes"
       CODECOV_TOKEN: ${CODECOV_TOKEN}
+      CIRCLECI: ${CIRCLECI}
+      CI: ${CI}
     build:
       context: .
     links:
       - test-postgres
       - test-postgres-django
       - test-redis
-    command: ./test-tier0.sh
+    command: ./test-runner.sh test/tier0
   test-postgres:
     image: postgres:9.5
     environment:
