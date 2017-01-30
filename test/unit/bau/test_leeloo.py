@@ -51,7 +51,8 @@ def test_send_success(monkeypatch, mock_session):
     monkeypatch.setattr(services, 'redis', mock_redis)
     mock_session.send = functools.partial(mock_send_method, True, 200)
     send_retval = leeloo.send(DJANGO_TABLENAME, [DJANGO_DICT])
-    assert mock_redis.call_count == 0
+    assert mock_redis.set.call_count == 0
+    assert mock_redis.delete.call_count == 1
 
 
 def test_send_failure(monkeypatch, mock_session):
