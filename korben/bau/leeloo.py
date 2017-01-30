@@ -39,17 +39,17 @@ def send(django_tablename, django_dicts):
         responses.append(session.send(request))
     if not all([response.ok for response in responses]):
         LOGGER.error('The following requests failed:')
-        for response in responses:
-            guid = json.loads(response.request.body.decode('utf-8'))['id']
-            redis_key = "{0}/fail/{1}".format(django_tablename, guid)
-            if not response.ok:
-                LOGGER.error(
-                    '    %s %s %s',
-                    response.status_code,
-                    response.request.path_url,
-                    guid
-                )
-                services.redis.set(redis_key, response.status_code)
-            else:
-                services.redis.delete(redis_key)
+    for response in responses:
+        guid = json.loads(response.request.body.decode('utf-8'))['id']
+        redis_key = "{0}/fail/{1}".format(django_tablename, guid)
+        if not response.ok:
+            LOGGER.error(
+                '    %s %s %s',
+                response.status_code,
+                response.request.path_url,
+                guid
+            )
+            services.redis.set(redis_key, response.status_code)
+        else:
+            services.redis.delete(redis_key)
     return responses
