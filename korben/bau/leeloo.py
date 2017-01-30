@@ -4,7 +4,7 @@ import logging
 
 from korben import config
 from korben.utils import generate_signature
-from korben.services import redis
+from korben import services
 
 import requests
 
@@ -49,7 +49,7 @@ def send(django_tablename, django_dicts):
                     response.request.path_url,
                     guid
                 )
-                redis.set(redis_key, response.status_code)
+                services.redis.set(redis_key, response.status_code)
             else:
-                redis.delete(redis_key)
+                services.redis.delete(redis_key)
     return responses
