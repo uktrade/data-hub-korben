@@ -43,7 +43,9 @@ class CDMSRestApi(object):
         if data is None:
             data = {}
         try:
-            resp = self.auth.make_request(verb, url, data=data, headers=headers)
+            resp = self.auth.make_request(
+                verb, url, data=data, headers=headers
+            )
         except Exception as exc:
             sentry_client.SENTRY_CLIENT.captureException()
             raise exc
@@ -54,8 +56,11 @@ class CDMSRestApi(object):
                 'status_code': resp.status_code,
                 'content': resp.content.decode(resp.encoding or 'utf-8'),
             })
-            sentry_client.SENTRY_CLIENT.captureMessage(message='cdms-request-fail',
-                time_spent=int(resp.elapsed.microseconds / 1000),  # sentry requirement
+            # sentry requirement for seconds here
+            time_spent = int(resp.elapsed.microseconds / 1000)
+            sentry_client.SENTRY_CLIENT.captureMessage(
+                message="cdms-request-fail-{0}".format(resp.status_code),
+                time_spent=time_spent,
                 stack=True,  # record stack frame
             )
         LOGGER.debug('%s request took %s', verb, resp.elapsed)
