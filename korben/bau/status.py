@@ -4,7 +4,7 @@ from pyramid.view import view_config
 from pyramid.security import NO_PERMISSION_REQUIRED
 
 from korben import services
-from korben.cdms_api.rest.api import CDMSRestApi
+from korben.cdms_api.rest import api as cdms_api
 from .poll import HEARTBEAT
 
 
@@ -27,7 +27,7 @@ def redis():
 
 def cdms():
     try:
-        cdms_client = CDMSRestApi()
+        cdms_client = cdms_api.CDMSRestApi()
         cdms_response = cdms_client.list('AccountSet')
         status = cdms_response.status_code
         if status != 200:
