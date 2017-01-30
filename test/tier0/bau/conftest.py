@@ -43,11 +43,8 @@ class SigningTestApp(TestApp):
 
 @pytest.fixture
 def test_app(monkeypatch, odata_test_service, tier0_postinitial):
-    monkeypatch.setattr(api, 'CDMSRestApi', lambda: odata_test_service)
     monkeypatch.setattr(views, 'fmt_guid', lambda x: x)
     app = webserver.get_app({
-        'odata_metadata': Mock,
-        'django_metadata': Mock,
-        'cdms_client': Mock,
+        'cdms_client': odata_test_service,
     })
     return SigningTestApp(app)
