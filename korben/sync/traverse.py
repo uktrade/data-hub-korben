@@ -40,10 +40,13 @@ def process_response(target, response):
 
 def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
     'Page through some request'
-    response = cdms_client.list(odata_target.name, filters=filters, skip=offset)
+    response = cdms_client.list(
+        odata_target.name, filters=filters, skip=offset
+    )
     if response.elapsed.seconds > 5:
         LOGGER.info(
-            "%s ! %s (%s) %ss", account_guid, odata_target.name, offset, response.elapsed.seconds
+            "%s ! %s (%s) %ss",
+            account_guid, odata_target.name, offset, response.elapsed.seconds
         )
     try:
         scrape_utils.raise_on_cdms_resp_errors(
@@ -64,18 +67,26 @@ def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
     while not paging_done:
         offset = offset + 50
         django_dicts.extend(
-            cdms_pages(cdms_client, account_guid, odata_target, filters, offset)
+            cdms_pages(
+                cdms_client, account_guid, odata_target, filters, offset
+            )
         )
         paging_done = len(django_dicts) < offset
     return django_dicts
 
 
-def cdms_to_leeloo(cdms_client, account_guid, odata_target, django_target, filters):
+def cdms_to_leeloo(cdms_client,
+                   account_guid,
+                   odata_target,
+                   django_target,
+                   filters):
     redis_key = FMT_TRAVERSE_FLAG.format(django_target, account_guid)
     already_done = bool(services.redis.get(redis_key))
     if already_done:
         return []
-    django_dicts = cdms_pages(cdms_client, account_guid, odata_target, filters, 0)
+    django_dicts = cdms_pages(
+        cdms_client, account_guid, odata_target, filters, 0
+    )
     n_django_dicts = len(django_dicts)
     if n_django_dicts:
         LOGGER.info(
@@ -88,14 +99,14 @@ def cdms_to_leeloo(cdms_client, account_guid, odata_target, django_target, filte
 
 def traverse_from_account(cdms_client, odata_metadata, account_guid):
     'Query CDMS, downloading contacts and interactions for a given company'
-    contact_responses = cdms_to_leeloo(
+    cdms_to_leeloo(
         cdms_client,
         account_guid,
         odata_metadata.tables['ContactSet'],
         'company_contact',
         "ParentCustomerId/Id eq {0}".format(fmt_guid(account_guid)),
     )
-    interaction_responses = cdms_to_leeloo(
+    cdms_to_leeloo(
         cdms_client,
         account_guid,
         odata_metadata.tables['detica_interactionSet'],
@@ -122,6 +133,7 @@ def main():
             traverse_from_account(
                 cdms_client, odata_metadata, account_guid,
             )
+
 
 if __name__ == '__main__':
     main()

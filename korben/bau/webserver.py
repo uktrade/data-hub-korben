@@ -1,19 +1,13 @@
 import os
 
-from pyramid import httpexceptions as http_exc
-from pyramid.authentication import RemoteUserAuthenticationPolicy, BasicAuthAuthenticationPolicy
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
-from pyramid.response import Response
 from wsgiref.simple_server import make_server
 
-from korben import config
 from korben.cdms_api.rest import api
-from korben.etl import spec, transform, utils
 from korben.services import db
 
 from . import auth
-from . import views
 
 
 DEFAULT_SETTINGS = {

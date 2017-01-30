@@ -1,11 +1,8 @@
 import datetime
-import os
 import csv
 import logging
-import tempfile
 import time
 
-import sqlalchemy as sqla
 from sqlalchemy.dialects.postgresql import insert
 
 from korben import services
@@ -112,6 +109,7 @@ def sync():
     LOGGER.info("{0.seconds}.{0.microseconds} overall".format(
         datetime.datetime.now() - start_all
     ))
+
 
 def main():
     one_month = 2629744

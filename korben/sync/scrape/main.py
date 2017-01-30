@@ -10,7 +10,6 @@ from korben import etl
 from korben import services
 from korben.cdms_api.rest.api import CDMSRestApi
 
-from .. import utils as sync_utils
 from . import utils
 from . import constants as scrape_constants
 from . import types
@@ -20,6 +19,7 @@ from . import classes
 class LoggingFilter(logging.Filter):
     def filter(self, record):
         return not record.getMessage().startswith('requests')
+
 
 SPENT_KEY = 'cache/spent'
 logging.basicConfig(level=logging.INFO)
@@ -106,9 +106,8 @@ def main(names=None, client=None):
                 if entity_chunk.state == types.EntityChunkState.incomplete:
                     entity_chunk.start(pool)
             else:
-                LOGGER.info(
-                    "Throttling {0.entity_name} ({0.offset_start}-{0.offset_end})".format(entity_chunk)
-                )
+                fmt_str = "Throttling {0.entity_name} ({0.offset_start}-{0.offset_end})"  # noqa: E501
+                LOGGER.info(fmt_str.format(entity_chunk))
 
             for entity_page in entity_chunk.entity_pages:
                 entity_page.poll()  # updates the state of the EntityPage
@@ -194,5 +193,9 @@ def main(names=None, client=None):
             if not client:  # assume this is not a testing case
                 exit(1)
             return
-        LOGGER.info("{0}/{1} entity chunks report complete".format(len([x for x in done if x]), len(entity_chunks)))
+        LOGGER.info(
+            "{0}/{1} entity chunks report complete".format(
+                len([x for x in done if x]), len(entity_chunks)
+            )
+        )
         time.sleep(1)  # don’t spam

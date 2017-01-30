@@ -7,6 +7,7 @@ from korben import services
 from korben.cdms_api.rest.api import CDMSRestApi
 from .poll import HEARTBEAT
 
+
 def database():
     try:
         metadata = services.db.get_odata_metadata()

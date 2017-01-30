@@ -2,7 +2,6 @@
 Do some rough “polling” for entities that have a "ModifiedOn" column, this code
 operates under the assumption that there is a fully populated local database.
 '''
-from json import JSONDecodeError
 import datetime
 import functools
 import json
@@ -15,7 +14,7 @@ import sqlalchemy as sqla
 
 from korben import config, services, utils
 from korben.bau.sentry_client import SENTRY_CLIENT
-from korben.etl.spec import COLNAME_LONGSHORT, COLNAME_SHORTLONG
+from korben.etl.spec import COLNAME_SHORTLONG
 
 from . import leeloo
 from .. import etl
@@ -41,7 +40,10 @@ class CDMSPoller:
     'Class to poll for updates from CDMS'
     PAGE_SIZE = 50
 
-    def __init__(self, client=None, against='ModifiedOn', comparator=operator.lt):
+    def __init__(self,
+                 client=None,
+                 against='ModifiedOn',
+                 comparator=operator.lt):
         'Arguments are optional here to allow for testing against OData'
         self.client = client or CDMSRestApi()
         self.against = against
@@ -84,7 +86,8 @@ class CDMSPoller:
             offset += self.PAGE_SIZE
 
             LOGGER.debug(
-                'Continuing reverse scrape for %s (from offset %s)', table.name, offset
+                'Continuing reverse scrape for %s (from offset %s)',
+                table.name, offset
             )
 
     def _insert(self, table, primary_key, row):
@@ -132,7 +135,7 @@ class CDMSPoller:
             except TypeError:
                 LOGGER.debug('Row in %s doesn’t exist', table.name)
                 new_rows += self._insert(table, primary_key, row)
-                continue # New row saved, stop here
+                continue  # New row saved, stop here
 
             # Existing row, try to update
 
@@ -148,7 +151,8 @@ class CDMSPoller:
             except TypeError:
                 LOGGER.error('Bad data in %s', table.name)
                 continue
-            except ValueError:  # TODO: type introspection (needs lookup object)
+            except ValueError:  # TODO: type introspection (needs lookup
+                                # object)
                 remote_against = row[self.against]
 
             if self.comparator(local_against, remote_against) is True:
@@ -181,7 +185,8 @@ class CDMSPoller:
             SENTRY_CLIENT.captureException()
             raise exc
         LOGGER.info(
-            '%s offset %s took %s seconds', table.name, offset, resp.elapsed.seconds
+            '%s offset %s took %s seconds',
+            table.name, offset, resp.elapsed.seconds
         )
 
         rows = []

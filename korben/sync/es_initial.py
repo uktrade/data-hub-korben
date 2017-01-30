@@ -11,10 +11,12 @@ from korben import etl
 from . import constants
 from . import utils
 
+
 class ESFilter(logging.Filter):
     'Filter out spamming ES logging'
     def filter(self, record):
         return 'elasticsearch' not in record.name
+
 
 logging.getLogger().addFilter(ESFilter())
 LOGGER = logging.getLogger('korben.sync.es_initial')
@@ -71,8 +73,7 @@ def joined_select(table):
     joined_tables = set()
     fkey_cols = [col for col in table.columns if bool(col.foreign_keys)]
     for col in fkey_cols:
-        fkey = next(iter(col.foreign_keys))  # assume fkeys
-                                             # are non-composite
+        fkey = next(iter(col.foreign_keys))  # assume fkeys are non-composite
         # don’t try to join twice
         if fkey.column.table.name not in joined_tables:
             # outer join is used here because data from cdms is incomplete
@@ -110,7 +111,9 @@ def main():
             joined_select(table), local_chunksize
         )
         for rows in chunks:
-            actions = list(map(functools.partial(row_es_add, table, 'id'), rows))
+            actions = list(
+                map(functools.partial(row_es_add, table, 'id'), rows)
+            )
             _, error_count = es_helpers.bulk(
                 client=services.es,
                 actions=actions,
@@ -124,14 +127,18 @@ def main():
     name = 'company_companieshousecompany'
     company_table = django_metadata.tables['company_company']
     LOGGER.info('Indexing from django database for %s', name)
+    comparitor = company_table.columns['company_number'] != None  # noqa: E711
     result = django_metadata.bind.execute(
-        sqla.select([company_table.columns['company_number']])\
-            .where(company_table.columns['company_number'] != None)
+        sqla.select([company_table.columns['company_number']])
+            .where(comparitor)
     ).fetchall()
     linked_companies = frozenset([x.company_number for x in result])
     table = django_metadata.tables[name]
     chunks = utils.select_chunks(
-        django_metadata.bind.execute, table, joined_select(table), local_chunksize
+        django_metadata.bind.execute,
+        table,
+        joined_select(table),
+        local_chunksize
     )
     for rows in chunks:
         filtered_rows = [

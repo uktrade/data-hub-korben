@@ -15,8 +15,9 @@ def __to_url(url):
         return url
     return __urlparse.urlparse(url)
 
-__to_bytes = lambda x: bytes(x, 'utf8')
-__noop = lambda x: x
+
+__to_bytes = lambda x: bytes(x, 'utf8')  # noqa: E731
+__noop = lambda x: x  # noqa: E731
 
 __config_spec = {
     #                                            default
@@ -37,7 +38,8 @@ __config_spec = {
     'redis_url':                   (True, True, 'tcp://redis', __to_url),
     'korben_sentry_dsn':           (True, True, None, __noop),
     'datahub_secret':              (True, True, None, __to_bytes),
-    'leeloo_url':                  (True, True, 'http://leeloo:8000/korben', __noop),
+    'leeloo_url':                  (
+        True, True, 'http://leeloo:8000/korben', __noop),
 }
 
 
@@ -55,7 +57,7 @@ def __set_config(name, value=None):
     if value:  # value was passed directly
         globals()[name] = cast(value)
         return
-    value = __config_yaml.get(name)
+    value = __config_yaml.get(name)  # noqa: F821
     if read_env:
         try:
             value = __os.environ[name.upper()]
@@ -90,11 +92,12 @@ def populate(path=None, ignore=True):
     if path:
         with open(path, 'r') as __config_yaml_fh:
             try:
-                globals()['__config_yaml'] = __yaml.load(__config_yaml_fh.read())
+                globals()['__config_yaml'] =\
+                    __yaml.load(__config_yaml_fh.read())
             except Exception as exc:
                 msg = 'Could not parse config YAML ({0})'
                 raise ConfigError(msg.format(exc))
-            if not __config_yaml:
+            if not __config_yaml:  # noqa: F821
                 raise ConfigError('Named config YAML was empty')
 
     else:
