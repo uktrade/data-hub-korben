@@ -33,3 +33,22 @@ korben sync es
 ```
 
 # BAU
+There are two web applications offered by this package. One is a web API
+allowing an authenticated request to trigger CRUD operations on a Dynamics
+instance. It’s a WSGI application and can be easily invoked by running
+`korben bau` on the command line. The other is a simple Python script which
+polls a Dynamics instance for fresh data. It can be invoked with `korben bau
+poll`. This service doesn’t offer an interface.
+
+# Testing
+There are three test suites in this repository, two of which have test
+environments defined here. The first contains basic unit tests; `make
+test-unit`, the second has an environment suitable for writing tests against a
+reference OData implementation offered by Microsoft (see
+http://www.odata.org/odata-services/); `make test-tier0`, and the third is a
+suite designed to run against the staging CDMS instance, with whatever
+implementation of OData that is offered by Microsoft CRM 2011. There isn’t a
+Make command for it here, because it has a dependency on
+[`uktrade/data-hub-leeloo`](https://github.com/uktrade/data-hub-leeloo),
+instead refer to the “umbrella” repo
+[`uktrade/data-hub`](https://github.com/uktrade/data-hub).

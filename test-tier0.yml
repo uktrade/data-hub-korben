@@ -10,13 +10,24 @@ services:
       KORBEN_SENTRY_DSN: http://abc:xyz@etc.com/etc/123
       REDIS_URL: tcp://test-redis
       UNIT_TESTS: "yes"
+      CODECOV_TOKEN: ${CODECOV_TOKEN}
+      CI: ${CI}
+      CIRCLECI: ${CIRCLECI}
+      CIRCLE_BRANCH: ${CIRCLE_BRANCH}
+      CIRCLE_BUILD_NUM: ${CIRCLE_BUILD_NUM}
+      CIRCLE_NODE_INDEX: ${CIRCLE_NODE_INDEX}
+      CIRCLE_PROJECT_USERNAME: ${CIRCLE_PROJECT_USERNAME}
+      CIRCLE_PROJECT_REPONAME: ${CIRCLE_PROJECT_REPONAME}
+      CIRCLE_SHA1: ${CIRCLE_SHA1}
+      CIRCLE_ARTIFACTS: ${CIRCLE_ARTIFACTS}
+      CIRCLE_PR_NUMBER: ${CIRCLE_PR_NUMBER}
     build:
       context: .
     links:
       - test-postgres
       - test-postgres-django
       - test-redis
-    command: py.test -vv --tb=short test/tier0
+    command: ./test-runner.sh test/tier0
   test-postgres:
     image: postgres:9.5
     environment:
