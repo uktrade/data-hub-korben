@@ -1,4 +1,3 @@
-import collections
 import datetime
 import functools
 import logging
@@ -92,7 +91,6 @@ def cdms_to_leeloo(client, guid, odata_target, django_target, filters):
 
 def traverse(client, odata_metadata, guid, children):
     'Query CDMS, downloading contacts and interactions for a given company'
-    retval = {}
     for table_name, parent_alias in children:
         cdms_to_leeloo(
             client,
