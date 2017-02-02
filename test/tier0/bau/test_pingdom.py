@@ -25,6 +25,6 @@ def test_update_category(monkeypatch, tier0, odata_test_service, test_app):
 <pingdom_http_custom_check>
     <status>FALSE</status>
 </pingdom_http_custom_check>
-<!--cdms failed because 'CDMS replied with 404'-->
+<!--cdms failed because 'module 'korben.config' has no attribute 'cdms_username''-->
 '''
     assert response.body.decode('utf-8') == expected_body
