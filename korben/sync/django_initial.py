@@ -51,7 +51,9 @@ def fetch_missing(metadata, missing, attempts=0):
                 django_name, count_non_existant
             )
         if still_missing:
-            return fetch_missing(metadata, still_missing, attempts=attempts + 1)
+            return fetch_missing(
+                metadata, still_missing, attempts=attempts + 1
+            )
 
 
 def main(client=None):

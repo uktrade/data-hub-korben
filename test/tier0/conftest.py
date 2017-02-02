@@ -2,6 +2,7 @@ import pytest
 
 from unittest.mock import Mock
 import copy
+import functools
 import json
 import os
 import time
@@ -40,8 +41,9 @@ SELECT relname, n_live_tup FROM pg_stat_user_tables
 '''
 
 
-@pytest.fixture(scope='session')
-def odata_test_service():
+@pytest.fixture
+def odata_test_service(monkeypatch):
+    monkeypatch.setattr(views, 'fmt_guid', lambda x: x)
     resp = requests.get(ODATA_URL)
     root = etree.fromstring(resp.content)
     config.cdms_base_url = root.attrib[ATOM_PREFIX + 'base']
@@ -238,15 +240,20 @@ def tier0_postinitial(tier0):
         cursor.connection.close()
 
 
+def fetcher(method, sql):
+    connection = get_connection(os.environ['DATABASE_ODATA_URL'])
+    cursor = connection.cursor()
+    cursor.execute(sql)
+    result = getattr(cursor, method)()
+    connection.close()
+    return result
+
+
+@pytest.fixture(scope='session')
+def odata_fetchone():
+    return functools.partial(fetcher, 'fetchone')
+
+
 @pytest.fixture(scope='session')
 def odata_fetchall():
-
-    def fetcher(sql):
-        connection = get_connection(os.environ['DATABASE_ODATA_URL'])
-        cursor = connection.cursor()
-        cursor.execute(sql)
-        result = cursor.fetchall()
-        connection.close()
-        return result
-
-    return fetcher
+    return functools.partial(fetcher, 'fetchall')

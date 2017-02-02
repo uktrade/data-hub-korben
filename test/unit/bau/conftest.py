@@ -11,14 +11,9 @@ from korben.services import db
 
 
 @pytest.fixture
-def mock_client(monkeypatch):
-    client = Mock()
-    monkeypatch.setattr(api, 'CDMSRestApi', lambda: client)
-
-@pytest.fixture
-def test_app(monkeypatch, mock_client):
+def test_app(monkeypatch):
     monkeypatch.setattr(db, 'get_odata_metadata', Mock)
     monkeypatch.setattr(db, 'get_django_metadata', Mock)
     monkeypatch.setattr(sentry_client, 'SENTRY_CLIENT', Mock())
-    app = webserver.get_app()
+    app = webserver.get_app({'cdms_client': Mock()})
     return TestApp(app)

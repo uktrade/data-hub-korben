@@ -51,7 +51,11 @@ class EntityChunk(object):
         entity_page_states = set(
             entity_page.state for entity_page in self.entity_pages
         )
-        if all(state == types.EntityPageState.initial for state in entity_page_states):
+        entity_page_states_initial = (
+            state == types.EntityPageState.initial
+            for state in entity_page_states
+        )
+        if all(entity_page_states_initial):
             return
         pending = (
             types.EntityPageState.pending in entity_page_states

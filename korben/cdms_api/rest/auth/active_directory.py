@@ -43,7 +43,8 @@ class ActiveDirectoryAuth:
 
     def setup_session(self, force=False):
         """
-        So that we don't login every time, we save the cookie and load it afterwards.
+        So that we don't login every time, we save the cookie and load it
+        afterwards.
         """
         if force:
             self.cookie_storage.reset()
@@ -65,12 +66,14 @@ class ActiveDirectoryAuth:
 
         1. get login page
         2. submit the form with username and password
-        3. the result is a form with a security token issued by the STS and the url of the next STS
-            to validate the token
+        3. the result is a form with a security token issued by the STS and the
+           url of the next STS to validate the token
         4. submit the form of step 3. without making any changes
-        5. repeat step 3. and 4 one more time to get the valid authentication cookie
+        5. repeat step 3. and 4 one more time to get the valid authentication
+           cookie
 
-        For more details, check: https://msdn.microsoft.com/en-us/library/aa480563.aspx
+        For more details, check:
+        https://msdn.microsoft.com/en-us/library/aa480563.aspx
         """
         session = requests.session()
 
@@ -89,7 +92,8 @@ class ActiveDirectoryAuth:
             username_field_name = html_parser('input[name*=Username]')[0].name
             password_field_name = html_parser('input[name*=Password]')[0].name
         except IndexError as exc:
-            # CDMS produced an unexpected HTML markup, we try again for 10 times
+            # CDMS produced an unexpected HTML markup, we try again for 10
+            # times
             if self.login_repetitions < self.login_max_attempts:
                 self.login_repetitions += 1
                 return self.login()
@@ -106,25 +110,32 @@ class ActiveDirectoryAuth:
             }
         )
 
-        # 3. and 4. re-submit the resulting form containing the security token so that the next STS can validate it
+        # 3. and 4. re-submit the resulting form containing the security token
+        # so that the next STS can validate it
         resp = self._submit_form(session, resp.content)
 
-        # 5. re-submit the form again to validate the token and get as result the authenticated cookie
+        # 5. re-submit the form again to validate the token and get as result
+        # the authenticated cookie
         self._submit_form(session, resp.content)
         return session
 
     def _submit_form(self, session, source, url=None, params={}):
         """
-        It submits the form contained in the `source` param optionally overriding form `params` and form `url`.
+        It submits the form contained in the `source` param optionally
+        overriding form `params` and form `url`.
 
-        This is needed as UKTI has a few STSes and the token has to be validated by all of them.
-        For more details, check: https://msdn.microsoft.com/en-us/library/aa480563.aspx
+        This is needed as UKTI has a few STSes and the token has to be
+        validated by all of them.  For more details, check:
+        https://msdn.microsoft.com/en-us/library/aa480563.aspx
         """
         html_parser = PyQuery(source)
         form_action = html_parser('form').attr('action')
 
         # get all inputs in the source + optional params passed in
-        data = {field.get('name'): field.get('value') for field in html_parser('input')}
+        data = {
+            field.get('name'): field.get('value')
+            for field in html_parser('input')
+        }
         data.update(params)
 
         url = url or form_action
@@ -138,14 +149,18 @@ class ActiveDirectoryAuth:
                 status_code=resp.status_code
             )
 
-        # check response, if form action of source == form action of response => error page
+        # check response, if form action of source == form action of response
+        # => error page
         html_parser = PyQuery(resp.content)
 
         if form_action == html_parser('form').attr('action'):
             error_els = html_parser('[id$=ErrorTextLabel]')
             if error_els:
-                raise LoginErrorException(', '.join([error_el.text for error_el in error_els]))
-            raise UnexpectedResponseException(  # we don't know exactly what happened...
+                raise LoginErrorException(
+                    ', '.join([error_el.text for error_el in error_els])
+                )
+            # we don't know exactly what happened...
+            raise UnexpectedResponseException(
                 'Unexpected Response.', content=resp.content
             )
         return resp
@@ -167,7 +182,7 @@ class ActiveDirectoryAuth:
     def _make_request(self, verb, url, data=None, headers=None):
         if data is None:
             data = {}
-        logger.debug('Calling CDMS url (%s) on %s' % (verb, url))
+        logger.debug('Calling CDMS url (%s) on %s', verb, url)
 
         if data:
             data = json.dumps(data)

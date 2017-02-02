@@ -1,4 +1,3 @@
-import os
 import pickle
 
 from cryptography.fernet import Fernet, InvalidToken
@@ -9,7 +8,8 @@ from korben import services
 
 class CookieStorage(object):
     """
-    Stores a cookie encrypting before writing it and decrypting it after reading it.
+    Stores a cookie encrypting before writing it and decrypting it after
+    reading it.
     """
 
     def __init__(self, cookie_path):

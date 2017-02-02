@@ -6,7 +6,6 @@ import zipfile
 from lxml import etree
 import requests
 
-from korben.services import redis_bytes
 from . import constants
 from .. import utils as sync_utils
 

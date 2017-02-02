@@ -9,7 +9,7 @@ import sqlalchemy as sqla
 from korben import services
 from korben.bau import leeloo
 from korben.bau.poll import POLL_SLEEP
-from korben.bau.views import fmt_guid
+from korben.bau import views
 from korben.etl import transform, load, spec
 from korben.sync.scrape import utils as scrape_utils, types
 from korben.sync.utils import select_chunks
@@ -28,8 +28,12 @@ def process_response(target, response):
         spec.COLNAME_SHORTLONG.get((target.name, short_col), short_col)
         for short_col in map(operator.attrgetter('name'), target.columns)
     ]
+    try:
+        entries = response.json()['d']['results']
+    except TypeError:  # handle non-cdms case
+        entries = response.json()['d']
     odata_dicts = []
-    for cdms_dict in response.json()['d']['results']:
+    for cdms_dict in entries:
         odata_dicts.append(short_cols(entry_row(long_cols, cdms_dict)))
     load.to_sqla_table_idempotent(target, odata_dicts)
     retval = []
@@ -38,12 +42,13 @@ def process_response(target, response):
     return retval
 
 
-def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
+def cdms_pages(client, guid, odata_target, filters, offset):
     'Page through some request'
-    response = cdms_client.list(odata_target.name, filters=filters, skip=offset)
+    response = client.list(odata_target.name, filters=filters, skip=offset)
     if response.elapsed.seconds > 5:
         LOGGER.info(
-            "%s ! %s (%s) %ss", account_guid, odata_target.name, offset, response.elapsed.seconds
+            "%s ! %s (%s) %ss",
+            guid, odata_target.name, offset, response.elapsed.seconds
         )
     try:
         scrape_utils.raise_on_cdms_resp_errors(
@@ -53,10 +58,8 @@ def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
         return []
     except types.EntityPageException:  # general case, retry
         time.sleep(POLL_SLEEP)
-        LOGGER.info('%s -> %s failed', account_guid, odata_target.name)
-        return cdms_pages(
-            cdms_client, account_guid, odata_target, filters, offset
-        )
+        LOGGER.info('%s -> %s failed', guid, odata_target.name)
+        return cdms_pages(client, guid, odata_target, filters, offset)
     django_dicts = process_response(odata_target, response)
     if not django_dicts:
         return django_dicts
@@ -64,64 +67,64 @@ def cdms_pages(cdms_client, account_guid, odata_target, filters, offset):
     while not paging_done:
         offset = offset + 50
         django_dicts.extend(
-            cdms_pages(cdms_client, account_guid, odata_target, filters, offset)
+            cdms_pages(client, guid, odata_target, filters, offset)
         )
         paging_done = len(django_dicts) < offset
     return django_dicts
 
 
-def cdms_to_leeloo(cdms_client, account_guid, odata_target, django_target, filters):
-    redis_key = FMT_TRAVERSE_FLAG.format(django_target, account_guid)
+def cdms_to_leeloo(client, guid, odata_target, django_target, filters):
+    redis_key = FMT_TRAVERSE_FLAG.format(django_target, guid)
     already_done = bool(services.redis.get(redis_key))
     if already_done:
         return []
-    django_dicts = cdms_pages(cdms_client, account_guid, odata_target, filters, 0)
+    django_dicts = cdms_pages(client, guid, odata_target, filters, 0)
     n_django_dicts = len(django_dicts)
     if n_django_dicts:
         LOGGER.info(
-            "(%s) -> %s of %s", account_guid, n_django_dicts, django_target
+            "(%s) -> %s of %s", guid, n_django_dicts, django_target
         )
     retval = leeloo.send(django_target, django_dicts)  # errors recorded here
     services.redis.set(redis_key, datetime.datetime.now().isoformat())
     return retval
 
 
-def traverse_from_account(cdms_client, odata_metadata, account_guid):
+def traverse(client, odata_metadata, guid, children):
     'Query CDMS, downloading contacts and interactions for a given company'
-    contact_responses = cdms_to_leeloo(
-        cdms_client,
-        account_guid,
-        odata_metadata.tables['ContactSet'],
-        'company_contact',
-        "ParentCustomerId/Id eq {0}".format(fmt_guid(account_guid)),
-    )
-    interaction_responses = cdms_to_leeloo(
-        cdms_client,
-        account_guid,
-        odata_metadata.tables['detica_interactionSet'],
-        'company_interaction',
-        "optevia_Organisation/Id eq {0}".format(fmt_guid(account_guid)),
-    )
+    for table_name, parent_alias in children:
+        cdms_to_leeloo(
+            client,
+            guid,
+            odata_metadata.tables[table_name],
+            spec.MAPPINGS[table_name]['to'],
+            "{0} eq {1}".format(parent_alias, views.fmt_guid(guid)),
+        )
 
 
-def main():
+def main(client, traversal_spec):
     '''
     Download everything, traversing from company to contact and then
     interaction. Tee the data to the OData database and Leeloo web API.
     '''
-    cdms_client = CDMSRestApi()
+    (root_table, root_pkey), children = traversal_spec
     odata_metadata = services.db.get_odata_metadata()
-    odata_table = odata_metadata.tables['AccountSet']
+    odata_table = odata_metadata.tables[root_table]
     base_select = sqla.select([odata_table])
     execute = odata_metadata.bind.execute
     odata_chunks = select_chunks(execute, odata_table, base_select)
-
     for odata_chunk in odata_chunks:
         for odata_row in odata_chunk:
-            account_guid = getattr(odata_row, 'AccountId')
-            traverse_from_account(
-                cdms_client, odata_metadata, account_guid,
-            )
+            guid = getattr(odata_row, root_pkey)
+            traverse(client, odata_metadata, guid, children)
+
 
 if __name__ == '__main__':
-    main()
+    traversal_spec = (
+        ('AccountSet', 'AccountId'),
+        (
+            ('ContactSet', 'ParentCustomerId/Id'),
+            ('detica_interactionSet', 'optevia_Organisation/Id'),
+        ),
+    )
+    client = CDMSRestApi()
+    main(client, traversal_spec)

@@ -20,7 +20,8 @@ class LoginErrorException(ErrorResponseException):
 class UnexpectedResponseException(ErrorResponseException):
     """
     Used when there's an unexpected response.
-    The message will have the status_code and the content will be the response body.
+    The message will have the status_code and the content will be the response
+    body.
     """
 
 

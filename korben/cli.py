@@ -2,7 +2,7 @@
 import logging
 import types
 import sys
-from . import sync, etl, bau
+from . import sync, bau
 
 MODULES = {
     'sync': sync,
@@ -43,9 +43,8 @@ def main():
                     print("  {0}".format(command))
                 return exit(1)
         except KeyError:
-            print("`{0}` is not a subcommand, available subcommands are:".format(
-                sys.argv[2]
-            ))
+            fmt_str = "`{0}` is not a subcommand, available subcommands are:"
+            print(fmt_str.format(sys.argv[2]))
             for command in commands:
                 print("  {0}".format(command))
             return exit(1)

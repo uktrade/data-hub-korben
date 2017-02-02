@@ -19,6 +19,7 @@ responses
 sqlparse
 streql
 
+flake8
 pytest
 pytest-runner
 pytest-cov

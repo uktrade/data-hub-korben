@@ -8,7 +8,7 @@ def category_object(tier0, tier0_postinitial, odata_test_service):
     resp = odata_test_service.create('Categories', category)
     assert resp.status_code == 201
     yield category
-    odata_test_service.delete('Categories', 123)
+    odata_test_service.delete('Categories', 123).ok
 
 
 def test_poll_create(odata_test_service, odata_fetchall, category_object):

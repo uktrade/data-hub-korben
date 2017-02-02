@@ -66,7 +66,13 @@ class CDMSRestApi(object):
         LOGGER.debug('%s request took %s', verb, resp.elapsed)
         return resp
 
-    def list(self, service, top=50, skip=0, select=None, filters=None, order_by=None):
+    def list(self,
+             service,
+             top=50,
+             skip=0,
+             select=None,
+             filters=None,
+             order_by=None):
         LOGGER.debug(
             'service=%s top=%s skip=%s select=%s filters=%s order_by=%s',
             service, top, skip, select, filters, order_by
@@ -88,7 +94,9 @@ class CDMSRestApi(object):
             service=service,
             top=top,
             skip=skip,
-            params='&'.join(sorted([u'%s=%s' % (k, v) for k, v in params.items()]))
+            params='&'.join(
+                sorted([u'%s=%s' % (k, v) for k, v in params.items()])
+            )
         )
 
         resp = self.make_request('get', url)
@@ -105,8 +113,8 @@ class CDMSRestApi(object):
 
         Returns:
             dict: A dictionary containing the content of the entity. Any fields
-                that have no data will be included in the dictionary with
-                `None` values.
+            that have no data will be included in the dictionary with `None`
+            values.
 
         Raises:
             CDMSNotFoundException: If instance with provided guid can't be

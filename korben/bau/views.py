@@ -1,21 +1,17 @@
 import json
 import logging
-import os
 import uuid
-import tempfile
 
 from pyramid import httpexceptions as http_exc
 from pyramid.response import Response
 from pyramid.view import view_config
 from requests.exceptions import RequestException
 
-from korben import config
 from korben.cdms_api.rest.api import CDMSRestApi
 from korben.cdms_api.rest.auth.active_directory import ActiveDirectoryAuth
 from korben.etl import utils as etl_utils
 
 from . import common
-from . import status
 from .sentry_client import SENTRY_CLIENT
 
 LOGGER = logging.getLogger('korben.bau.views')
@@ -87,7 +83,11 @@ def get(request):
     return common.odata_to_django(odata_tablename, response)
 
 
-@view_config(route_name='validate-credentials', request_method=['POST'], renderer='json')
+@view_config(
+    route_name='validate-credentials',
+    request_method=['POST'],
+    renderer='json'
+)
 def validate_credentials(request):
     'Validate a set of CDMS credentials'
     cdms_cookie_path = uuid.uuid4().hex

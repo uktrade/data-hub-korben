@@ -8,6 +8,7 @@ from korben.etl import spec, transform
 
 LOGGER = logging.getLogger('korben.bau.common')
 
+
 def request_tablenames(request):
     'Extract table names from a request, raise things'
     django_tablename = request.matchdict['django_tablename']

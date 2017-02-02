@@ -1,11 +1,14 @@
-ATTRIBUTEMASK_TAG = '{http://schemas.microsoft.com/ado/2007/08/dataservices}AttributeMask'
+ATTRIBUTEMASK_TAG =\
+    '{http://schemas.microsoft.com/ado/2007/08/dataservices}AttributeMask'
 CONTENT_TAG = '{http://www.w3.org/2005/Atom}content'
 ENTRY_TAG = '{http://www.w3.org/2005/Atom}entry'
 ID_TAG = '{http://schemas.microsoft.com/ado/2007/08/dataservices}Id'
 LINK_TAG = '{http://www.w3.org/2005/Atom}link'
-MESSAGE_TAG = '{http://schemas.microsoft.com/ado/2007/08/dataservices/metadata}message'
+MESSAGE_TAG =\
+    '{http://schemas.microsoft.com/ado/2007/08/dataservices/metadata}message'
 
-TYPE_KEY = '{http://schemas.microsoft.com/ado/2007/08/dataservices/metadata}type'
+TYPE_KEY =\
+    '{http://schemas.microsoft.com/ado/2007/08/dataservices/metadata}type'
 
 
 FORBIDDEN_ENTITIES = (
