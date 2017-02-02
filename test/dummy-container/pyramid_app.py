@@ -17,7 +17,7 @@ DJANGO_TABLENAMES = {
     'company_company',
     'company_advisor',
     'company_contact',
-    'company_interaction',
+    'interaction_interaction',
 }
 
 

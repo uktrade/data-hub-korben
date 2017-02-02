@@ -19,7 +19,7 @@ def test_create_interaction(test_app, django_fixtures):
     }
     interaction.update(interaction_update)
     interaction_resp = test_app.post_json(
-        '/create/company_interaction', interaction
+        '/create/interaction_interaction', interaction
     )
     match = re.match('.{8}-.{4}-.{4}-.{12}', interaction_resp.json['id'])
     assert match.span() == (0, 31)
@@ -30,6 +30,6 @@ def test_create_interaction(test_app, django_fixtures):
 def test_get_interaction_date(test_app, django_fixtures):
     'Check that the date comes back in a non-CDMS format'
     interaction_resp = test_app.post_json(
-        '/get/company_interaction/f0b138b8-18e6-e511-8ffa-e4115bead28a', {}
+        '/get/interaction_interaction/f0b138b8-18e6-e511-8ffa-e4115bead28a', {}
     )
-    assert '/Date(' not in interaction_resp.json['date_of_interaction']
+    assert '/Date(' not in interaction_resp.json['date']
