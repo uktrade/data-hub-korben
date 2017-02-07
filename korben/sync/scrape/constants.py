@@ -1,7 +1,9 @@
-PROCESSES = 16
+import os
+
+PROCESSES = int(os.environ.get('KORBEN_SCRAPE_PROCESSES', 16))
 CHUNKSIZE = 100
 PAGESIZE = 50
-INTERVAL = 5
+INTERVAL = int(os.environ.get('KORBEN_SCRAPE_INTERVAL', 5))
 
 SECRET_SECTORS = (
     '9e38cecc-5f95-e211-a939-e4115bead28a',
