@@ -11,9 +11,21 @@ from korben.services import db
 
 
 @pytest.fixture
-def test_app(monkeypatch):
-    monkeypatch.setattr(db, 'get_odata_metadata', Mock)
-    monkeypatch.setattr(db, 'get_django_metadata', Mock)
+def mock_client(monkeypatch):
+    client = Mock()
+    monkeypatch.setattr(api, 'CDMSRestApi', lambda: client)
+
+
+@pytest.fixture
+def mock_externals(monkeypatch):
     monkeypatch.setattr(sentry_client, 'SENTRY_CLIENT', Mock())
-    app = webserver.get_app({'cdms_client': Mock()})
+
+
+@pytest.fixture
+def test_app(mock_externals, mock_client):
+    app = webserver.get_app({
+        'odata_metadata': Mock,
+        'django_metadata': Mock,
+        'cdms_client': Mock,
+    })
     return TestApp(app)

@@ -87,7 +87,7 @@ def django_interaction():
         # Face to Face
         'interaction_type_id': 'a5d71fdd-5d95-e211-a939-e4115bead28a',
         'subject': 'Pros and cons of shooting production assistants',
-        'date_of_interaction': str(datetime.datetime.now()),
+        'date': str(datetime.datetime.now()),
         'notes': 'We decided we shouldn’t play with guns in the future.',
         # Trade - Enquiry
         'service_id': '330bba2b-3499-e211-a939-e4115bead28a',

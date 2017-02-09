@@ -1,8 +1,9 @@
 import os
 
+from wsgiref.simple_server import make_server
+
 from pyramid.authorization import ACLAuthorizationPolicy
 from pyramid.config import Configurator
-from wsgiref.simple_server import make_server
 
 from korben.cdms_api.rest import api
 from korben.services import db
@@ -11,9 +12,9 @@ from . import auth
 
 
 DEFAULT_SETTINGS = {
-    'odata_metadata': lambda: db.get_odata_metadata(),
-    'django_metadata': lambda: db.get_django_metadata(),
-    'cdms_client': lambda: api.CDMSRestApi()
+    'odata_metadata': db.get_odata_metadata,
+    'django_metadata': db.get_django_metadata,
+    'cdms_client': api.CDMSRestApi
 }
 
 

@@ -1,4 +1,5 @@
 import pytest
+from unittest.mock import Mock
 
 import collections
 import json
@@ -42,5 +43,8 @@ class SigningTestApp(TestApp):
 
 @pytest.fixture
 def test_app(monkeypatch, odata_test_service, tier0_postinitial):
-    monkeypatch.setattr(api, 'CDMSRestApi', lambda: odata_test_service)
-    return SigningTestApp(webserver.get_app())
+    monkeypatch.setattr(views, 'fmt_guid', lambda x: x)
+    app = webserver.get_app({
+        'cdms_client': odata_test_service,
+    })
+    return SigningTestApp(app)
