@@ -59,8 +59,8 @@ def fetch_missing(metadata, missing, attempts=0):
 def main(django_names_str=None, client=None):
     odata_metadata = services.db.get_odata_metadata()
     django_metadata = services.db.get_django_metadata()
-    table_map = django_tables_dep_order(django_metadata)
-    if not django_names:
+    tablemap = django_tables_dep_order(django_metadata)
+    if not django_names_str:
         spec = tablemap
     else:
         django_names = django_names_str.split(',')
