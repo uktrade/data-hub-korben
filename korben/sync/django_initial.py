@@ -56,10 +56,16 @@ def fetch_missing(metadata, missing, attempts=0):
             )
 
 
-def main(client=None):
+def main(django_names_str=None, client=None):
+    django_names = django_names_str.split(',')
+    table_map = django_tables_dep_order(django_metadata)
+    if not django_names:
+        spec = tablemap
+    else:
+        spec = filter(lambda x: x[1] in django_names, tablemap) 
     odata_metadata = services.db.get_odata_metadata()
     django_metadata = services.db.get_django_metadata()
-    for odata_name, django_name in django_tables_dep_order(django_metadata):
+    for odata_name, django_name in spec:
         LOGGER.info('Dumping %s -> %s', odata_name, django_name)
         odata_table = odata_metadata.tables[odata_name]
         primary_key = etl.utils.primary_key(odata_table)
