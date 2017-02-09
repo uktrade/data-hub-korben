@@ -57,14 +57,14 @@ def fetch_missing(metadata, missing, attempts=0):
 
 
 def main(django_names_str=None, client=None):
+    odata_metadata = services.db.get_odata_metadata()
+    django_metadata = services.db.get_django_metadata()
     table_map = django_tables_dep_order(django_metadata)
     if not django_names:
         spec = tablemap
     else:
         django_names = django_names_str.split(',')
-        spec = filter(lambda x: x[1] in django_names, tablemap) 
-    odata_metadata = services.db.get_odata_metadata()
-    django_metadata = services.db.get_django_metadata()
+        spec = filter(lambda x: x[1] in django_names, tablemap)
     for odata_name, django_name in spec:
         LOGGER.info('Dumping %s -> %s', odata_name, django_name)
         odata_table = odata_metadata.tables[odata_name]
