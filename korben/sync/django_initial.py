@@ -7,7 +7,7 @@ import sqlalchemy as sqla
 from korben import services
 from korben import etl
 from korben.cdms_api.rest.api import CDMSRestApi
-from . import utils
+from . import utils, constants
 
 LOGGER = logging.getLogger('korben.sync.django_initial')
 
@@ -25,7 +25,7 @@ def django_tables_dep_order(django_metadata):
 
 
 def fetch_missing(metadata, missing, attempts=0):
-    if attempts < 3:
+    if attempts < constants.DJANGO_INITIAL_MISSING_ATTEMPTS:
         pass
     else:
         return
