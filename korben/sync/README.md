@@ -25,3 +25,6 @@ This script makes an ETL run to send all entity types specified in the
 As rows are sent to the Django database, any integrity errors found are parsed
 for a list entities which were found to be missing. An attempt is then made to
 download these missing entities from CDMS. If this fails after
+`constants.DJANGO_INITIAL_MISSING_ATTEMPTS` many attempts, then the missing
+fkey’d entity is considered to be non-existant and the parent entity is not
+sync’d.
