@@ -89,22 +89,10 @@ def cdms_to_leeloo(client, guid, odata_target, django_target, filters):
     return retval
 
 
-def traverse(client, odata_metadata, guid, children):
-    'Query CDMS, downloading contacts and interactions for a given company'
-    for table_name, parent_alias in children:
-        cdms_to_leeloo(
-            client,
-            guid,
-            odata_metadata.tables[table_name],
-            spec.MAPPINGS[table_name]['to'],
-            "{0} eq {1}".format(parent_alias, views.fmt_guid(guid)),
-        )
-
-
-def main(client, traversal_spec):
+def traverse(client, traversal_spec):
     '''
-    Download everything, traversing from company to contact and then
-    interaction. Tee the data to the OData database and Leeloo web API.
+    Download everything, traversing from parent to children. Tee acquired the
+    data to the OData database and Leeloo web API.
     '''
     (root_table, root_pkey), children = traversal_spec
     odata_metadata = services.db.get_odata_metadata()
@@ -115,10 +103,17 @@ def main(client, traversal_spec):
     for odata_chunk in odata_chunks:
         for odata_row in odata_chunk:
             guid = getattr(odata_row, root_pkey)
-            traverse(client, odata_metadata, guid, children)
+            for table_name, parent_alias in children:
+                cdms_to_leeloo(
+                    client,
+                    guid,
+                    odata_metadata.tables[table_name],
+                    spec.MAPPINGS[table_name]['to'],
+                    "{0} eq {1}".format(parent_alias, views.fmt_guid(guid)),
+                )
 
 
-if __name__ == '__main__':
+def main():
     traversal_spec = (
         ('AccountSet', 'AccountId'),
         (
@@ -127,4 +122,4 @@ if __name__ == '__main__':
         ),
     )
     client = CDMSRestApi()
-    main(client, traversal_spec)
+    traverse(client, traversal_spec)

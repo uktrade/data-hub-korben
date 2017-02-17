@@ -4,7 +4,7 @@ import datetime
 import random
 
 from korben.bau import poll
-from korben.sync import traverse
+from korben.sync.traverse import traverse
 from korben.services import db
 from korben.etl import load
 
@@ -47,7 +47,7 @@ def traversables(odata_test_service):
 def test_traverse(tier0, odata_fetchone, odata_fetchall, odata_test_service, traversables):
     products, categories = traversables
     traversal_spec = (('Categories', 'ID'), (('Products', 'Category/ID'),),)
-    traversal_results = traverse.main(odata_test_service, traversal_spec)
+    traversal_results = traverse(odata_test_service, traversal_spec)
     for product in products:
         row = odata_fetchone(
             '''SELECT "Name" FROM "Products" WHERE "ID"='{0}';'''.format(
