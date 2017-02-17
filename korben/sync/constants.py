@@ -1,3 +1,6 @@
+import os
+
+
 ATTRIBUTEMASK_TAG =\
     '{http://schemas.microsoft.com/ado/2007/08/dataservices}AttributeMask'
 CONTENT_TAG = '{http://www.w3.org/2005/Atom}content'
@@ -443,3 +446,6 @@ ENTITY_INT_MAP = {
 }
 
 INDEXED_ES_TYPES = ('company_company', 'company_contact')
+
+DJANGO_INITIAL_MISSING_ATTEMPTS =\
+    int(os.environ.get('DJANGO_INITIAL_MISSING_ATTEMPTS', 3))

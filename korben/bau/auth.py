@@ -17,6 +17,7 @@ from korben.utils import generate_signature
 class Root(object):
     'Provide the most basic non-trivial ACL imaginable'
     __acl__ = ((security.Allow, 'leeloo', 'access'),)
+
     def __init__(self, request):
         pass
 
