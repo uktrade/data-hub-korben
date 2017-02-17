@@ -18,6 +18,7 @@ ENUM_MAPPINGS = (
     ('optevia_interactioncommunicationchannelId', 'optevia_interactioncommunicationchannelSet', 'optevia_name', 'metadata_interactiontype'),  # noqa: E501
     ('BusinessUnitId', 'BusinessUnitSet', 'Name', 'metadata_team'),
     ('optevia_serviceId', 'optevia_serviceSet', 'optevia_name', 'metadata_service'),  # noqa: E501
+    ('optevia_servicedeliverystatusId', 'optevia_servicedeliverystatusSet', 'optevia_name', 'metadata_servicedeliverystatus'),  # noqa: E501
 )
 
 # Used to avoid having to make Django fields nullable, this is loaded into all
@@ -185,7 +186,7 @@ MAPPINGS.update({
         ),
     },
     'detica_interactionSet': {
-        'to': 'company_interaction',
+        'to': 'interaction_interaction',
         'local': (
             ('ActivityId', 'id'),
             ('Subject', 'subject'),
@@ -193,7 +194,7 @@ MAPPINGS.update({
 
         ),
         'datetime': (
-            ('ActualStart', 'date_of_interaction'),
+            ('ActualStart', 'date'),
             ('ModifiedOn', 'modified_on'),
             ('CreatedOn', 'created_on'),
         ),
@@ -220,12 +221,53 @@ MAPPINGS.update({
             'interaction_type_id',
         ),
         'empty_strings': (
-            'archived_reason',
             'notes',
             'subject',
         ),
-        'defaults': (
-            ('archived', lambda: False),
+    },
+    'optevia_servicedeliverySet': {
+        'to': 'interaction_servicedelivery',
+        'local': (
+            ('optevia_servicedeliveryId', 'id'),
+            ('optevia_Notes', 'notes'),
+            ('optevia_CustomerCommentFeedback', 'feedback'),
+        ),
+        'nonflat': (
+            ('optevia_ServiceDeliveryStatus', (('Id', 'status_id'),),),
+            ('optevia_ServiceOffer', (('Id', 'service_offer_id'),),),
+            ('optevia_Service', (('Id', 'service_id'),),),
+            ('optevia_ServiceProvider', (('Id', 'dit_team_id'),),),
+            ('optevia_Organisation', (('Id', 'company_id'),),),
+            ('optevia_Contact', (('Id', 'contact_id'),),),
+            ('optevia_Advisor', (('Id', 'dit_advisor_id'),),),
+            ('optevia_UKRegion', (('Id', 'uk_region_id'),),),
+            ('optevia_Sector', (('Id', 'sector_id'),),),
+            ('optevia_LeadCountry', (('Id', 'country_of_interest_id'),),),
+        ),
+        'datetime': (
+            ('optevia_OrderDate', 'date'),
+        ),
+        'use_undefined': (
+            'company_id',
+            'contact_id',
+            'service_id',
+            'dit_advisor_id',
+            'dit_team_id',
+        ),
+        'empty_strings': (
+            'notes',
+            'subject',
+            'feedback',
+        ),
+    },
+    'optevia_serviceofferSet': {
+        'to': 'interaction_serviceoffer',
+        'local': (
+            ('optevia_serviceofferId', 'id'),
+        ),
+        'nonflat': (
+            ('optevia_Service', (('Id', 'service_id'),),),
+            ('optevia_ServiceProvider', (('Id', 'dit_team_id'),),),
         ),
     },
 })

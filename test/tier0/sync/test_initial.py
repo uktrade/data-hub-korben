@@ -36,7 +36,7 @@ def test_sync_scrape_initial(tier0, odata_test_service, odata_fetchall):
         assert count == result[0][0]
 
     # call django initial load function to move data through the ETL
-    django_initial.main(odata_test_service)
+    django_initial.main(client=odata_test_service)
     for count, model_name in expected:
         assert count == getattr(target_models, model_name).objects.count()
 

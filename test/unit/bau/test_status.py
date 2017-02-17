@@ -20,7 +20,7 @@ def test_status_fail(monkeypatch, test_app):
 <pingdom_http_custom_check>
     <status>FALSE</status>
 </pingdom_http_custom_check>
-<!--database failed because '???'-->
+<!--database failed because 'module 'korben.config' has no attribute 'database_odata_url''-->
 <!--redis failed because 'Error -2 connecting to redis:6379. Name or service not known.'-->
 <!--cdms failed because 'CDMS replied with 418'-->
 <!--polling failed because 'Error -2 connecting to redis:6379. Name or service not known.'-->
