@@ -5,4 +5,4 @@ test-unit:
 	docker-compose -f test-unit.yml build && docker-compose -f test-unit.yml run --service-ports test
 
 test-flake8:
-	docker build -f Dockerfile-flake8 . -t korben-flake8 && docker run korben-flake8 flake8 /src
+	docker build -f Dockerfile-flake8 -t korben-flake8 . && docker run korben-flake8 flake8 /src
