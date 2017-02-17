@@ -3,18 +3,25 @@
 
 _Korben talks to CDMS_
 
-![Data flow](docs/assets/korben-data-flow.png)
+## Package structure
 
-_Data flow in Korben_
+ - [`bau`](korben/bau) Web API, authentication
+ - [`etl`](korben/etl) Transformation OData <-> Django
+ - [`services`](korben/services) Persistence interfaces
+ - [`sync`](korben/sync) Initial setup code
+   - [`scrape`](korben/sync/scrape) Populate OData db
+   - [`django_initial`](korben/sync/django_initial.py) ETL run OData -> Django
+   - [`ch`](korben/sync/ch)
 
 This directory contains application code for a service offering two-way CDMS
 sync. It also contains code for loading CDMS and CH data into an Elastic Search
 index.
 
-# Initial
+## Initial
 
 Run the following commands from the Korben container to get the system
 populated with initial dataset:
+
 ``` bash
 # Download everything we can from Dynamics instance
 # and dump into OData database
@@ -32,15 +39,19 @@ korben sync django
 korben sync es
 ```
 
-# BAU
+Refer to the [`sync`](korben/sync) package where more detailed documentation
+lives.
+
+## BAU
 There are two web applications offered by this package. One is a web API
 allowing an authenticated request to trigger CRUD operations on a Dynamics
 instance. It’s a WSGI application and can be easily invoked by running
 `korben bau` on the command line. The other is a simple Python script which
 polls a Dynamics instance for fresh data. It can be invoked with `korben bau
-poll`. This service doesn’t offer an interface.
+poll`. This service doesn’t offer an interface. Refer to the
+[`bau`](korben/bau) package for further documentation.
 
-# Testing
+## Testing
 There are three test suites in this repository, two of which have test
 environments defined here. The first contains basic unit tests; `make
 test-unit`, the second has an environment suitable for writing tests against a

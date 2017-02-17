@@ -1,3 +1,4 @@
+'Configure Pyramid app, expose WSGI application object'
 import os
 
 from wsgiref.simple_server import make_server

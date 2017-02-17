@@ -1,3 +1,4 @@
+'Report status of attached services'
 import sqlalchemy as sqla
 from pyramid.response import Response
 from pyramid.view import view_config

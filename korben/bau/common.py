@@ -1,3 +1,4 @@
+'Functionality common to views'
 import json
 import logging
 
