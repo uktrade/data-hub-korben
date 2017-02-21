@@ -43,12 +43,16 @@ and to determine whether incoming data is newer or older than existing data.
 The default value for the comparitor column is `ModifiedOn`, but others are
 used in testing (see
 [`test/tier0/bau/test_poll`](https://github.com/uktrade/data-hub-korben/blob/master/test/tier0/bau/test_poll.py)).
-Using this comparitor, the `PAGE_SIZE` most recent entries are downloaded and
-individually compared to existing rows in the database; if there is no row to
-compare to, it will be inserted and sent to Leeloo; if the row exists and is
-the same age as the incoming row, it is disgarded (the most up-date-version
-exists already); if the row exists and is older than the incoming row, the
-incoming row is updated and the update is sent to Leeloo. If all 50 entries
-result in either an insert or an update, then it is assumed that there are more
-entries to download for this entity type and the offset is incremented and the
-“next” page is processed in the same way.
+Using this comparitor;
+    - the `PAGE_SIZE` most recent entries are downloaded and individually
+      compared to existing rows in the database;
+        - if there is no row to compare to, it will be inserted and sent to
+          Leeloo;
+        - if the row exists and is the same age as the incoming row, it is
+          disgarded (the most up-date-version exists already);
+        - if the row exists and is older than the incoming row, the incoming
+          row is “upserted” into the intermediate database and sent to Leeloo;
+    - if all 50 entries result in either an insert or an update, then it is
+      assumed that there are more entries to download for this entity type and
+      the offset is incremented and the “next” page is processed in the same
+      way.
