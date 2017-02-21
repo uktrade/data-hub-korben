@@ -53,6 +53,6 @@ Using this comparitor;
     - if the row exists and is older than the incoming row, the incoming
       row is “upserted” into the intermediate database and sent to Leeloo;
   - if all 50 entries result in either an insert or an update, then it is
-    assumed that there are more entries to download for this entity type and
-    the offset is incremented and the “next” page is processed in the same
-    way.
+    assumed that there are further outstanding updates to download for this
+    entity type and the offset is incremented and the “next” page is processed
+    in the same way.
