@@ -10,5 +10,5 @@ dependencies:
 
 test:
   override:
-    - case $CIRCLE_NODE_INDEX in 0) make test-unit ;; 1) make test-tier0 ;; 2) make test-flake8 ;; esac:
+    - case $CIRCLE_NODE_INDEX in 0) make test-unit ;; 1) make test-tier0 ;; 2) make test-tier1 ;; 3) make test-flake8 ;;esac:
         parallel: true
