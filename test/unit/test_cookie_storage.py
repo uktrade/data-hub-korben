@@ -7,8 +7,6 @@ from unittest import TestCase
 from cryptography.fernet import Fernet
 
 from korben import config, services
-from django.core.exceptions import ImproperlyConfigured
-
 from korben.cdms_api.cookie_storage import CookieStorage
 
 

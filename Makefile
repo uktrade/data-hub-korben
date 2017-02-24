@@ -4,7 +4,7 @@ test-tier0:
 test-tier1:
 	docker-compose -f test-tier1.yml down &&\
 	docker-compose -f test-tier1.yml build &&\
-	docker-compose -f test-tier1.yml run --service-ports test ./test-runner.sh test/tier1/cdms_api/test_cookie_storage.py
+	docker-compose -f test-tier1.yml run --service-ports test ./test-runner.sh test/tier1/cdms_api
 
 test-unit:
 	docker-compose -f test-unit.yml build && docker-compose -f test-unit.yml run --service-ports test
