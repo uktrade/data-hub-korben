@@ -1,7 +1,8 @@
 # Initial setup
 
 Long-running scrape to populate `datahub_odata` database is executed with
-`korben sync scrape`. Sit back and relax, this takes hours.
+`korben sync scrape`. Sit back and relax, this takes hours. Refer to the
+[`scrape`](scrape) package for more detailed documentation.
 
 When the “staging” `datahub_odata` database is populated, let’s run the initial
 ETL to get that data into the Django database `datahub`. Just run
@@ -14,10 +15,16 @@ Next let’s populate the ElasticSearch instance `korben sync es`.
 
 Leeloo is now populated and ready to rock.
 
-We also need to update CDMS with the enum rows we use to represent `Undefined`,
-we need to copy the latest fixtures out of the `leeloo` directory (damn it,
-Docker) and then use another sync command to send those fixtures to CDMS:
-```
-cp leeloo/fixtures/undefined.yaml leeloo/fixtures/datahub_businesstypes.yaml korben/leeloo_fixtures
-korben sync cdms korben/leeloo_fixtures/undefined.yaml korben/leeloo_fixtures/datahub_businesstypes.yaml
-```
+## [`django_initial`](django_initial.py)
+This script makes an ETL run to send all entity types specified in the
+`etl.spec.MAPPINGS` constant to Django.
+
+> This code breaks the stated “architecture” of Leeloo being separated from
+> Korben by inserting rows directly into the Django-controlled database.
+
+As rows are sent to the Django database, any integrity errors found are parsed
+for a list entities which were found to be missing. An attempt is then made to
+download these missing entities from CDMS. If this fails after
+`constants.DJANGO_INITIAL_MISSING_ATTEMPTS` many attempts, then the missing
+fkey’d entity is considered to be non-existant and the parent entity is not
+sync’d.

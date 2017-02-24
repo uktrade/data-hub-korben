@@ -1,3 +1,4 @@
+'Pyramid app views'
 import json
 import logging
 import uuid

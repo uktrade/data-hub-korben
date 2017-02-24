@@ -26,11 +26,12 @@ def test_poll_create(odata_test_service, odata_fetchall, category_object):
 def test_poll_update(odata_test_service, odata_fetchall, category_object):
     'Update an object in the service and check a call to `poll` is reflective'
     update_dict = {'Name': 'Trihedral'}
+    poller = poll.CDMSPoller(client=odata_test_service, against='Name')
+    poller.poll_entities()
     resp = odata_test_service.update(
         'Categories', False, category_object['ID'], update_dict,
     )
     assert resp.status_code == 200
-    poller = poll.CDMSPoller(client=odata_test_service, against='Name')
     poller.poll_entities()
     result = odata_fetchall(
         'SELECT "Name" FROM "Categories" WHERE "ID"={0}'.format(

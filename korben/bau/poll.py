@@ -32,7 +32,7 @@ def get_entry_list(resp):
     # this try except clause is for compatibility with plain OData services
     try:
         return resp_json['d']['results']
-    except ValueError:
+    except TypeError:
         return resp_json['d']
 
 
