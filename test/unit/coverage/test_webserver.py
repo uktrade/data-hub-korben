@@ -10,8 +10,6 @@ import redis
 
 from korben import config
 from korben.bau import webserver, sentry_client
-from korben.cdms_api.rest import api
-from korben.services import db
 
 
 MOCK_DEFAULT_SETTINGS = {
@@ -26,6 +24,8 @@ def mock_externals(monkeypatch):
 
 
 def test_get_app_no_overrides(mock_externals):
+    from korben import config
+    config.cdms_adfs_url = 'http://example.com'  # fix the race-condition... TODO get rid of korben :P
     webserver.get_app()
 
 
@@ -40,7 +40,6 @@ def test_wsgi_app_constant(monkeypatch, mock_externals):
         'database_url': 'HELLO MUM',
         'cdms_username': 'd',
         'cdms_password': 'e',
-        'cdms_base_url': 'f',
         'cdms_cookie_path': 'g',
         'cdms_cookie_key': Fernet.generate_key().decode('utf8'),
     }
