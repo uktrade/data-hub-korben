@@ -25,7 +25,7 @@ def mock_externals(monkeypatch):
 
 def test_get_app_no_overrides(mock_externals):
     from korben import config
-    config.cdms_adfs_url = ''  # fix the race-condition... TODO get rid of korben :P
+    config.cdms_adfs_url = 'http://example.com'  # fix the race-condition... TODO get rid of korben :P
     webserver.get_app()
 
 
