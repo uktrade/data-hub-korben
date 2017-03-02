@@ -29,6 +29,7 @@ call.
 This view returns the status of the OData database, Redis instance, CDMS and
 the polling service in XML for consumption by Pingdom.
 
+
 ## Polling
 The [`poll`](poll.py) module offers a CLI for a script that repeatedly makes
 calls to the CDMS web API to sync changes made through the CDMS web UI to Data
