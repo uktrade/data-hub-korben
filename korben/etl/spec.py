@@ -19,7 +19,6 @@ ENUM_MAPPINGS = (
     ('BusinessUnitId', 'BusinessUnitSet', 'Name', 'metadata_team'),
     ('optevia_serviceId', 'optevia_serviceSet', 'optevia_name', 'metadata_service'),  # noqa: E501
     ('optevia_servicedeliverystatusId', 'optevia_servicedeliverystatusSet', 'optevia_name', 'metadata_servicedeliverystatus'),  # noqa: E501
-    ('detica_accountclassificationId', 'detica_accountclassificationSet', 'detica_name', 'metadata_companyclassification'),  # noqa: E501
 )
 
 # Used to avoid having to make Django fields nullable, this is loaded into all
@@ -72,7 +71,6 @@ MAPPINGS.update({
             ('optevia_Sector', (('Id', 'sector_id'),),),
             ('optevia_EmployeeRange', (('Id', 'employee_range_id'),),),
             ('optevia_TurnoverRange', (('Id', 'turnover_range_id'),),),
-            ('detica_AccountClassification', (('Id', 'classification_id'),),),
         ),
         'defaults': (
             ('archived', lambda: False),
@@ -102,7 +100,6 @@ MAPPINGS.update({
             'business_type_id',
             'sector_id',
             'uk_region_id',
-            'classification_id',
         ),
     },
     'SystemUserSet': {
