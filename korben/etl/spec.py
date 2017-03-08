@@ -102,6 +102,7 @@ MAPPINGS.update({
             'business_type_id',
             'sector_id',
             'uk_region_id',
+            'classification_id',
         ),
     },
     'SystemUserSet': {
